@@ -11,13 +11,23 @@ import {
 // project. Real security is enforced by Firestore rules + Anonymous Auth
 // (see README.md). Values come from Vite env vars (.env locally, repo
 // Variables in CI).
+//
+// Be forgiving about how the env values were entered: a common mistake when
+// setting the GitHub Actions *Variables* is to paste the whole `NAME=value`
+// line (or leave a trailing newline) into the value box. That would ship an
+// apiKey like "VITE_FIREBASE_API_KEY=AIza…" and Firebase rejects it with
+// `auth/api-key-not-valid`. Strip any accidental `VITE_…=` prefix and
+// surrounding whitespace so the app works regardless.
+const clean = (v: string | undefined): string =>
+  (v ?? "").replace(/^\s*VITE_[A-Z0-9_]*=\s*/, "").trim();
+
 const firebaseConfig = {
-  apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-  appId: import.meta.env.VITE_FIREBASE_APP_ID,
+  apiKey: clean(import.meta.env.VITE_FIREBASE_API_KEY),
+  authDomain: clean(import.meta.env.VITE_FIREBASE_AUTH_DOMAIN),
+  projectId: clean(import.meta.env.VITE_FIREBASE_PROJECT_ID),
+  storageBucket: clean(import.meta.env.VITE_FIREBASE_STORAGE_BUCKET),
+  messagingSenderId: clean(import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID),
+  appId: clean(import.meta.env.VITE_FIREBASE_APP_ID),
 };
 
 export const isFirebaseConfigured = Boolean(
