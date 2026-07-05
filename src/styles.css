@@ -114,8 +114,12 @@ body {
   text-decoration: none;
 }
 .brand-mark {
-  color: var(--brand-600);
-  font-weight: 700;
+  width: 1.25em;
+  height: 1.25em;
+  border-radius: 0.32em;
+  object-fit: contain;
+  /* faint ring so the white tile reads on the light topbar too */
+  box-shadow: 0 0 0 1px rgba(17, 17, 17, 0.06);
 }
 .tagline {
   color: var(--text-faint);
@@ -166,7 +170,8 @@ body {
   margin-bottom: 8px;
 }
 .footer-brand .brand-mark {
-  color: var(--brand);
+  /* crisp white tile on the dark footer — no ring needed */
+  box-shadow: none;
 }
 .footer-tag {
   font-size: 0.8rem;

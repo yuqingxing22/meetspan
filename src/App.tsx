@@ -1,5 +1,6 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { isFirebaseConfigured } from "./firebase";
+import markUrl from "./assets/meetspan-mark.svg";
 
 export default function App() {
   const { pathname } = useLocation();
@@ -11,7 +12,8 @@ export default function App() {
     <div className="app">
       <header className="topbar">
         <Link to="/" className="brand">
-          <span className="brand-mark">◷</span> MeetSpan
+          <img className="brand-mark" src={markUrl} alt="" width={22} height={22} />{" "}
+          MeetSpan
         </Link>
         <span className="tagline">Find a time across timezones</span>
         {showCta && (
@@ -36,7 +38,8 @@ export default function App() {
 
       <footer className="footer">
         <div className="footer-brand">
-          <span className="brand-mark">◷</span> MeetSpan
+          <img className="brand-mark" src={markUrl} alt="" width={20} height={20} />{" "}
+          MeetSpan
         </div>
         <div className="footer-tag">
           No sign-up · share-link only · your times stay in your own timezone
