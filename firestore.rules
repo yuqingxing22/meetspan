@@ -1,0 +1,56 @@
+rules_version = '2';
+
+// Anonymous-auth security model (see README.md "Security model & tradeoffs").
+//
+// Every request must be signed in — anonymously is fine. Possession of the poll
+// link (+ the organizer's secret admin token for the UI) still drives access,
+// but these rules add real server-side integrity on top:
+//   • a participant can only edit their OWN availability doc,
+//   • collected emails live in a separate collection readable ONLY by the poll's
+//     organizer — nobody else with the link can harvest them,
+//   • a poll's organizer binding can never be reassigned.
+//
+// Closing / finalizing a poll stays link-portable (any signed-in user, gated in
+// the app by the secret admin token) so the organizer link keeps working on any
+// device.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /polls/{pollId} {
+      allow read: if request.auth != null;
+
+      // The creator stamps themselves as organizerUid — this is what gates email
+      // reads below, so it must equal the caller.
+      allow create: if request.auth != null
+                    && request.resource.data.organizerUid == request.auth.uid;
+
+      // Portable management: any signed-in user may update meta (close/finalize),
+      // but the organizer binding is immutable.
+      allow update: if request.auth != null
+                    && request.resource.data.organizerUid == resource.data.organizerUid;
+
+      allow delete: if false;
+
+      // Availability — readable by anyone with the link (for the group heatmap),
+      // writable only by the uid that owns each doc.
+      match /participants/{participantId} {
+        allow read: if request.auth != null;
+        allow create: if request.auth != null
+                      && request.resource.data.ownerUid == request.auth.uid;
+        allow update: if request.auth != null
+                      && resource.data.ownerUid == request.auth.uid
+                      && request.resource.data.ownerUid == resource.data.ownerUid;
+        allow delete: if false;
+      }
+
+      // Private emails — one doc per writer, keyed by their uid. Readable ONLY by
+      // the poll's organizer; each writer may only touch their own doc.
+      match /emails/{uid} {
+        allow read: if request.auth != null
+                    && request.auth.uid ==
+                       get(/databases/$(database)/documents/polls/$(pollId)).data.organizerUid;
+        allow create, update, delete: if request.auth != null
+                    && request.auth.uid == uid;
+      }
+    }
+  }
+}

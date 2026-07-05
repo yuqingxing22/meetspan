@@ -1,0 +1,40 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm --prefix \"/Users/yuqingxing/meeting organizer\" install)",
+      "Bash(npm --prefix \"/Users/yuqingxing/meeting organizer\" run build)",
+      "Bash(npm --prefix \"/Users/yuqingxing/meeting organizer\" test)",
+      "Bash(npm --prefix \"/Users/yuqingxing/meeting organizer\" run dev)",
+      "Bash(kill 55209)",
+      "Bash(pkill -f \"vite\")",
+      "Bash(node \"/Users/yuqingxing/meeting organizer/diag.mjs\")",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\" http://localhost:5173/)",
+      "Bash(npm run *)",
+      "Bash(npm test *)",
+      "Bash(curl -s -o /dev/null -w \"dev server: %{http_code}\\\\n\" http://localhost:5173/)",
+      "Bash(curl -s \"http://localhost:5173/src/pages/Home.tsx\")",
+      "Bash(npx tsc *)",
+      "Bash(echo \"--- TSC EXIT $? ---\")",
+      "Bash(npx vite *)",
+      "Bash(echo \"EXIT $?\")",
+      "Bash(npx vitest *)",
+      "Bash(awk '{print $NF}')",
+      "Bash(echo \"TSC EXIT $?\")",
+      "Bash(curl -s \"http://localhost:5173/src/styles.css\")",
+      "Bash(xargs -I{} echo \"styles.css served, --cellh occurrences: {}\")",
+      "Bash(ls src/lib/*.test.ts src/components/*.test.tsx)",
+      "Bash(grep -rln \"mailtoLink\\\\|generateEmail\\\\|email\" src --include=\"*.test.*\")",
+      "Bash(node -e \"require\\('firebase/auth'\\); console.log\\('firebase/auth OK'\\)\")",
+      "Bash(grep -rniE \"#[0-9a-f]{3,6}\\\\b\" components pages)",
+      "Skill(run)",
+      "Skill(run:*)",
+      "Bash(echo \"started dev server, pid $!\")",
+      "Bash(rm -f \"/Users/yuqingxing/meeting organizer/gridpreview.html\")",
+      "Bash(ls gridpreview.html)",
+      "Bash(grep -vE \"node_modules|dist|^\\\\.$|^\\\\.\\\\.$\")",
+      "Bash(git symbolic-ref *)",
+      "Bash(git -c user.name=MeetSpan -c user.email=kyraxing@gmail.com commit -q -m 'MeetSpan: Cal.com-inspired UI + deploy-ready *)",
+      "Bash(grep -E \"^\\\\.env$\")"
+    ]
+  }
+}
