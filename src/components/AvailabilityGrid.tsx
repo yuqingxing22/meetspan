@@ -88,16 +88,22 @@ export default function AvailabilityGrid({
           </div>
         ))}
 
-        {model.rows.map((r) => (
+        {model.rows.map((r, i) => (
           <RowFragment
             key={r.key}
             rowKey={r.key}
             rowLabel={r.label}
+            onHour={r.onHour}
+            first={i === 0}
+            last={i === model.rows.length - 1}
             columns={model.columns}
             cells={model.cells}
             selected={selected}
           />
         ))}
+        <div className="grid-time-end">
+          <span>{model.endLabel}</span>
+        </div>
       </div>
       <div className="legend">
         <span className="swatch" style={{ background: "var(--surface-2)" }} />
@@ -112,29 +118,41 @@ export default function AvailabilityGrid({
 function RowFragment({
   rowKey,
   rowLabel,
+  onHour,
+  first,
+  last,
   columns,
   cells,
   selected,
 }: {
   rowKey: number;
   rowLabel: string;
+  onHour: boolean;
+  first: boolean;
+  last: boolean;
   columns: { key: string; label: string }[];
   cells: Map<string, number>;
   selected: Set<number>;
 }) {
   return (
     <>
-      <div className="grid-time-head">{rowLabel}</div>
-      {columns.map((c) => {
+      <div className={`grid-time-head${first ? " first" : ""}`}>
+        {onHour && <span>{rowLabel}</span>}
+      </div>
+      {columns.map((c, ci) => {
+        const edge =
+          (onHour ? " hour" : "") +
+          (last ? " row-last" : "") +
+          (ci === columns.length - 1 ? " col-last" : "");
         const ms = cells.get(`${c.key}|${rowKey}`);
         if (ms === undefined) {
-          return <div key={c.key} className="cell empty" />;
+          return <div key={c.key} className={`cell empty${edge}`} />;
         }
         return (
           <div
             key={c.key}
             data-slot={ms}
-            className={`cell${selected.has(ms) ? " sel" : ""}`}
+            className={`cell${selected.has(ms) ? " sel" : ""}${edge}`}
           />
         );
       })}

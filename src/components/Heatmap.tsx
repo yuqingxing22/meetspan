@@ -49,35 +49,45 @@ export default function Heatmap({
           </div>
         ))}
 
-        {model.rows.map((r) => (
-          <div key={r.key} style={{ display: "contents" }}>
-            <div className="grid-time-head">{r.label}</div>
-            {model.columns.map((c) => {
-              const ms = model.cells.get(`${c.key}|${r.key}`);
-              if (ms === undefined) {
-                return <div key={c.key} className="cell empty" />;
-              }
-              const stat = statsByMs.get(ms) ?? { count: 0, available: [] };
-              const names = stat.available.map(nameOf).join(", ");
-              const cls = [
-                "cell",
-                `h${level(stat.count)}`,
-                highlight?.has(ms) ? "best" : "",
-              ]
-                .filter(Boolean)
-                .join(" ");
-              return (
-                <div
-                  key={c.key}
-                  className={cls}
-                  title={`${stat.count}/${total} free${
-                    names ? ` — ${names}` : ""
-                  }`}
-                />
-              );
-            })}
-          </div>
-        ))}
+        {model.rows.map((r, i) => {
+          const first = i === 0;
+          const last = i === model.rows.length - 1;
+          return (
+            <div key={r.key} style={{ display: "contents" }}>
+              <div className={`grid-time-head${first ? " first" : ""}`}>
+                {r.onHour && <span>{r.label}</span>}
+              </div>
+              {model.columns.map((c, ci) => {
+                const edge =
+                  (r.onHour ? " hour" : "") +
+                  (last ? " row-last" : "") +
+                  (ci === model.columns.length - 1 ? " col-last" : "");
+                const ms = model.cells.get(`${c.key}|${r.key}`);
+                if (ms === undefined) {
+                  return <div key={c.key} className={`cell empty${edge}`} />;
+                }
+                const stat = statsByMs.get(ms) ?? { count: 0, available: [] };
+                const names = stat.available.map(nameOf).join(", ");
+                const cls =
+                  `cell h${level(stat.count)}` +
+                  (highlight?.has(ms) ? " best" : "") +
+                  edge;
+                return (
+                  <div
+                    key={c.key}
+                    className={cls}
+                    title={`${stat.count}/${total} free${
+                      names ? ` — ${names}` : ""
+                    }`}
+                  />
+                );
+              })}
+            </div>
+          );
+        })}
+        <div className="grid-time-end">
+          <span>{model.endLabel}</span>
+        </div>
       </div>
       <div className="legend">
         <span>Fewer free</span>

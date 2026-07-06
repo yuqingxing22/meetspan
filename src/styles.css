@@ -16,6 +16,10 @@
   --border: #e5e7eb;
   --border-soft: #eef0f2;
 
+  /* Timeline grid lines: solid on the hour, dotted on the half-hour */
+  --grid-line: #cdd2db;
+  --grid-line-soft: #e1e5eb;
+
   /* Text */
   --text: #111111; /* ink — headlines & primary text */
   --text-body: #374151;
@@ -761,21 +765,23 @@ div.field.tz-field {
 
 .grid-wrap {
   overflow-x: auto;
-  padding-bottom: 8px;
+  padding: 14px 0 8px; /* room for the top hour label sitting on the first line */
 }
+/* Timeline grid: contiguous cells framed by solid hour lines + dotted
+   half-hour lines; only whole-hour labels show, straddling the gridline. */
 .grid {
   display: grid;
   user-select: none;
-  gap: 3px;
+  gap: 0;
   min-width: max-content;
 }
 .grid-corner,
 .grid-col-head,
-.grid-time-head {
+.grid-time-head,
+.grid-time-end {
   font-size: 0.76rem;
   color: var(--text-dim);
   font-weight: 600;
-  padding: 4px 6px;
   position: sticky;
   background: var(--surface);
 }
@@ -783,41 +789,73 @@ div.field.tz-field {
   top: 0;
   text-align: center;
   line-height: 1.15;
-}
-.grid-time-head {
-  left: 0;
-  text-align: right;
-  white-space: nowrap;
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
+  padding: 2px 8px 10px;
 }
 .grid-corner {
   top: 0;
   left: 0;
-  z-index: 2;
+  z-index: 3;
 }
+/* Left time gutter — the hour label straddles its row's TOP line */
+.grid-time-head {
+  left: 0;
+  z-index: 2;
+  display: flex;
+  align-items: flex-start;
+  justify-content: flex-end;
+  white-space: nowrap;
+  padding-right: 10px;
+}
+.grid-time-head span {
+  transform: translateY(-50%); /* center the label on the gridline */
+}
+/* The first row's label can't rise above the grid — pin it below the line */
+.grid-time-head.first span {
+  transform: translateY(-10%);
+}
+/* Closing label sitting on the very bottom line (e.g. 5:00 PM) */
+.grid-time-end {
+  left: 0;
+  z-index: 2;
+  height: 0;
+}
+.grid-time-end span {
+  position: absolute;
+  right: 10px;
+  top: 0;
+  transform: translateY(-50%);
+}
+
 .cell {
   width: var(--cellw);
   height: var(--cellh);
-  border-radius: 4px;
   background: var(--surface-2);
-  border: 1px solid var(--border);
+  border-left: 1px solid var(--grid-line);
+  border-top: 1px dotted var(--grid-line-soft); /* half-hour divider */
   cursor: pointer;
+}
+.cell.hour {
+  border-top: 1px solid var(--grid-line); /* solid line on the hour */
+}
+.cell.col-last {
+  border-right: 1px solid var(--grid-line); /* right frame edge */
+}
+.cell.row-last {
+  border-bottom: 1px solid var(--grid-line); /* closing bottom line */
 }
 .cell.empty {
   background: transparent;
-  border: 0;
   cursor: default;
 }
 /* Your own painted availability — solid accent */
 .cell.sel {
   background: var(--brand-600);
-  border-color: #1d4ed8;
 }
 .cell.pending {
   outline: 2px solid var(--brand);
-  outline-offset: -2px;
+  outline-offset: -1px;
+  position: relative;
+  z-index: 1;
 }
 /* Group heatmap intensity — blue sequential ramp (light → dark = more free) */
 .cell.h0 {
@@ -842,6 +880,8 @@ div.field.tz-field {
 .cell.best {
   outline: 2px solid var(--good);
   outline-offset: -2px;
+  position: relative;
+  z-index: 1;
 }
 
 .legend {

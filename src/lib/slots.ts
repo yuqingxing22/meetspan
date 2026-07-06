@@ -75,12 +75,15 @@ export interface GridColumn {
 export interface GridRow {
   key: number; // minutes from local midnight
   label: string; // e.g. "9:00 AM"
+  onHour: boolean; // starts exactly on the hour — the only rows that get a label
 }
 export interface GridModel {
   columns: GridColumn[];
   rows: GridRow[];
   /** `${colKey}|${rowKey}` -> slot epoch-ms, only where a slot exists. */
   cells: Map<string, number>;
+  /** Time of the grid's bottom line (last slot's end), e.g. "5:00 PM". */
+  endLabel: string;
 }
 
 /**
@@ -112,9 +115,17 @@ export function buildGridModel(
     .map(([key, label]) => ({ key, label }));
   const rows = Array.from(rowSet.entries())
     .sort((a, b) => a[0] - b[0])
-    .map(([key, label]) => ({ key, label }));
+    .map(([key, label]) => ({ key, label, onHour: key % 60 === 0 }));
 
-  return { columns, rows, cells };
+  // Bottom-of-axis label: the end of the last slot. Infer the slot step from
+  // the row spacing (30 min in this app) and add it to the last row's start.
+  const step = rows.length >= 2 ? rows[1].key - rows[0].key : 30;
+  const lastEndMin = rows.length ? rows[rows.length - 1].key + step : 0;
+  const endLabel = DateTime.fromObject({ hour: 0, minute: 0 })
+    .plus({ minutes: lastEndMin })
+    .toFormat("h:mm a");
+
+  return { columns, rows, cells, endLabel };
 }
 
 /** Format a single slot instant in a given timezone. */
