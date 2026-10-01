@@ -1,3 +1,5 @@
+import { windowPenalty } from "./comfort";
+
 /**
  * Pure scheduling engine. Given the poll's absolute slots and each
  * participant's selected slots, find meeting windows that satisfy the
@@ -12,6 +14,10 @@
 export interface EngineParticipant {
   id: string;
   selectedSlots: number[];
+  /** Slots marked "if needed": usable only when nothing works otherwise. */
+  maybeSlots?: number[];
+  /** Their timezone, used to prefer times that aren't at night for anyone. */
+  tz?: string;
 }
 
 export interface ComputeInput {
@@ -38,11 +44,13 @@ export interface Session {
 export type ResultKind = "ok" | "none";
 
 export interface Suggestion {
-  kind: "shorten" | "split" | "exclude" | "better_days" | "insufficient";
+  kind: "if_needed" | "shorten" | "split" | "exclude" | "better_days" | "insufficient";
   title: string;
   detail: string;
   sessions?: Session[];
   excluded?: string[];
+  /** People who'd be using their "if needed" times. */
+  stretched?: string[];
 }
 
 export interface ComputeResult {
@@ -58,6 +66,10 @@ export interface ComputeResult {
 }
 
 const MS_PER_MIN = 60_000;
+
+/** Lower is better; breaks ties between windows with the same head count. */
+type Penalty = (s: Session) => number;
+const noPenalty: Penalty = () => 0;
 
 function intersectInto(a: Set<string>, b: Set<string>): Set<string> {
   const out = new Set<string>();
@@ -133,10 +145,13 @@ function windowsOfSize(
   return out;
 }
 
-/** Pick up to `n` non-overlapping sessions, preferring distinct days & coverage. */
-function selectSessions(windows: Session[], n: number): Session[] {
+/**
+ * Pick up to `n` non-overlapping sessions, preferring coverage, then times that
+ * are reasonable hours for everyone, then distinct days.
+ */
+function selectSessions(windows: Session[], n: number, penalty: Penalty = noPenalty): Session[] {
   const ranked = [...windows].sort(
-    (a, b) => b.count - a.count || a.startMs - b.startMs
+    (a, b) => b.count - a.count || penalty(a) - penalty(b) || a.startMs - b.startMs
   );
   const chosen: Session[] = [];
   const usedBlocks = new Set<number>();
@@ -183,6 +198,9 @@ export function computeSchedule(input: ComputeInput): ComputeResult {
   const k = Math.max(1, Math.ceil(durationMin / granularityMin));
   const index = buildSlotIndex(input);
   const allIds = participants.map((p) => p.id);
+  const tzById = new Map(participants.map((p) => [p.id, p.tz]));
+  const penalty: Penalty = (s) =>
+    windowPenalty(s.startMs, s.endMs, s.freeIds.map((id) => tzById.get(id)));
 
   const stats = slots.map((ms, i) => ({
     ms,
@@ -212,7 +230,7 @@ export function computeSchedule(input: ComputeInput): ComputeResult {
   // 1) Try full overlap at the requested duration.
   const fullWindows = windowsOfSize(input, index, allIds, k, total);
   if (fullWindows.length) {
-    const chosen = selectSessions(fullWindows, F);
+    const chosen = selectSessions(fullWindows, F, penalty);
     if (chosen.length < F) {
       suggestions.push({
         kind: "better_days",
@@ -221,7 +239,7 @@ export function computeSchedule(input: ComputeInput): ComputeResult {
           "There aren't enough separate windows where all participants overlap. Consider fewer sessions per week, a shorter duration, or excluding someone (see below).",
       });
       // Also surface fallbacks so the organizer has options.
-      appendExcludeAndShorten(input, index, allIds, total, k, F, suggestions);
+      appendExcludeAndShorten(input, index, allIds, total, k, F, suggestions, penalty);
     }
     return {
       kind: "ok",
@@ -235,6 +253,42 @@ export function computeSchedule(input: ComputeInput): ComputeResult {
 
   // 2) No full-overlap window at the requested duration → explain + suggest.
 
+  // (0) "If needed": does everyone fit once their maybe-times count?
+  if (participants.some((p) => p.maybeSlots?.length)) {
+    const stretchedInput: ComputeInput = {
+      ...input,
+      participants: participants.map((p) => ({
+        ...p,
+        selectedSlots: [...p.selectedSlots, ...(p.maybeSlots ?? [])],
+      })),
+    };
+    const sIndex = buildSlotIndex(stretchedInput);
+    const sWindows = windowsOfSize(stretchedInput, sIndex, allIds, k, total);
+    if (sWindows.length) {
+      const picked = selectSessions(sWindows, F, penalty);
+      // Who relies on an "if needed" slot in the picked windows?
+      const yes = new Map(participants.map((p) => [p.id, new Set(p.selectedSlots)]));
+      const step = granularityMin * MS_PER_MIN;
+      const stretched = participants
+        .filter((p) =>
+          picked.some((w) => {
+            for (let t = w.startMs; t < w.endMs; t += step) if (!yes.get(p.id)!.has(t)) return true;
+            return false;
+          })
+        )
+        .map((p) => p.id);
+      suggestions.push({
+        kind: "if_needed",
+        title: "Everyone fits with “if needed” times",
+        detail: `No ${durationMin}-min window has everyone fully free, but it works if ${
+          stretched.length === 1 ? "one person uses" : `${stretched.length} people use`
+        } times they marked “if needed”.`,
+        sessions: picked,
+        stretched,
+      });
+    }
+  }
+
   // (a) Shorten: largest duration where everyone still overlaps.
   const largest = largestFullOverlapSize(input, index, allIds, total, k - 1);
   if (largest) {
@@ -243,14 +297,14 @@ export function computeSchedule(input: ComputeInput): ComputeResult {
       kind: "shorten",
       title: `Shorten to ${mins} min — everyone can make it`,
       detail: `No ${durationMin}-min window works for all ${total}, but a ${mins}-min window does.`,
-      sessions: selectSessions(largest.windows, F),
+      sessions: selectSessions(largest.windows, F, penalty),
     });
 
     // (b) Split: cover the full duration across several shorter days. Only
     // offer it if the chosen shorter sessions actually add up to the duration.
     const parts = Math.ceil(k / largest.size);
     if (parts >= 2) {
-      const split = selectSessions(largest.windows, parts);
+      const split = selectSessions(largest.windows, parts, penalty);
       const coveredSlots = split.reduce((a, s) => a + s.slotCount, 0);
       if (split.length >= 2 && coveredSlots >= k) {
         suggestions.push({
@@ -264,7 +318,7 @@ export function computeSchedule(input: ComputeInput): ComputeResult {
   }
 
   // (c) Exclude: full-length window if one person steps out.
-  appendExclude(input, index, allIds, total, k, F, suggestions);
+  appendExclude(input, index, allIds, total, k, F, suggestions, penalty);
 
   // (d) Better days: where is overlap strongest for this duration?
   const anyWindows = windowsOfSize(input, index, allIds, k, 1);
@@ -275,7 +329,7 @@ export function computeSchedule(input: ComputeInput): ComputeResult {
       if (!cur || w.count > cur.count) bestPerBlock.set(w.blockId, w);
     }
     const top = [...bestPerBlock.values()]
-      .sort((a, b) => b.count - a.count || a.startMs - b.startMs)
+      .sort((a, b) => b.count - a.count || penalty(a) - penalty(b) || a.startMs - b.startMs)
       .slice(0, 3);
     suggestions.push({
       kind: "better_days",
@@ -307,7 +361,8 @@ function appendExclude(
   total: number,
   k: number,
   F: number,
-  suggestions: Suggestion[]
+  suggestions: Suggestion[],
+  penalty: Penalty = noPenalty
 ): void {
   if (total < 2) return;
   const near = windowsOfSize(input, index, allIds, k, total - 1).filter(
@@ -324,7 +379,7 @@ function appendExclude(
   }
   let best: { id: string; sessions: Session[] } | null = null;
   for (const [id, ws] of byExcluded) {
-    const picked = selectSessions(ws, F);
+    const picked = selectSessions(ws, F, penalty);
     if (!best || picked.length > best.sessions.length) best = { id, sessions: picked };
   }
   if (best && best.sessions.length) {
@@ -346,7 +401,8 @@ function appendExcludeAndShorten(
   total: number,
   k: number,
   F: number,
-  suggestions: Suggestion[]
+  suggestions: Suggestion[],
+  penalty: Penalty = noPenalty
 ): void {
-  appendExclude(input, index, allIds, total, k, F, suggestions);
+  appendExclude(input, index, allIds, total, k, F, suggestions, penalty);
 }

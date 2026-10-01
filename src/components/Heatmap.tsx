@@ -3,6 +3,8 @@ import { buildGridModel } from "../lib/slots";
 export interface SlotStat {
   count: number;
   available: string[];
+  /** People who marked this slot "if needed" (not counted as free). */
+  maybe?: string[];
 }
 
 interface Props {
@@ -107,6 +109,7 @@ export default function Heatmap({
                 }
                 const stat = statsByMs.get(ms) ?? { count: 0, available: [] };
                 const names = stat.available.map(nameOf).join(", ");
+                const maybeNames = (stat.maybe ?? []).map(nameOf).join(", ");
                 const cls =
                   `cell heat h${heatLevel(stat.count, total)}` +
                   (highlight?.has(ms)
@@ -121,7 +124,9 @@ export default function Heatmap({
                     key={c.key}
                     data-slot={ms}
                     className={cls}
-                    title={`${stat.count}/${total} free${names ? ` — ${names}` : ""}`}
+                    title={`${stat.count}/${total} free${names ? ` — ${names}` : ""}${
+                      maybeNames ? ` · if needed: ${maybeNames}` : ""
+                    }`}
                   />
                 );
               })}

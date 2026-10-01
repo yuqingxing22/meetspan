@@ -137,3 +137,40 @@ describe("computeSchedule", () => {
     expect(res.kind).toBe("none");
   });
 });
+
+describe("cross-timezone preferences", () => {
+  // Two 1-hour options on Wed Oct 14 2026, both with everyone free:
+  // 9 AM Los Angeles (= 12 AM Shanghai) and 5 PM Los Angeles (= 8 AM Shanghai).
+  const morningLA = day(Date.UTC(2026, 9, 14, 16, 0), 2);
+  const eveningLA = day(Date.UTC(2026, 9, 15, 0, 0), 2);
+  const slots = [...morningLA, ...eveningLA];
+
+  it("breaks a tie in favor of hours that aren't at night for anyone", () => {
+    const res = run(
+      slots,
+      [
+        { id: "kyra", selectedSlots: slots, tz: "America/Los_Angeles" },
+        { id: "mei", selectedSlots: slots, tz: "Asia/Shanghai" },
+      ],
+      60
+    );
+    expect(res.kind).toBe("ok");
+    // 9 AM LA is midnight for Mei, so the 5 PM LA option wins despite being later.
+    expect(res.sessions[0].startMs).toBe(eveningLA[0]);
+  });
+
+  it("suggests a time that works if someone uses their 'if needed' times", () => {
+    const res = run(
+      slots,
+      [
+        { id: "kyra", selectedSlots: morningLA, tz: "America/Los_Angeles" },
+        { id: "mei", selectedSlots: [], maybeSlots: morningLA, tz: "Asia/Shanghai" },
+      ],
+      60
+    );
+    expect(res.kind).toBe("none");
+    const s = res.suggestions.find((x) => x.kind === "if_needed");
+    expect(s?.sessions?.[0].startMs).toBe(morningLA[0]);
+    expect(s?.stretched).toEqual(["mei"]);
+  });
+});

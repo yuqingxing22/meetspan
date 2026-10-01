@@ -846,6 +846,55 @@ div.field.tz-field {
   font-weight: 400;
   color: var(--text-body);
 }
+.chip-night {
+  background: #fff1e0 !important;
+  color: #8a3b12 !important;
+}
+.chip-edge {
+  background: #fdf7e8 !important;
+  color: #7a5a12 !important;
+}
+.chip-flag {
+  margin-left: 4px;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #e4e6fd;
+  color: var(--brand-ink);
+  font-size: 11px;
+  font-weight: 600;
+}
+.chip-night-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-left: 2px;
+  color: #b45309;
+  font-size: 11px;
+  font-weight: 600;
+}
+.comfort-text {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+.comfort {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.comfort-night {
+  color: #9a3412;
+  font-weight: 500;
+}
+.comfort-edge {
+  color: #7a5a12;
+}
+.people-sub .comfort {
+  margin-left: 6px;
+  font-size: 12px;
+}
 .chip-miss {
   background: var(--warn-soft) !important;
   color: var(--warn-ink) !important;
@@ -1568,6 +1617,54 @@ div.field.tz-field {
 .cell.g5 {
   background: #c4c9fa;
 }
+/* "If needed" — hatched, lighter than free */
+.cell.maybe {
+  background: repeating-linear-gradient(
+    -45deg,
+    #b9bdf7 0 4px,
+    #dde0fc 4px 8px
+  );
+}
+.swatch-maybe {
+  background: repeating-linear-gradient(-45deg, #b9bdf7 0 3px, #dde0fc 3px 6px);
+  margin-left: 8px;
+}
+.brush-row {
+  display: flex;
+  align-items: center;
+  gap: 8px 12px;
+  flex-wrap: wrap;
+  margin: 4px 0 8px;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+.brush-row .seg button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.brush-row .swatch {
+  margin: 0;
+}
+.slot-row.maybe {
+  border: 1.5px dashed #9ea4f5;
+  background: #f5f6ff;
+}
+.slot-row.maybe .slot-check {
+  background: repeating-linear-gradient(-45deg, #b9bdf7 0 3px, #dde0fc 3px 6px);
+  box-shadow: none;
+  color: transparent;
+}
+.slot-tag {
+  margin-left: 8px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: #e4e6fd;
+  color: var(--brand-ink);
+  font-size: 11px;
+  font-weight: 600;
+}
+
 /* Your own painted availability — solid accent */
 .cell.sel {
   background: var(--brand);
@@ -2002,6 +2099,35 @@ div.field.tz-field {
   font-size: 13px;
   color: #c9cbd3;
 }
+/* Guest page: the organizer's locked-in time */
+.final-card {
+  align-items: flex-start;
+}
+.final-card .locked-icon {
+  margin-top: 2px;
+}
+.final-eyebrow {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: #a5f3c0;
+  margin-bottom: 2px;
+}
+.final-actions {
+  margin-top: 0;
+  align-self: center;
+}
+.btn-ghost-dark {
+  background: transparent;
+  border-color: #3d4049;
+  color: #fff;
+}
+.btn-ghost-dark:hover {
+  background: #2a2c35;
+  border-color: #3d4049;
+  color: #fff;
+}
 .org-layout {
   display: flex;
   gap: 16px;
@@ -2291,6 +2417,13 @@ div.field.tz-field {
   border: 1px solid var(--brand-line);
   font-size: 14px;
   color: var(--text-body);
+}
+.fill-bar > span:not(.fill-note) {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+.fill-bar > svg {
+  flex: none;
 }
 .fill-note {
   font-size: 13px;

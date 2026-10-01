@@ -9,7 +9,9 @@ interface Props {
   /** The poll's slots. */
   slots: number[];
   selected: Set<number>;
-  onFill: (next: Set<number>) => void;
+  /** Current "if needed" marks; a fill clears them (Undo restores them). */
+  maybe?: Set<number>;
+  onFill: (next: Set<number>, nextMaybe: Set<number>) => void;
 }
 
 /**
@@ -18,9 +20,13 @@ interface Props {
  * nothing is filled automatically, so a week with exceptions isn't submitted
  * by accident.
  */
-export default function ScheduleFill({ slots, selected, onFill }: Props) {
+export default function ScheduleFill({ slots, selected, maybe, onFill }: Props) {
   const { signedIn, schedule } = useMySchedule();
-  const [undo, setUndo] = useState<{ prev: Set<number>; filled: number } | null>(null);
+  const [undo, setUndo] = useState<{
+    prev: Set<number>;
+    prevMaybe: Set<number>;
+    filled: number;
+  } | null>(null);
   const [signingIn, setSigningIn] = useState(false);
 
   if (!isFirebaseConfigured) return null;
@@ -73,8 +79,8 @@ export default function ScheduleFill({ slots, selected, onFill }: Props) {
         className="btn btn-sm btn-primary"
         onClick={() => {
           const next = applySchedule(slots, schedule);
-          setUndo({ prev: new Set(selected), filled: next.size });
-          onFill(next);
+          setUndo({ prev: new Set(selected), prevMaybe: new Set(maybe), filled: next.size });
+          onFill(next, new Set());
         }}
       >
         <Icon name="calendar" /> Fill from my schedule
@@ -88,7 +94,7 @@ export default function ScheduleFill({ slots, selected, onFill }: Props) {
             type="button"
             className="link-btn link-inline"
             onClick={() => {
-              onFill(undo.prev);
+              onFill(undo.prev, undo.prevMaybe);
               setUndo(null);
             }}
           >

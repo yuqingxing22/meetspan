@@ -59,6 +59,8 @@ export interface Participant {
   ownerUid: string;
   /** Subset of PollMeta.slots the participant marked available (UTC epoch-ms). */
   selectedSlots: number[];
+  /** Slots marked "if needed" (possible, not ideal). Older docs don't have it. */
+  maybeSlots?: number[];
   updatedAt: number;
 }
 

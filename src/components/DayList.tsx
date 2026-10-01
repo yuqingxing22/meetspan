@@ -8,7 +8,9 @@ interface Props {
   tz: string;
   weekdayOnly?: boolean;
   selected: Set<number>;
-  onChange: (next: Set<number>) => void;
+  onChange: (next: Set<number>, nextMaybe?: Set<number>) => void;
+  /** "If needed" slots; when given, a tap cycles free → if needed → clear. */
+  maybe?: Set<number>;
   /** How many *other* people are free at each slot. */
   othersFree: Map<number, number>;
   othersTotal: number;
@@ -27,6 +29,7 @@ export default function DayList({
   onChange,
   othersFree,
   othersTotal,
+  maybe,
 }: Props) {
   const model = buildGridModel(slots, tz, { weekdayOnly });
   const [day, setDay] = useState(0);
@@ -38,9 +41,22 @@ export default function DayList({
 
   function toggle(ms: number) {
     const next = new Set(selected);
-    if (next.has(ms)) next.delete(ms);
-    else next.add(ms);
-    onChange(next);
+    if (!maybe) {
+      if (next.has(ms)) next.delete(ms);
+      else next.add(ms);
+      onChange(next);
+      return;
+    }
+    const nextMaybe = new Set(maybe);
+    if (next.has(ms)) {
+      next.delete(ms);
+      nextMaybe.add(ms);
+    } else if (nextMaybe.has(ms)) {
+      nextMaybe.delete(ms);
+    } else {
+      next.add(ms);
+    }
+    onChange(next, nextMaybe);
   }
 
   const isLast = day >= model.columns.length - 1;
@@ -72,7 +88,7 @@ export default function DayList({
       </div>
 
       <div className="daylist-head">
-        <span>Tap the times you're free</span>
+        <span>{maybe ? "Tap once for free, twice for “if needed”" : "Tap the times you're free"}</span>
         {othersTotal > 0 && <span>Others free</span>}
       </div>
       <div className="daylist-rows">
@@ -80,13 +96,14 @@ export default function DayList({
           const ms = model.cells.get(`${col.key}|${r.key}`);
           if (ms === undefined) return null;
           const mine = selected.has(ms);
+          const ifNeeded = !mine && !!maybe?.has(ms);
           const n = othersFree.get(ms) ?? 0;
           return (
             <button
               type="button"
               key={r.key}
-              className={`slot-row${mine ? " on" : ""}`}
-              aria-pressed={mine}
+              className={`slot-row${mine ? " on" : ifNeeded ? " maybe" : ""}`}
+              aria-pressed={mine ? true : ifNeeded ? "mixed" : false}
               onClick={() => toggle(ms)}
             >
               <span className="slot-check">
@@ -94,6 +111,7 @@ export default function DayList({
               </span>
               <span className="slot-time">
                 {fmt(r.key)} – {fmt(r.key + step)}
+                {ifNeeded && <span className="slot-tag">If needed</span>}
               </span>
               {othersTotal > 0 && (
                 <span className="slot-others">

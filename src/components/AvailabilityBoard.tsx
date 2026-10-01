@@ -11,7 +11,10 @@ interface Props {
   weekdayOnly?: boolean;
   /** The current viewer's own selection (editable). */
   selected: Set<number>;
-  onChange: (next: Set<number>) => void;
+  /** New "free" set, plus the new "if needed" set when `maybe` is used. */
+  onChange: (next: Set<number>, nextMaybe?: Set<number>) => void;
+  /** The viewer's "if needed" slots. Omit to offer only free/busy. */
+  maybe?: Set<number>;
   /** Whether the viewer can mark their own times. */
   editable: boolean;
   /** Everyone who has responded (from Firestore). */
@@ -55,26 +58,29 @@ export default function AvailabilityBoard({
   paintOnly,
   onFocusSlot,
   focusMs,
+  maybe,
 }: Props) {
   const [mode, setMode] = useState<"paint" | "group">(
     editable ? defaultMode ?? "paint" : "group"
   );
   const [ownFocus, setOwnFocus] = useState<number | null>(null);
+  const [brush, setBrush] = useState<"yes" | "maybe">("yes");
   const view = editable ? (paintOnly ? "paint" : mode) : "group";
 
   const { statsByMs, total, othersFree, othersTotal } = useMemo(() => {
     // Everyone except the viewer's stored copy — the viewer is represented by
     // their live `selected` set instead, so unsaved edits show up right away.
     const others = participants.filter((p) => p.id !== myId);
-    const meResponded = selected.size > 0 || participants.some((p) => p.id === myId);
+    const meResponded =
+      selected.size > 0 || (maybe?.size ?? 0) > 0 || participants.some((p) => p.id === myId);
 
     const stats = new Map<number, SlotStat>();
     const free = new Map<number, number>();
     for (const ms of slots) {
-      stats.set(ms, { count: 0, available: [] });
+      stats.set(ms, { count: 0, available: [], maybe: [] });
       free.set(ms, 0);
     }
-    for (const p of others)
+    for (const p of others) {
       for (const ms of p.selectedSlots) {
         const s = stats.get(ms);
         if (s) {
@@ -83,7 +89,9 @@ export default function AvailabilityBoard({
           free.set(ms, (free.get(ms) ?? 0) + 1);
         }
       }
-    if (meResponded)
+      for (const ms of p.maybeSlots ?? []) stats.get(ms)?.maybe!.push(p.id);
+    }
+    if (meResponded) {
       for (const ms of selected) {
         const s = stats.get(ms);
         if (s) {
@@ -91,13 +99,15 @@ export default function AvailabilityBoard({
           s.count++;
         }
       }
+      for (const ms of maybe ?? []) stats.get(ms)?.maybe!.push(ME);
+    }
     return {
       statsByMs: stats,
       total: others.length + (meResponded ? 1 : 0),
       othersFree: free,
       othersTotal: others.length,
     };
-  }, [participants, myId, selected, slots]);
+  }, [participants, myId, selected, maybe, slots]);
 
   const ghost = useMemo(() => {
     const m = new Map<number, number>();
@@ -155,6 +165,12 @@ export default function AvailabilityBoard({
           <div className="legend">
             <span className="swatch swatch-me" />
             You're free
+            {maybe && (
+              <>
+                <span className="swatch swatch-maybe" />
+                If needed
+              </>
+            )}
             {othersTotal > 0 && (
               <>
                 <span className="swatch swatch-ghost" />
@@ -179,6 +195,34 @@ export default function AvailabilityBoard({
         <p className={`board-hint${view === "paint" ? " only-wide" : ""}`}>{hint}</p>
       )}
 
+      {view === "paint" && maybe && (
+        <div className="brush-row only-wide">
+          <span>Paint as</span>
+          <div className="seg seg-sm" role="group" aria-label="Paint as">
+            <button
+              type="button"
+              className={brush === "yes" ? "active" : ""}
+              aria-pressed={brush === "yes"}
+              onClick={() => setBrush("yes")}
+            >
+              <span className="swatch swatch-me" /> Free
+            </button>
+            <button
+              type="button"
+              className={brush === "maybe" ? "active" : ""}
+              aria-pressed={brush === "maybe"}
+              onClick={() => setBrush("maybe")}
+            >
+              <span className="swatch swatch-maybe" /> If needed
+            </button>
+          </div>
+          <span className="muted small">
+            “If needed” means possible but not ideal. It's used only when no time
+            works for everyone.
+          </span>
+        </div>
+      )}
+
       {view === "paint" ? (
         <>
           <div className="only-wide">
@@ -189,6 +233,8 @@ export default function AvailabilityBoard({
               selected={selected}
               onChange={onChange}
               ghost={othersTotal > 0 ? ghost : undefined}
+              maybe={maybe}
+              brush={brush}
             />
           </div>
           <div className="only-narrow">
@@ -200,6 +246,7 @@ export default function AvailabilityBoard({
               onChange={onChange}
               othersFree={othersFree}
               othersTotal={othersTotal}
+              maybe={maybe}
             />
           </div>
         </>
@@ -223,6 +270,10 @@ export default function AvailabilityBoard({
                     focusStat.available.length
                       ? `${focusStat.available.map(nameOfWithMe).join(", ")} free`
                       : "nobody free"
+                  }${
+                    focusStat.maybe?.length
+                      ? ` · if needed: ${focusStat.maybe.map(nameOfWithMe).join(", ")}`
+                      : ""
                   }`
                 : "Hover or tap the grid to see who is free at any time."}
             </div>

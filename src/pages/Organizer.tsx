@@ -27,6 +27,8 @@ import { newParticipantId } from "../lib/ids";
 import { computeSchedule, type Session } from "../lib/overlap";
 import { formatRange, tzInfo } from "../lib/slots";
 import { commonWindows } from "../lib/best";
+import { sessionAt } from "../lib/finalized";
+import { windowComfort } from "../lib/comfort";
 import { avatarColor, initial } from "../lib/avatar";
 import { isFirebaseConfigured } from "../firebase";
 import { useAuthState } from "../lib/useAuthState";
@@ -41,31 +43,6 @@ const DURATIONS = [
   { min: 90, label: "1.5 hr" },
   { min: 120, label: "2 hr" },
 ];
-
-/** Rebuild a Session for a saved start time (e.g. a finalized poll on reload). */
-function sessionAt(
-  startMs: number,
-  durationMin: number,
-  meta: PollMeta,
-  participants: Participant[]
-): Session {
-  const step = meta.granularityMin * 60_000;
-  const endMs = startMs + durationMin * 60_000;
-  const covered: number[] = [];
-  for (let t = startMs; t < endMs; t += step) covered.push(t);
-  const freeIds = participants
-    .filter((p) => covered.every((ms) => p.selectedSlots.includes(ms)))
-    .map((p) => p.id);
-  return {
-    startMs,
-    endMs,
-    slotCount: covered.length,
-    count: freeIds.length,
-    freeIds,
-    missing: participants.map((p) => p.id).filter((id) => !freeIds.includes(id)),
-    blockId: 0,
-  };
-}
 
 /** Setup progress shown beside the organizer's "my times" view. */
 function SetupRail({ hasMine, onDashboard }: { hasMine: boolean; onDashboard: () => void }) {
@@ -154,6 +131,7 @@ function Organizer() {
   const stored = useMemo(() => loadParticipant(pollId), [pollId]);
   const [myId, setMyId] = useState(stored?.id ?? "");
   const [mySelected, setMySelected] = useState<Set<number>>(new Set());
+  const [myMaybe, setMyMaybe] = useState<Set<number>>(new Set());
   const [availDirty, setAvailDirty] = useState(false);
   const [savingAvail, setSavingAvail] = useState(false);
   const availInited = useRef(false);
@@ -199,6 +177,7 @@ function Organizer() {
     const mine = participants.find((p) => p.id === myId);
     if (mine) {
       setMySelected(new Set(mine.selectedSlots));
+      setMyMaybe(new Set(mine.maybeSlots ?? []));
       availInited.current = true;
     }
   }, [participants, myId]);
@@ -229,6 +208,7 @@ function Organizer() {
         tz: meta.organizerTz,
         ownerUid: uid,
         selectedSlots: [...mySelected],
+        maybeSlots: [...myMaybe],
         updatedAt: Date.now(),
       });
       setMyId(id);
@@ -246,7 +226,7 @@ function Organizer() {
     const t = window.setTimeout(() => void saveMyAvailability(), 800);
     return () => window.clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [availDirty, mySelected]);
+  }, [availDirty, mySelected, myMaybe]);
 
   const nameById = useMemo(() => {
     const m = new Map<string, string>();
@@ -268,7 +248,12 @@ function Organizer() {
     return computeSchedule({
       slots: meta.slots,
       granularityMin: meta.granularityMin,
-      participants: participants.map((p) => ({ id: p.id, selectedSlots: p.selectedSlots })),
+      participants: participants.map((p) => ({
+        id: p.id,
+        selectedSlots: p.selectedSlots,
+        maybeSlots: p.maybeSlots,
+        tz: p.tz,
+      })),
       durationMin,
       sessionsPerWeek,
     });
@@ -536,8 +521,10 @@ function Organizer() {
               <ScheduleFill
                 slots={meta.slots}
                 selected={mySelected}
-                onFill={(next) => {
+                maybe={myMaybe}
+                onFill={(next, nextMaybe) => {
                   setMySelected(next);
+                  setMyMaybe(nextMaybe);
                   setAvailDirty(true);
                 }}
               />
@@ -547,9 +534,11 @@ function Organizer() {
               tz={meta.organizerTz}
               weekdayOnly={meta.dateMode === "weekly"}
               selected={mySelected}
-              onChange={(next) => {
+              maybe={myMaybe}
+              onChange={(next, nextMaybe) => {
                 if (!canEdit) return;
                 setMySelected(next);
+                if (nextMaybe) setMyMaybe(nextMaybe);
                 setAvailDirty(true);
               }}
               editable={canEdit}
@@ -741,12 +730,17 @@ function Organizer() {
                           {g.windows.map((w) => {
                             const on = picks.includes(w.startMs);
                             const locked = lockedStarts.has(w.startMs);
+                            // Who would be up at night for this slot?
+                            const night = participants
+                              .filter((p) => windowComfort(w.startMs, w.endMs, p.tz) === "night")
+                              .map((p) => p.codename);
                             return (
                               <button
                                 type="button"
                                 key={w.startMs}
                                 className={`chip time-chip${on ? " on" : ""}${locked ? " locked" : ""}`}
                                 aria-pressed={on}
+                                title={night.length ? `Late night for ${night.join(", ")}` : undefined}
                                 onClick={() =>
                                   setPicks((p) =>
                                     p.includes(w.startMs)
@@ -761,6 +755,12 @@ function Organizer() {
                               >
                                 {(on || locked) && <Icon name="check" size={14} />}
                                 {shortRange(w)}
+                                {night.length > 0 && (
+                                  <span className="chip-night-mark" aria-label={`late night for ${night.join(", ")}`}>
+                                    <Icon name="moon" size={12} />
+                                    {night.length > 1 ? night.length : ""}
+                                  </span>
+                                )}
                               </button>
                             );
                           })}

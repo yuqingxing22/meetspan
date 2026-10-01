@@ -72,6 +72,7 @@ const PATHS = {
       <path d="M14 14h3v3h-3zM20 14v.01M14 20h.01M17 20h4v-3" />
     </>
   ),
+  moon: <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z" />,
   download: <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" />,
 } as const;
 

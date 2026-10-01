@@ -7,9 +7,17 @@ interface Props {
   /** Show weekday-only column labels (Mon/Wed) instead of dated ones. */
   weekdayOnly?: boolean;
   selected: Set<number>;
-  onChange: (next: Set<number>) => void;
+  /**
+   * Called with the new "free" set — and, when `maybe` is given, the new
+   * "if needed" set as well.
+   */
+  onChange: (next: Set<number>, nextMaybe?: Set<number>) => void;
   /** Faint background level 0–5 per slot (how many others are free). */
   ghost?: Map<number, number>;
+  /** "If needed" slots. Omit to paint plain free/busy. */
+  maybe?: Set<number>;
+  /** Which mark painting applies when `maybe` is used. */
+  brush?: "yes" | "maybe";
 }
 
 /**
@@ -23,21 +31,45 @@ export default function AvailabilityGrid({
   selected,
   onChange,
   ghost,
+  maybe,
+  brush = "yes",
 }: Props) {
   const model = buildGridModel(slots, tz, { weekdayOnly });
   const dragging = useRef(false);
   const mode = useRef<"add" | "remove">("add");
   const working = useRef<Set<number>>(selected);
+  const workingMaybe = useRef<Set<number> | undefined>(maybe);
   working.current = selected;
+  workingMaybe.current = maybe;
 
   function apply(ms: number) {
-    const next = new Set(working.current);
-    if (mode.current === "add") next.add(ms);
-    else next.delete(ms);
-    if (next.size !== working.current.size) {
-      working.current = next;
-      onChange(next);
+    const yes = working.current;
+    const may = workingMaybe.current;
+    if (!may) {
+      const next = new Set(yes);
+      if (mode.current === "add") next.add(ms);
+      else next.delete(ms);
+      if (next.size !== yes.size) {
+        working.current = next;
+        onChange(next);
+      }
+      return;
     }
+    // Two marks: painting one removes the other from that slot.
+    const target = brush === "maybe" ? may : yes;
+    const other = brush === "maybe" ? yes : may;
+    const nextTarget = new Set(target);
+    const nextOther = new Set(other);
+    if (mode.current === "add") {
+      nextTarget.add(ms);
+      nextOther.delete(ms);
+    } else nextTarget.delete(ms);
+    if (nextTarget.size === target.size && nextOther.size === other.size) return;
+    const nextYes = brush === "maybe" ? nextOther : nextTarget;
+    const nextMaybe = brush === "maybe" ? nextTarget : nextOther;
+    working.current = nextYes;
+    workingMaybe.current = nextMaybe;
+    onChange(nextYes, nextMaybe);
   }
 
   function slotAtPoint(x: number, y: number): number | null {
@@ -52,7 +84,8 @@ export default function AvailabilityGrid({
     const ms = slotAtPoint(e.clientX, e.clientY);
     if (ms === null) return;
     dragging.current = true;
-    mode.current = selected.has(ms) ? "remove" : "add";
+    const target = maybe && brush === "maybe" ? maybe : selected;
+    mode.current = target.has(ms) ? "remove" : "add";
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     apply(ms);
     e.preventDefault();
@@ -103,6 +136,7 @@ export default function AvailabilityGrid({
             cells={model.cells}
             selected={selected}
             ghost={ghost}
+            maybe={maybe}
           />
         ))}
         <div className="grid-time-end">
@@ -123,6 +157,7 @@ function RowFragment({
   cells,
   selected,
   ghost,
+  maybe,
 }: {
   rowKey: number;
   rowLabel: string;
@@ -133,6 +168,7 @@ function RowFragment({
   cells: Map<string, number>;
   selected: Set<number>;
   ghost?: Map<number, number>;
+  maybe?: Set<number>;
 }) {
   return (
     <>
@@ -153,7 +189,13 @@ function RowFragment({
             key={c.key}
             data-slot={ms}
             className={`cell${
-              selected.has(ms) ? " sel" : ghost ? ` g${ghost.get(ms) ?? 0}` : ""
+              selected.has(ms)
+                ? " sel"
+                : maybe?.has(ms)
+                ? " maybe"
+                : ghost
+                ? ` g${ghost.get(ms) ?? 0}`
+                : ""
             }${edge}`}
           />
         );

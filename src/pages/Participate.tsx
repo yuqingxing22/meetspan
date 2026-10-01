@@ -4,6 +4,7 @@ import { DateTime } from "luxon";
 import AvailabilityBoard from "../components/AvailabilityBoard";
 import TimezonePicker from "../components/TimezonePicker";
 import ScheduleFill from "../components/ScheduleFill";
+import Icon from "../components/Icon";
 import { detectTz, formatRange, formatSlot, tzInfo } from "../lib/slots";
 import {
   setParticipantEmail,
@@ -15,6 +16,9 @@ import { loadParticipant, saveParticipant } from "../lib/adminStore";
 import { newParticipantId } from "../lib/ids";
 import { bestWindow } from "../lib/best";
 import { avatarColor, initial } from "../lib/avatar";
+import { comfortLabel, windowComfort } from "../lib/comfort";
+import { finalizedSessions } from "../lib/finalized";
+import { buildICS, downloadICS, googleCalendarLink } from "../lib/ics";
 import { isFirebaseConfigured } from "../firebase";
 import { useAuthState } from "../lib/useAuthState";
 import { useMySchedule } from "../lib/useMySchedule";
@@ -42,6 +46,7 @@ function Participate() {
   const [email, setEmail] = useState(stored?.email ?? "");
   const [tz, setTz] = useState(stored?.tz ?? detectTz());
   const [selected, setSelected] = useState<Set<number>>(new Set());
+  const [maybe, setMaybe] = useState<Set<number>>(new Set());
   const [dirty, setDirty] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>(stored ? "saved" : "idle");
   const [focusMs, setFocusMs] = useState<number | null>(null);
@@ -74,6 +79,7 @@ function Participate() {
     const mine = participants.find((p) => p.id === pid);
     if (mine) {
       setSelected(new Set(mine.selectedSlots));
+      setMaybe(new Set(mine.maybeSlots ?? []));
       inited.current = true;
     }
   }, [participants, pid]);
@@ -97,6 +103,7 @@ function Participate() {
         tz,
         ownerUid: uid,
         selectedSlots: [...selected],
+        maybeSlots: [...maybe],
         updatedAt: Date.now(),
       });
       const key = `${mail}|${name}`;
@@ -117,11 +124,11 @@ function Participate() {
     const t = window.setTimeout(() => void save(), 800);
     return () => window.clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [dirty, selected, codename, tz, email, uid, closed]);
+  }, [dirty, selected, maybe, codename, tz, email, uid, closed]);
 
   const nameOf = (id: string) => participants.find((p) => p.id === id)?.codename ?? "someone";
   const others = participants.filter((p) => p.id !== pid);
-  const meIn = selected.size > 0 || participants.some((p) => p.id === pid);
+  const meIn = selected.size > 0 || maybe.size > 0 || participants.some((p) => p.id === pid);
   const meName = codename.trim() || "You";
 
   // Everyone, with the viewer's live selection standing in for their saved copy.
@@ -131,11 +138,13 @@ function Participate() {
       name: p.codename,
       tz: p.tz,
       slots: new Set(p.selectedSlots),
+      maybe: new Set(p.maybeSlots ?? []),
       isMe: false,
     }));
-    if (meIn) list.push({ id: pid || "me", name: `${meName} (you)`, tz, slots: selected, isMe: true });
+    if (meIn)
+      list.push({ id: pid || "me", name: `${meName} (you)`, tz, slots: selected, maybe, isMe: true });
     return list;
-  }, [others, meIn, pid, meName, tz, selected]);
+  }, [others, meIn, pid, meName, tz, selected, maybe]);
 
   const best = useMemo(() => {
     if (!meta) return null;
@@ -186,6 +195,8 @@ function Participate() {
       ? DateTime.fromISO(meta.dates[0]).toFormat("cccc, LLL d")
       : "";
   const respondedCount = others.length + (meIn ? 1 : 0);
+  const finalSessions = finalizedSessions(meta, participants);
+  const finalTitle = meta.finalized?.meetingName || meta.title || "Meeting";
 
   let status: { text: string; tone: string } = { text: "Mark your free times below", tone: "idle" };
   if (saveState === "error") status = { text: "Couldn't save", tone: "warn" };
@@ -212,7 +223,68 @@ function Participate() {
         </p>
       </div>
 
-      {closed && (
+      {finalSessions.length > 0 && (
+        <div className="locked-banner final-card">
+          <span className="locked-icon">
+            <Icon name="check" size={18} strokeWidth={2.6} />
+          </span>
+          <div className="locked-text">
+            <div className="final-eyebrow">The time is set</div>
+            {finalSessions.map((s) => (
+              <div key={s.startMs} className="locked-title">
+                {formatRange(s.startMs, s.endMs, tz)}
+              </div>
+            ))}
+            <div className="locked-sub">
+              {finalTitle} · in your timezone
+              {meta.dateMode === "weekly" ? " · repeats every week" : ""}
+            </div>
+          </div>
+          <div className="btn-row final-actions">
+            {finalSessions.map((s, i) => (
+              <a
+                key={s.startMs}
+                className="btn btn-on-dark"
+                href={googleCalendarLink(
+                  finalTitle,
+                  s.startMs,
+                  s.endMs,
+                  `Scheduled with MeetSpan${meta.organizerName ? ` by ${meta.organizerName}` : ""}.`,
+                  meta.dateMode === "weekly"
+                )}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Icon name="calendar" />
+                {finalSessions.length > 1 ? `Google Calendar · ${i + 1}` : "Add to Google Calendar"}
+              </a>
+            ))}
+            <button
+              type="button"
+              className="btn btn-ghost-dark"
+              onClick={() =>
+                downloadICS(
+                  `${finalTitle.replace(/[^\w-]+/g, "-").replace(/^-+|-+$/g, "").toLowerCase() || "meeting"}.ics`,
+                  buildICS(
+                    {
+                      meta,
+                      meetingName: finalTitle,
+                      sessions: finalSessions,
+                      participants,
+                      recurring: meta.dateMode === "weekly",
+                    },
+                    Date.now()
+                  )
+                )
+              }
+            >
+              <Icon name="download" /> .ics
+            </button>
+          </div>
+        </div>
+      )}
+
+      {closed && finalSessions.length === 0 && (
         <div className="notice notice-warn">
           This poll is closed, so your times are read-only now.
         </div>
@@ -261,8 +333,10 @@ function Participate() {
             <ScheduleFill
               slots={meta.slots}
               selected={selected}
-              onFill={(next) => {
+              maybe={maybe}
+              onFill={(next, nextMaybe) => {
                 setSelected(next);
+                setMaybe(nextMaybe);
                 setDirty(true);
               }}
             />
@@ -272,9 +346,11 @@ function Participate() {
             tz={tz}
             weekdayOnly={meta.dateMode === "weekly"}
             selected={selected}
-            onChange={(next) => {
+            maybe={maybe}
+            onChange={(next, nextMaybe) => {
               if (closed) return;
               setSelected(next);
+              if (nextMaybe) setMaybe(nextMaybe);
               setDirty(true);
             }}
             editable={!closed}
@@ -297,8 +373,10 @@ function Participate() {
               <ul className="people">
                 {everyone.map((p) => {
                   const free = p.slots.has(focusMs);
+                  const ifNeeded = !free && p.maybe.has(focusMs);
                   const local = DateTime.fromMillis(focusMs, { zone: p.tz });
                   const sameZone = p.tz === tz;
+                  const comfort = windowComfort(focusMs, focusMs + 30 * 60_000, p.tz);
                   return (
                     <li key={p.id}>
                       <span className="avatar" style={{ background: p.isMe ? "#14151A" : avatarColor(p.id) }}>
@@ -310,10 +388,16 @@ function Participate() {
                           {sameZone
                             ? "Same timezone as you"
                             : `${local.toFormat("h:mm a ccc")} in ${tzInfo(p.tz).city}`}
+                          {comfort !== "day" && (
+                            <span className={`comfort comfort-${comfort}`}>
+                              {comfort === "night" && <Icon name="moon" size={12} />}
+                              {comfortLabel(focusMs, p.tz, comfort)}
+                            </span>
+                          )}
                         </span>
                       </span>
-                      <span className={`badge ${free ? "badge-ok" : "badge-muted"}`}>
-                        {free ? "Free" : "Busy"}
+                      <span className={`badge ${free ? "badge-ok" : ifNeeded ? "badge-brand" : "badge-muted"}`}>
+                        {free ? "Free" : ifNeeded ? "If needed" : "Busy"}
                       </span>
                     </li>
                   );

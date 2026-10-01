@@ -82,6 +82,27 @@ export function buildICS(input: IcsInput, nowMs: number): string {
   return lines.join("\r\n");
 }
 
+/**
+ * A Google Calendar "add event" link for one session — opens a prefilled event
+ * in the viewer's own calendar (and timezone). Weekly polls repeat weekly.
+ */
+export function googleCalendarLink(
+  title: string,
+  startMs: number,
+  endMs: number,
+  details: string,
+  weekly: boolean
+): string {
+  const q = new URLSearchParams({
+    action: "TEMPLATE",
+    text: title,
+    dates: `${stamp(startMs)}/${stamp(endMs)}`,
+    details,
+  });
+  if (weekly) q.set("recur", "RRULE:FREQ=WEEKLY");
+  return `https://calendar.google.com/calendar/render?${q.toString()}`;
+}
+
 /** Trigger a browser download of an .ics file. */
 export function downloadICS(filename: string, ics: string): void {
   const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
