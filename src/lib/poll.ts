@@ -3,9 +3,12 @@ import {
   deleteDoc,
   doc,
   getDoc,
+  getDocs,
   onSnapshot,
+  query,
   setDoc,
   updateDoc,
+  where,
 } from "firebase/firestore";
 import { db } from "../firebase";
 import { hashToken } from "./ids";
@@ -33,6 +36,18 @@ export async function createPoll(pollId: string, meta: PollMeta): Promise<void> 
 export async function getPoll(pollId: string): Promise<PollMeta | null> {
   const snap = await getDoc(pollRef(pollId));
   return snap.exists() ? (snap.data() as PollMeta) : null;
+}
+
+/** Polls this uid created (any device), newest first. */
+export async function listPollsByOrganizer(
+  uid: string
+): Promise<{ pollId: string; meta: PollMeta }[]> {
+  const snap = await getDocs(
+    query(collection(db(), "polls"), where("organizerUid", "==", uid))
+  );
+  return snap.docs
+    .map((d) => ({ pollId: d.id, meta: d.data() as PollMeta }))
+    .sort((a, b) => b.meta.createdAt - a.meta.createdAt);
 }
 
 /** Live subscription to the poll document. Returns an unsubscribe fn. */

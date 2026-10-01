@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { DateTime } from "luxon";
 import TimezonePicker from "../components/TimezonePicker";
@@ -10,7 +10,7 @@ import {
   nextDatesForWeekdays,
 } from "../lib/slots";
 import { hashToken, newAdminToken, newPollId } from "../lib/ids";
-import { createPoll } from "../lib/poll";
+import { createPoll, listPollsByOrganizer } from "../lib/poll";
 import {
   addMyPoll,
   listMyPolls,
@@ -64,7 +64,43 @@ export default function Home() {
   const [startHour, setStartHour] = useState(9);
   const [endHour, setEndHour] = useState(17);
   const [busy, setBusy] = useState(false);
-  const [myPolls, setMyPolls] = useState<MyPoll[]>(listMyPolls());
+  const [localPolls, setLocalPolls] = useState<MyPoll[]>(listMyPolls());
+  // Polls tied to this account (uid) on the server: they show up on any device
+  // where the same Google account is signed in.
+  const [cloudPolls, setCloudPolls] = useState<MyPoll[]>([]);
+
+  useEffect(() => {
+    if (!isFirebaseConfigured || !uid) return;
+    let alive = true;
+    listPollsByOrganizer(uid)
+      .then((list) => {
+        if (!alive) return;
+        setCloudPolls(
+          list.map(({ pollId, meta }) => ({
+            pollId,
+            token: "",
+            title: meta.title,
+            createdAt: meta.createdAt,
+          }))
+        );
+      })
+      .catch((e) => console.error("Couldn't load your polls", e));
+    return () => {
+      alive = false;
+    };
+  }, [uid]);
+
+  const cloudIds = useMemo(
+    () => new Set(cloudPolls.map((p) => p.pollId)),
+    [cloudPolls]
+  );
+  // Local entries carry the admin token; cloud-only ones are opened by uid.
+  const myPolls = useMemo(() => {
+    const byId = new Map<string, MyPoll>();
+    cloudPolls.forEach((p) => byId.set(p.pollId, p));
+    localPolls.forEach((p) => byId.set(p.pollId, p));
+    return [...byId.values()].sort((a, b) => b.createdAt - a.createdAt);
+  }, [cloudPolls, localPolls]);
 
   const [created, setCreated] = useState<{
     pollId: string;
@@ -73,7 +109,7 @@ export default function Home() {
 
   function forgetPoll(pollId: string) {
     removeMyPoll(pollId);
-    setMyPolls(listMyPolls());
+    setLocalPolls(listMyPolls());
   }
 
   const rangeDates = useMemo(() => {
@@ -258,14 +294,16 @@ export default function Home() {
         <div className="card">
           <h2>Your polls</h2>
           <p className="hint">
-            Polls you created in this browser. Click to manage — no link needed.
+            Polls you created, on this browser or under your account. Click to manage — no link needed.
           </p>
           <div className="mypolls">
             {myPolls.map((p) => (
               <div key={p.pollId} className="mypoll">
                 <button
                   className="mypoll-open"
-                  onClick={() => nav(`/o/${p.pollId}?k=${p.token}`)}
+                  onClick={() =>
+                    nav(p.token ? `/o/${p.pollId}?k=${p.token}` : `/o/${p.pollId}`)
+                  }
                 >
                   <span className="mypoll-title">
                     {p.title || "Untitled poll"}
@@ -274,13 +312,15 @@ export default function Home() {
                     {DateTime.fromMillis(p.createdAt).toFormat("LLL d, yyyy")}
                   </span>
                 </button>
-                <button
-                  className="mypoll-forget"
-                  title="Remove from this list (doesn't delete the poll)"
-                  onClick={() => forgetPoll(p.pollId)}
-                >
-                  ✕
-                </button>
+                {!cloudIds.has(p.pollId) && (
+                  <button
+                    className="mypoll-forget"
+                    title="Remove from this list (doesn't delete the poll)"
+                    onClick={() => forgetPoll(p.pollId)}
+                  >
+                    ✕
+                  </button>
+                )}
               </div>
             ))}
           </div>

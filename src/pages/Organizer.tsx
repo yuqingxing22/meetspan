@@ -85,13 +85,17 @@ export default function Organizer() {
   useEffect(() => {
     if (!meta) return;
     let alive = true;
-    verifyAdmin(meta, token).then((ok) => alive && setIsAdmin(ok));
+    // The poll's creator (same uid, e.g. signed in with Google on another
+    // device) is the organizer even without the secret link.
+    verifyAdmin(meta, token).then(
+      (ok) => alive && setIsAdmin(ok || (!!uid && meta.organizerUid === uid))
+    );
     if (meta.title && !meetingName) setMeetingName(meta.title);
     return () => {
       alive = false;
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [meta, token]);
+  }, [meta, token, uid]);
 
   const nameById = useMemo(() => {
     const m = new Map<string, string>();
