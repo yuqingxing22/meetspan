@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Mark your times on a phone</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+a{color:#4F46E5}a:hover{color:#3730A3}
+button{font:inherit}
+button:focus-visible{outline:2px solid #4F46E5;outline-offset:2px}
+</style>
+</helmet>
+<div style="width: 390px; height: 844px; box-sizing: border-box; display: flex; flex-direction: column; background: #F6F6F8; font-family: 'Geist', ui-sans-serif, system-ui, sans-serif; color: #14151A; -webkit-font-smoothing: antialiased; overflow: hidden">
+
+<div style="flex: none; padding: 20px 18px 14px; background: #FFFFFF; border-bottom: 1px solid #ECEDF1">
+<div style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #5B5F6B">
+<span style="width: 22px; height: 22px; border-radius: 999px; background: #4F46E5; color: #FFFFFF; font-size: 11px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center">K</span>
+<span><b style="font-weight: 600; color: #14151A">Kyra</b> invited you</span>
+</div>
+<h1 style="margin: 8px 0 4px; font-size: 24px; line-height: 1.2; letter-spacing: -0.02em; font-weight: 700">Weekly research sync</h1>
+<div style="display: flex; align-items: center; gap: 6px; font-size: 13px; color: #5B5F6B">
+<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#4F46E5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="M2 12h20"></path><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+<span>Your time: Los Angeles (PDT)</span>
+<button type="button" style="border: none; background: none; padding: 0 2px; color: #4F46E5; font-size: 13px; font-weight: 500; cursor: pointer">Change</button>
+</div>
+
+<sc-if value="{{notDone}}" hint-placeholder-val="{{ true }}">
+<div style="display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px; margin-top: 14px">
+<sc-for list="{{tabs}}" as="t" hint-placeholder-count="5">
+<button type="button" onClick="{{t.pick}}" aria-pressed="{{t.pressed}}" style="{{t.style}}">
+<span style="display: block; font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.04em; opacity: 0.8">{{t.dow}}</span>
+<span style="display: block; font-size: 17px; font-weight: 600; line-height: 1.2">{{t.dom}}</span>
+<span style="{{t.dotStyle}}"></span>
+</button>
+</sc-for>
+</div>
+</sc-if>
+</div>
+
+<sc-if value="{{done}}" hint-placeholder-val="{{ false }}">
+<div style="flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px 28px 40px; text-align: center">
+<img src="/_blob/1534f4a3566b5f29ef57f54dc72c4d2b" alt="" style="width: 200px; height: auto">
+<h2 style="margin: 28px 0 8px; font-size: 24px; font-weight: 700; letter-spacing: -0.02em">You're all set</h2>
+<p style="margin: 0; font-size: 15px; line-height: 1.5; color: #5B5F6B">You marked {{totalHours}} across {{daysMarked}}. Kyra will pick a time and let everyone know.</p>
+<p style="margin: 10px 0 0; font-size: 14px; line-height: 1.5; color: #5B5F6B">Plans changed? Open this same link again to update your times.</p>
+<button type="button" onClick="{{editAgain}}" style="margin-top: 24px; width: 100%; height: 48px; border-radius: 12px; border: 1px solid #DCDEE4; background: #FFFFFF; color: #14151A; font-size: 15px; font-weight: 600; cursor: pointer">Edit my times</button>
+<a href="Main.dc.html" style="margin-top: 14px; font-size: 14px; font-weight: 500; color: #4F46E5; text-decoration: none">Create your own poll</a>
+</div>
+</sc-if>
+
+<sc-if value="{{notDone}}" hint-placeholder-val="{{ true }}">
+<div style="flex: 1 1 auto; overflow-y: auto; padding: 12px 14px 16px">
+<div style="display: flex; justify-content: space-between; align-items: center; padding: 0 4px 8px; font-size: 12px; color: #5B5F6B">
+<span>Tap the times you're free</span>
+<span>Others free</span>
+</div>
+<div style="display: flex; flex-direction: column; gap: 6px">
+<sc-for list="{{rows}}" as="row" hint-placeholder-count="16">
+<button type="button" onClick="{{row.toggle}}" aria-pressed="{{row.pressed}}" aria-label="{{row.aria}}" style="{{row.style}}">
+<span style="{{row.check}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+<span style="flex: 1 1 auto; text-align: left; font-size: 15px; font-weight: 500; font-variant-numeric: tabular-nums">{{row.time}}</span>
+<span style="display: inline-flex; align-items: center; gap: 6px">
+<span style="width: 48px; height: 6px; border-radius: 999px; background: #E6E7EC; overflow: hidden; display: inline-block"><span style="{{row.bar}}"></span></span>
+<span style="{{row.countStyle}}">{{row.count}}</span>
+</span>
+</button>
+</sc-for>
+</div>
+</div>
+
+<div style="flex: none; display: flex; align-items: center; gap: 10px; padding: 12px 16px 26px; background: #FFFFFF; border-top: 1px solid #ECEDF1">
+<div style="flex: 1 1 auto; min-width: 0">
+<div style="{{statusStyle}}"><span style="{{statusDot}}"></span>{{statusText}}</div>
+<div style="margin-top: 2px; font-size: 12px; color: #5B5F6B">{{summary}}</div>
+</div>
+<button type="button" onClick="{{nextDay}}" style="flex: none; height: 46px; padding: 0 18px; border-radius: 12px; border: none; background: #4F46E5; color: #FFFFFF; font-size: 15px; font-weight: 600; cursor: pointer">{{nextLabel}}</button>
+</div>
+</sc-if>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":390,"height":844}}'>
+var DAYS = [
+  { dow: 'Mon', dom: 12, long: 'Mon, Oct 12' }, { dow: 'Tue', dom: 13, long: 'Tue, Oct 13' },
+  { dow: 'Wed', dom: 14, long: 'Wed, Oct 14' }, { dow: 'Thu', dom: 15, long: 'Thu, Oct 15' },
+  { dow: 'Fri', dom: 16, long: 'Fri, Oct 16' }
+];
+var ROWS = 16;
+var IDS = ['kyra', 'alex', 'mei', 'jordan', 'priya'];
+function free(id, d, r) {
+  switch (id) {
+    case 'kyra': return (d !== 4 && r <= 7) || (d === 1 && r >= 10);
+    case 'alex': return d <= 3 && r <= 2;
+    case 'mei': return (d === 2 && r <= 1) || (d >= 1 && d <= 3 && r >= 14);
+    case 'jordan': return ((d === 0 || d === 2 || d === 4) && r <= 9) || ((d === 1 || d === 3) && r >= 4 && r <= 12);
+    case 'priya': return (d <= 2 && r <= 1) || (d === 2 && r === 2);
+  }
+  return false;
+}
+function clock(totalMin) {
+  var m = ((totalMin % 1440) + 1440) % 1440;
+  var h = Math.floor(m / 60), mm = m % 60;
+  var hh = h % 12 === 0 ? 12 : h % 12;
+  return hh + ':' + (mm < 10 ? '0' : '') + mm + ' ' + (h < 12 ? 'AM' : 'PM');
+}
+
+class Component extends DCLogic {
+  state = { day: 2, sel: { 200: true, 201: true }, save: 'saved' };
+
+  componentWillUnmount() { clearTimeout(this.saveTimer); }
+
+  toggle(d, r) {
+    var sel = Object.assign({}, this.state.sel);
+    var k = d * 100 + r;
+    if (sel[k]) delete sel[k]; else sel[k] = true;
+    this.setState({ sel: sel, save: 'saving' });
+    clearTimeout(this.saveTimer);
+    this.saveTimer = setTimeout(() => this.setState({ save: 'saved' }), 600);
+  }
+
+  renderVals() {
+    var s = this.state;
+    var d = s.day;
+    var keys = Object.keys(s.sel).map(Number);
+
+    var tabs = DAYS.map((day, i) => {
+      var on = i === d;
+      var has = keys.some((k) => Math.floor(k / 100) === i);
+      return {
+        dow: day.dow, dom: day.dom, pressed: on ? 'true' : 'false',
+        style: 'position: relative; height: 56px; border-radius: 12px; cursor: pointer; padding: 0; ' + (on ? 'border: none; background: #14151A; color: #FFFFFF;' : 'border: 1px solid #E6E7EC; background: #FFFFFF; color: #14151A;'),
+        dotStyle: 'position: absolute; top: 6px; right: 7px; width: 6px; height: 6px; border-radius: 999px; background: ' + (has ? '#4F46E5' : 'transparent') + ';',
+        pick: () => this.setState({ day: i })
+      };
+    });
+
+    var rows = [];
+    for (var r = 0; r < ROWS; r++) {
+      var mine = !!s.sel[d * 100 + r];
+      var c = IDS.filter((id) => free(id, d, r)).length;
+      rows.push({
+        time: clock(540 + r * 30) + ' – ' + clock(570 + r * 30),
+        pressed: mine ? 'true' : 'false',
+        aria: DAYS[d].long + ', ' + clock(540 + r * 30) + (mine ? ', you are free' : ''),
+        style: 'display: flex; align-items: center; gap: 12px; width: 100%; min-height: 48px; padding: 0 14px; border-radius: 12px; cursor: pointer; ' + (mine ? 'border: 1.5px solid #4F46E5; background: #EEF0FF; color: #14151A;' : 'border: 1px solid #E6E7EC; background: #FFFFFF; color: #14151A;'),
+        check: 'flex: none; width: 22px; height: 22px; border-radius: 7px; display: inline-flex; align-items: center; justify-content: center; ' + (mine ? 'background: #4F46E5; color: #FFFFFF;' : 'background: #FFFFFF; color: transparent; box-shadow: inset 0 0 0 1.5px #C9CCD6;'),
+        bar: 'display: block; height: 100%; border-radius: 999px; background: #8B90F5; width: ' + c * 20 + '%;',
+        count: c + '/5',
+        countStyle: 'width: 26px; text-align: right; font-size: 12px; font-variant-numeric: tabular-nums; color: ' + (c === 5 ? '#2F7A47' : '#5B5F6B') + '; font-weight: ' + (c === 5 ? '600' : '400') + ';',
+        toggle: ((dd, rr) => () => this.toggle(dd, rr))(d, r)
+      });
+    }
+
+    var dayCount = keys.filter((k) => Math.floor(k / 100) === d).length;
+    var saving = s.save === 'saving';
+    var isLast = d === DAYS.length - 1;
+
+    return {
+      tabs: tabs, rows: rows,
+      statusText: saving ? 'Saving…' : 'Saved automatically',
+      statusStyle: 'display: flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: ' + (saving ? '#3730A3' : '#2F7A47') + ';',
+      statusDot: 'width: 8px; height: 8px; border-radius: 999px; background: ' + (saving ? '#4F46E5' : '#2F7A47') + ';',
+      summary: dayCount === 0 ? 'Nothing marked on ' + DAYS[d].dow : (dayCount / 2) + ' hr marked on ' + DAYS[d].dow,
+      nextLabel: isLast ? 'Done' : 'Next day',
+      nextDay: () => { if (isLast) this.setState({ done: true }); else this.setState({ day: d + 1 }); },
+      done: !!s.done, notDone: !s.done,
+      editAgain: () => this.setState({ done: false, day: 0 }),
+      totalHours: (keys.length / 2) + (keys.length === 2 ? ' hour' : ' hours'),
+      daysMarked: (function () { var n = {}; keys.forEach(function (k) { n[Math.floor(k / 100)] = 1; }); var c = Object.keys(n).length; return c + (c === 1 ? ' day' : ' days'); })()
+    };
+  }
+}
+</script>
+</body>
+</html>

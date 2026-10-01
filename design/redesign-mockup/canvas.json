@@ -1,0 +1,18 @@
+{
+  "v": 3,
+  "createdOnFiles": {"v": 1, "at": "2026-10-01T18:00:00Z"},
+  "title": "MeetSpan redesign",
+  "launch": {"view": "canvas"},
+  "pages": [],
+  "boards": {
+    "Main.dc.html": {"x": 0, "y": 0, "w": 1280, "h": 1240, "title": "1 · Create a poll (home)", "expand": "fill", "is_interactive": true},
+    "Participant.dc.html": {"x": 1360, "y": 0, "w": 1280, "h": 940, "title": "2 · Guest: mark your times", "expand": "fill", "is_interactive": true},
+    "Organizer.dc.html": {"x": 0, "y": 1360, "w": 1280, "h": 1000, "title": "3 · Organizer dashboard", "expand": "fill", "is_interactive": true},
+    "Phone.dc.html": {"x": 1360, "y": 1360, "w": 390, "h": 844, "title": "4 · Guest on a phone", "is_interactive": true}
+  },
+  "order": ["Main.dc.html", "Participant.dc.html", "Organizer.dc.html", "Phone.dc.html"],
+  "notes": {
+    "heading": {"x": 0, "y": -300, "text": "MeetSpan redesign · clickable mockup", "kind": "title1", "maxW": 2640}
+  },
+  "designSystems": []
+}

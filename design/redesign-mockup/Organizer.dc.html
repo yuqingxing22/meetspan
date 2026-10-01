@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Organizer dashboard</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0;background:#F6F6F8}
+a{color:#4F46E5}a:hover{color:#3730A3}
+button,input,select{font:inherit}
+button:focus-visible,a:focus-visible{outline:2px solid #4F46E5;outline-offset:2px}
+</style>
+</helmet>
+<div style="min-height: 100vh; background: #F6F6F8; font-family: 'Geist', ui-sans-serif, system-ui, sans-serif; color: #14151A; -webkit-font-smoothing: antialiased">
+
+<header style="display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 16px; padding: 14px 24px; border-bottom: 1px solid #E6E7EC; background: #FFFFFF">
+<div style="display: flex; align-items: center; gap: 10px">
+<img src="/_blob/26a3842bc7696181d1fd21b08f65c1a3" alt="" width="30" height="30" style="display: block; width: 30px; height: 30px; box-sizing: border-box; border-radius: 9px; border: 1px solid #E6E7EC">
+<span style="font-weight: 700; font-size: 17px; letter-spacing: -0.02em">MeetSpan</span>
+</div>
+<div style="display: flex; align-items: center; gap: 12px">
+<a href="Main.dc.html" style="display: inline-flex; align-items: center; gap: 6px; height: 38px; padding: 0 14px; border-radius: 10px; background: #14151A; color: #FFFFFF; text-decoration: none; font-size: 14px; font-weight: 600">New poll</a>
+<div style="display: flex; align-items: center; gap: 8px; padding-left: 12px; border-left: 1px solid #E6E7EC">
+<span style="width: 28px; height: 28px; border-radius: 999px; background: #4F46E5; color: #FFFFFF; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center">K</span>
+<span style="font-size: 14px; font-weight: 500">Kyra</span>
+<button type="button" style="height: 34px; padding: 0 10px; border: none; border-radius: 8px; background: transparent; color: #5B5F6B; font-size: 14px; cursor: pointer">Sign out</button>
+</div>
+</div>
+</header>
+
+<main style="max-width: 1180px; margin: 0 auto; padding: 32px 20px 64px; box-sizing: border-box">
+
+<div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; flex-wrap: wrap; margin-bottom: 20px">
+<div>
+<div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap">
+<h1 style="margin: 0; font-size: 32px; line-height: 1.15; letter-spacing: -0.03em; font-weight: 700">Weekly research sync</h1>
+<span style="{{statusPill}}"><span style="{{statusDot}}"></span>{{statusLabel}}</span>
+</div>
+<p style="margin: 6px 0 0; font-size: 15px; color: #5B5F6B">Mon, Oct 12 – Fri, Oct 16 · 9 AM – 5 PM · Your timezone: Los Angeles (PDT)</p>
+</div>
+<div style="display: flex; gap: 8px; position: relative">
+<button type="button" onClick="{{copyInvite}}" style="{{copyStyle}}">
+<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>{{copyLabel}}
+</button>
+<button type="button" onClick="{{toggleMenu}}" aria-label="More actions" aria-expanded="{{menuExpanded}}" style="width: 40px; height: 40px; border-radius: 10px; border: 1px solid #E6E7EC; background: #FFFFFF; color: #14151A; cursor: pointer; display: flex; align-items: center; justify-content: center">
+<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8"></circle><circle cx="12" cy="12" r="1.8"></circle><circle cx="19" cy="12" r="1.8"></circle></svg>
+</button>
+<sc-if value="{{menuOpen}}" hint-placeholder-val="{{ false }}">
+<div style="position: absolute; right: 0; top: 46px; z-index: 5; width: 220px; padding: 6px; background: #FFFFFF; border: 1px solid #E6E7EC; border-radius: 12px; box-shadow: 0 12px 32px rgba(20,21,26,0.12)">
+<button type="button" style="display: block; width: 100%; text-align: left; height: 38px; padding: 0 12px; border: none; border-radius: 8px; background: transparent; color: #14151A; font-size: 14px; cursor: pointer">Edit days &amp; hours</button>
+<button type="button" style="display: block; width: 100%; text-align: left; height: 38px; padding: 0 12px; border: none; border-radius: 8px; background: transparent; color: #14151A; font-size: 14px; cursor: pointer">Email the organizer link to me</button>
+<button type="button" onClick="{{toggleClosed}}" style="display: block; width: 100%; text-align: left; height: 38px; padding: 0 12px; border: none; border-radius: 8px; background: transparent; color: #B42318; font-size: 14px; font-weight: 500; cursor: pointer">{{closeLabel}}</button>
+</div>
+</sc-if>
+</div>
+</div>
+
+<sc-if value="{{isEmpty}}" hint-placeholder-val="{{ false }}">
+<section style="background: #FFFFFF; border: 1px solid #ECEDF1; border-radius: 16px; box-shadow: 0 1px 2px rgba(20,21,26,0.04), 0 6px 20px rgba(20,21,26,0.04); padding: 48px 24px; display: flex; flex-direction: column; align-items: center; text-align: center">
+<img src="/_blob/1370839ccb789b6233fb5b178c3e3bf9" alt="" style="width: 260px; max-width: 80%; height: auto">
+<h2 style="margin: 28px 0 6px; font-size: 22px; font-weight: 600; letter-spacing: -0.02em">Waiting for the first response</h2>
+<p style="margin: 0; max-width: 440px; font-size: 15px; line-height: 1.5; color: #5B5F6B">Send the invite link to your group. As people mark their times, the best options show up here automatically.</p>
+<div style="display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin-top: 20px">
+<button type="button" onClick="{{copyInvite}}" style="height: 44px; padding: 0 18px; border-radius: 10px; border: none; background: #4F46E5; color: #FFFFFF; font-size: 15px; font-weight: 600; cursor: pointer">{{copyLabel}}</button>
+<a href="Participant.dc.html" style="display: inline-flex; align-items: center; height: 44px; padding: 0 16px; border-radius: 10px; border: 1px solid #E6E7EC; background: #FFFFFF; color: #14151A; text-decoration: none; font-size: 15px; font-weight: 500">Add my own times</a>
+</div>
+</section>
+</sc-if>
+
+<sc-if value="{{notEmpty}}" hint-placeholder-val="{{ true }}">
+<div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; margin-bottom: 16px">
+<div style="background: #FFFFFF; border: 1px solid #ECEDF1; border-radius: 14px; padding: 16px 18px">
+<div style="font-size: 13px; color: #5B5F6B">Responses</div>
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 6px">
+<span style="font-size: 28px; font-weight: 700; letter-spacing: -0.02em">5</span>
+<div style="display: flex">
+<sc-for list="{{people}}" as="p" hint-placeholder-count="5">
+<span style="{{p.stackStyle}}">{{p.initial}}</span>
+</sc-for>
+</div>
+</div>
+</div>
+<div style="background: #FFFFFF; border: 1px solid #ECEDF1; border-radius: 14px; padding: 16px 18px">
+<div style="font-size: 13px; color: #5B5F6B">Best overlap</div>
+<div style="margin-top: 6px; font-size: 28px; font-weight: 700; letter-spacing: -0.02em">{{topCountText}}</div>
+<div style="font-size: 13px; color: #5B5F6B">{{topWhen}}</div>
+</div>
+<div style="background: #FFFFFF; border: 1px solid #ECEDF1; border-radius: 14px; padding: 16px 18px">
+<div style="font-size: 13px; color: #5B5F6B">Timezones</div>
+<div style="margin-top: 6px; font-size: 28px; font-weight: 700; letter-spacing: -0.02em">5</div>
+<div style="font-size: 13px; color: #5B5F6B">Los Angeles to Shanghai · 15 hours apart</div>
+</div>
+</div>
+
+<sc-if value="{{hasPicked}}" hint-placeholder-val="{{ false }}">
+<div style="display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 16px 18px; margin-bottom: 16px; border-radius: 14px; background: #14151A; color: #FFFFFF">
+<div style="display: flex; align-items: center; gap: 12px">
+<span style="width: 34px; height: 34px; border-radius: 999px; background: #2F7A47; display: flex; align-items: center; justify-content: center"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+<div>
+<div style="font-size: 15px; font-weight: 600">Locked in: {{pickedTitle}}</div>
+<div style="font-size: 13px; color: #C9CBD3">{{pickedSub}}</div>
+</div>
+</div>
+<div style="display: flex; gap: 8px; flex-wrap: wrap">
+<button type="button" style="height: 40px; padding: 0 14px; border-radius: 10px; border: none; background: #FFFFFF; color: #14151A; font-size: 14px; font-weight: 600; cursor: pointer">Email everyone</button>
+<button type="button" style="height: 40px; padding: 0 14px; border-radius: 10px; border: 1px solid #3D4049; background: transparent; color: #FFFFFF; font-size: 14px; font-weight: 500; cursor: pointer">Add to calendar (.ics)</button>
+<button type="button" onClick="{{unpick}}" style="height: 40px; padding: 0 10px; border: none; background: transparent; color: #C9CBD3; font-size: 14px; cursor: pointer">Undo</button>
+</div>
+</div>
+</sc-if>
+
+<div style="display: flex; gap: 16px; align-items: flex-start; flex-wrap: wrap">
+
+<section style="flex: 1 1 380px; min-width: 0; display: flex; flex-direction: column; gap: 12px">
+<div style="background: #FFFFFF; border: 1px solid #ECEDF1; border-radius: 16px; padding: 18px">
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap">
+<h2 style="margin: 0; font-size: 17px; font-weight: 600">Best times</h2>
+<div style="display: inline-flex; padding: 3px; border-radius: 10px; background: #F1F2F5; gap: 2px">
+<sc-for list="{{durations}}" as="du" hint-placeholder-count="4">
+<button type="button" onClick="{{du.pick}}" aria-pressed="{{du.pressed}}" style="{{du.style}}">{{du.label}}</button>
+</sc-for>
+</div>
+</div>
+<p style="margin: 6px 0 0; font-size: 13px; color: #5B5F6B">Updates live as people respond. Hover a card to see it on the grid.</p>
+</div>
+
+<sc-for list="{{options}}" as="o" hint-placeholder-count="3">
+<div onMouseEnter="{{o.hover}}" onMouseLeave="{{o.unhover}}" style="{{o.cardStyle}}">
+<div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px">
+<div>
+<div style="display: flex; align-items: center; gap: 8px">
+<span style="{{o.rankStyle}}">{{o.rankLabel}}</span>
+<span style="font-size: 13px; color: #5B5F6B">{{o.countText}}</span>
+</div>
+<div style="margin-top: 8px; font-size: 18px; font-weight: 600; letter-spacing: -0.01em">{{o.title}}</div>
+</div>
+</div>
+<div style="margin-top: 10px; height: 6px; border-radius: 999px; background: #F1F2F5; overflow: hidden"><div style="{{o.bar}}"></div></div>
+<div style="margin-top: 12px; display: flex; flex-wrap: wrap; gap: 6px">
+<sc-for list="{{o.locals}}" as="l" hint-placeholder-count="5">
+<span style="{{l.style}}">{{l.text}}</span>
+</sc-for>
+</div>
+<sc-if value="{{o.hasMissing}}" hint-placeholder-val="{{ false }}">
+<div style="margin-top: 10px; font-size: 13px; color: #92400E">{{o.missingText}}</div>
+</sc-if>
+<button type="button" onClick="{{o.pick}}" style="{{o.btnStyle}}">{{o.btnLabel}}</button>
+</div>
+</sc-for>
+</section>
+
+<section style="flex: 1 1 560px; min-width: 0; background: #FFFFFF; border: 1px solid #ECEDF1; border-radius: 16px; box-shadow: 0 1px 2px rgba(20,21,26,0.04), 0 6px 20px rgba(20,21,26,0.04); padding: 20px">
+<div style="display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 14px">
+<h2 style="margin: 0; font-size: 17px; font-weight: 600">Everyone's availability</h2>
+<div style="display: flex; align-items: center; gap: 8px; font-size: 13px; color: #5B5F6B">
+<span>0</span>
+<span style="display: inline-flex; border-radius: 4px; overflow: hidden"><span style="width: 18px; height: 12px; background: #F3F4F8"></span><span style="width: 18px; height: 12px; background: #E3E5FF"></span><span style="width: 18px; height: 12px; background: #C6CAFF"></span><span style="width: 18px; height: 12px; background: #A1A7FB"></span><span style="width: 18px; height: 12px; background: #767DF1"></span><span style="width: 18px; height: 12px; background: #4B50DA"></span></span>
+<span>5 free</span>
+</div>
+</div>
+<div style="display: flex; gap: 8px; user-select: none">
+<div style="flex: none; width: 48px; padding-top: 46px">
+<sc-for list="{{timeLabels}}" as="t" hint-placeholder-count="16">
+<div style="height: 22px; position: relative"><span style="position: absolute; right: 0; top: 0; transform: translateY(-50%); font-size: 12px; color: #6B6F7A; white-space: nowrap">{{t.label}}</span></div>
+</sc-for>
+<div style="height: 0; position: relative"><span style="position: absolute; right: 0; top: 0; transform: translateY(-50%); font-size: 12px; color: #6B6F7A; white-space: nowrap">5 PM</span></div>
+</div>
+<sc-for list="{{columns}}" as="col" hint-placeholder-count="5">
+<div style="flex: 1 1 0; min-width: 0">
+<div style="height: 46px; display: flex; flex-direction: column; align-items: center; justify-content: center">
+<span style="font-size: 12px; font-weight: 500; color: #6B6F7A; text-transform: uppercase; letter-spacing: 0.04em">{{col.dow}}</span>
+<span style="font-size: 18px; font-weight: 600; line-height: 1.1">{{col.dom}}</span>
+</div>
+<div style="border: 1px solid #E1E3E8; border-radius: 10px; overflow: hidden">
+<sc-for list="{{col.cells}}" as="cell" hint-placeholder-count="16">
+<button type="button" onMouseEnter="{{cell.enter}}" aria-label="{{cell.aria}}" style="{{cell.style}}"></button>
+</sc-for>
+</div>
+</div>
+</sc-for>
+</div>
+<div style="margin-top: 14px; min-height: 40px; padding: 10px 12px; border-radius: 10px; background: #F6F6F8; font-size: 13px; line-height: 1.5; color: #3D4049">{{hoverText}}</div>
+</section>
+</div>
+</sc-if>
+</main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"empty":{"editor":"boolean","default":false},"$preview":{"width":1280,"height":1000}}'>
+var DAYS = [
+  { dow: 'Mon', dom: 12, long: 'Mon, Oct 12' }, { dow: 'Tue', dom: 13, long: 'Tue, Oct 13' },
+  { dow: 'Wed', dom: 14, long: 'Wed, Oct 14' }, { dow: 'Thu', dom: 15, long: 'Thu, Oct 15' },
+  { dow: 'Fri', dom: 16, long: 'Fri, Oct 16' }
+];
+var DOW = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+var ROWS = 16;
+var PEOPLE = [
+  { id: 'kyra', name: 'Kyra', city: 'Los Angeles', off: 0, color: '#4F46E5' },
+  { id: 'alex', name: 'Alex', city: 'London', off: 8, color: '#0E7490' },
+  { id: 'mei', name: 'Mei', city: 'Shanghai', off: 15, color: '#B45309' },
+  { id: 'jordan', name: 'Jordan', city: 'New York', off: 3, color: '#7C3AED' },
+  { id: 'priya', name: 'Priya', city: 'Berlin', off: 9, color: '#BE185D' }
+];
+function free(id, d, r) {
+  switch (id) {
+    case 'kyra': return (d !== 4 && r <= 7) || (d === 1 && r >= 10);
+    case 'alex': return d <= 3 && r <= 2;
+    case 'mei': return (d === 2 && r <= 1) || (d >= 1 && d <= 3 && r >= 14);
+    case 'jordan': return ((d === 0 || d === 2 || d === 4) && r <= 9) || ((d === 1 || d === 3) && r >= 4 && r <= 12);
+    case 'priya': return (d <= 2 && r <= 1) || (d === 2 && r === 2);
+  }
+  return false;
+}
+function clock(totalMin) {
+  var m = ((totalMin % 1440) + 1440) % 1440;
+  var h = Math.floor(m / 60), mm = m % 60;
+  var hh = h % 12 === 0 ? 12 : h % 12;
+  return hh + ':' + (mm < 10 ? '0' : '') + mm + ' ' + (h < 12 ? 'AM' : 'PM');
+}
+var HEAT = ['#F3F4F8', '#E3E5FF', '#C6CAFF', '#A1A7FB', '#767DF1', '#4B50DA'];
+var DURS = [{ k: 1, label: '30 min' }, { k: 2, label: '1 hr' }, { k: 3, label: '1.5 hr' }, { k: 4, label: '2 hr' }];
+
+class Component extends DCLogic {
+  state = { k: 2, hoverOpt: null, picked: null, hoverCell: null, menu: false, closed: false, copied: false };
+
+  componentWillUnmount() { clearTimeout(this.copyTimer); }
+
+  windows(k) {
+    var all = [];
+    for (var d = 0; d < DAYS.length; d++) {
+      for (var r = 0; r + k <= ROWS; r++) {
+        var freeIds = PEOPLE.filter((p) => { for (var i = 0; i < k; i++) if (!free(p.id, d, r + i)) return false; return true; }).map((p) => p.id);
+        all.push({ d: d, r: r, k: k, ids: freeIds, c: freeIds.length });
+      }
+    }
+    all.sort((a, b) => b.c - a.c || a.d - b.d || a.r - b.r);
+    var out = [];
+    for (var j = 0; j < all.length && out.length < 3; j++) {
+      var w = all[j];
+      if (w.c === 0) break;
+      var clash = out.some((o) => o.d === w.d && Math.abs(o.r - w.r) < Math.max(k, 2));
+      if (!clash) out.push(w);
+    }
+    return out;
+  }
+
+  renderVals() {
+    var s = this.state;
+    var opts = this.windows(s.k);
+    var shown = s.hoverOpt !== null ? opts[s.hoverOpt] : s.picked;
+    var inShown = (d, r) => shown && shown.d === d && r >= shown.r && r < shown.r + shown.k;
+
+    var columns = DAYS.map((day, d) => {
+      var cells = [];
+      for (var r = 0; r < ROWS; r++) {
+        var c = PEOPLE.filter((p) => free(p.id, d, r)).length;
+        var border = r === 0 ? 'none' : (r % 2 === 0 ? '1px solid #E1E3E8' : '1px dashed #ECEDF1');
+        var hl = inShown(d, r);
+        var hov = s.hoverCell && s.hoverCell.d === d && s.hoverCell.r === r;
+        var style = 'display: block; width: 100%; height: 22px; padding: 0; margin: 0; border: none; border-top: ' + border + '; background: ' + HEAT[c] + '; cursor: default;';
+        if (hl) style += ' box-shadow: inset 3px 0 0 #F59E0B, inset -3px 0 0 #F59E0B' + (r === shown.r ? ', inset 0 3px 0 #F59E0B' : '') + (r === shown.r + shown.k - 1 ? ', inset 0 -3px 0 #F59E0B' : '') + ';';
+        else if (hov) style += ' box-shadow: inset 0 0 0 2px #14151A;';
+        cells.push({
+          style: style,
+          aria: day.long + ', ' + clock(540 + r * 30) + ', ' + c + ' of 5 free',
+          enter: ((dd, rr) => () => this.setState({ hoverCell: { d: dd, r: rr } }))(d, r)
+        });
+      }
+      return { dow: day.dow, dom: day.dom, cells: cells };
+    });
+
+    var timeLabels = [];
+    for (var r = 0; r < ROWS; r++) timeLabels.push({ label: r % 2 === 0 ? clock(540 + r * 30).replace(':00', '') : '' });
+
+    var hoverText = 'Hover the grid to see who is free at any time.';
+    if (s.hoverCell) {
+      var hd = s.hoverCell.d, hr = s.hoverCell.r;
+      var yes = PEOPLE.filter((p) => free(p.id, hd, hr)).map((p) => p.name);
+      var no = PEOPLE.filter((p) => !free(p.id, hd, hr)).map((p) => p.name);
+      hoverText = DAYS[hd].long + ', ' + clock(540 + hr * 30) + ': ' + (yes.length ? yes.join(', ') + ' free' : 'nobody free') + (no.length ? ' · busy: ' + no.join(', ') : '');
+    }
+
+    var isPicked = (o) => s.picked && s.picked.d === o.d && s.picked.r === o.r && s.picked.k === o.k;
+    var options = opts.map((o, i) => {
+      var all = o.c === PEOPLE.length;
+      var title = DAYS[o.d].long + ' · ' + clock(540 + o.r * 30) + ' – ' + clock(540 + (o.r + o.k) * 30);
+      var picked = isPicked(o);
+      var locals = PEOPLE.map((p) => {
+        var t = 540 + o.r * 30 + p.off * 60;
+        var shift = Math.floor(t / 1440);
+        var ok = o.ids.indexOf(p.id) >= 0;
+        return {
+          text: p.name + ' · ' + clock(t) + (shift > 0 ? ' ' + DOW[o.d + shift] : ''),
+          style: 'font-size: 12px; padding: 4px 9px; border-radius: 999px; ' + (ok ? 'background: #F3F4F7; color: #3D4049;' : 'background: #FFF4E5; color: #92400E; text-decoration: line-through;')
+        };
+      });
+      var missing = PEOPLE.filter((p) => o.ids.indexOf(p.id) < 0).map((p) => p.name);
+      return {
+        title: title,
+        rankLabel: i === 0 ? (all ? 'Everyone can make it' : 'Best option') : 'Option ' + (i + 1),
+        rankStyle: 'font-size: 12px; font-weight: 600; padding: 3px 9px; border-radius: 999px; ' + (i === 0 && all ? 'background: #E7F6EC; color: #2F7A47;' : (i === 0 ? 'background: #EEF0FF; color: #3730A3;' : 'background: #F3F4F7; color: #5B5F6B;')),
+        countText: o.c + ' of ' + PEOPLE.length + ' free',
+        bar: 'height: 100%; border-radius: 999px; width: ' + Math.round((o.c / PEOPLE.length) * 100) + '%; background: ' + (all ? '#2F7A47' : '#4F46E5') + ';',
+        locals: locals,
+        hasMissing: missing.length > 0,
+        missingText: missing.join(' and ') + (missing.length === 1 ? " can't make it" : " can't make it"),
+        cardStyle: 'background: #FFFFFF; border-radius: 16px; padding: 18px; ' + (picked ? 'border: 1.5px solid #2F7A47;' : (s.hoverOpt === i ? 'border: 1.5px solid #F59E0B; box-shadow: 0 6px 20px rgba(20,21,26,0.06);' : 'border: 1px solid #ECEDF1;')),
+        btnLabel: picked ? 'Picked ✓' : 'Pick this time',
+        btnStyle: 'margin-top: 14px; width: 100%; height: 42px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; ' + (picked ? 'border: 1px solid #BFE3CB; background: #E7F6EC; color: #2F7A47;' : (i === 0 ? 'border: none; background: #4F46E5; color: #FFFFFF;' : 'border: 1px solid #DCDEE4; background: #FFFFFF; color: #14151A;')),
+        hover: ((ii) => () => this.setState({ hoverOpt: ii }))(i),
+        unhover: () => this.setState({ hoverOpt: null }),
+        pick: ((oo) => () => this.setState({ picked: { d: oo.d, r: oo.r, k: oo.k } }))(o)
+      };
+    });
+
+    var segOn = 'height: 32px; padding: 0 12px; border-radius: 8px; border: none; background: #FFFFFF; color: #14151A; font-size: 13px; font-weight: 600; box-shadow: 0 1px 2px rgba(20,21,26,0.10); cursor: pointer;';
+    var segOff = 'height: 32px; padding: 0 12px; border-radius: 8px; border: none; background: transparent; color: #5B5F6B; font-size: 13px; font-weight: 500; cursor: pointer;';
+    var durations = DURS.map((du) => ({
+      label: du.label, style: s.k === du.k ? segOn : segOff, pressed: s.k === du.k ? 'true' : 'false',
+      pick: () => this.setState({ k: du.k, hoverOpt: null })
+    }));
+
+    var top = opts[0];
+    var pickedTitle = '', pickedSub = '';
+    if (s.picked) {
+      pickedTitle = DAYS[s.picked.d].long + ' · ' + clock(540 + s.picked.r * 30) + ' – ' + clock(540 + (s.picked.r + s.picked.k) * 30) + ' PDT';
+      pickedSub = 'Send the final time to everyone who left an email, or download a calendar invite.';
+    }
+
+    var pillBase = 'display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 10px; border-radius: 999px; font-size: 13px; font-weight: 500; ';
+    var copyBase = 'display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 14px; border-radius: 10px; font-size: 14px; font-weight: 500; cursor: pointer; ';
+
+    var empty = !!this.props.empty;
+
+    return {
+      isEmpty: empty, notEmpty: !empty,
+      statusLabel: s.closed ? 'Closed' : 'Collecting responses',
+      statusPill: pillBase + (s.closed ? 'background: #F3F4F7; color: #5B5F6B;' : 'background: #E7F6EC; color: #2F7A47;'),
+      statusDot: 'width: 7px; height: 7px; border-radius: 999px; background: ' + (s.closed ? '#A3A6B1' : '#2F7A47') + ';',
+      copyLabel: s.copied ? 'Copied ✓' : 'Copy invite link',
+      copyStyle: copyBase + (s.copied ? 'border: 1px solid #BFE3CB; background: #E7F6EC; color: #2F7A47;' : 'border: 1px solid #E6E7EC; background: #FFFFFF; color: #14151A;'),
+      copyInvite: () => {
+        try { var p = navigator.clipboard && navigator.clipboard.writeText('yuqingxing22.github.io/meetspan/#/p/[poll-id]'); if (p && p.catch) p.catch(function () {}); } catch (e) {}
+        this.setState({ copied: true });
+        clearTimeout(this.copyTimer);
+        this.copyTimer = setTimeout(() => this.setState({ copied: false }), 1600);
+      },
+      menuOpen: s.menu, menuExpanded: s.menu ? 'true' : 'false',
+      toggleMenu: () => this.setState({ menu: !this.state.menu }),
+      closeLabel: s.closed ? 'Reopen poll' : 'Close poll',
+      toggleClosed: () => this.setState({ closed: !this.state.closed, menu: false }),
+      people: PEOPLE.map((p, i) => ({
+        initial: p.name.charAt(0),
+        stackStyle: 'width: 30px; height: 30px; border-radius: 999px; background: ' + p.color + '; color: #FFFFFF; font-size: 12px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; border: 2px solid #FFFFFF;' + (i > 0 ? ' margin-left: -8px;' : '')
+      })),
+      topCountText: top ? top.c + ' / ' + PEOPLE.length : '–',
+      topWhen: top ? DAYS[top.d].long + ', ' + clock(540 + top.r * 30) : 'No overlap yet',
+      hasPicked: !!s.picked, pickedTitle: pickedTitle, pickedSub: pickedSub,
+      unpick: () => this.setState({ picked: null }),
+      durations: durations, options: options,
+      columns: columns, timeLabels: timeLabels, hoverText: hoverText
+    };
+  }
+}
+</script>
+</body>
+</html>
