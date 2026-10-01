@@ -2278,6 +2278,70 @@ div.field.tz-field {
   color: var(--text-dim);
 }
 
+/* "Fill from my schedule" bar above the grid */
+.fill-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px 12px;
+  flex-wrap: wrap;
+  padding: 10px 12px;
+  margin-bottom: 14px;
+  border-radius: var(--radius-sm);
+  background: var(--brand-softer);
+  border: 1px solid var(--brand-line);
+  font-size: 14px;
+  color: var(--text-body);
+}
+.fill-note {
+  font-size: 13px;
+  color: var(--text-dim);
+}
+.link-inline {
+  padding: 0;
+  font-size: inherit;
+  font-weight: 600;
+  color: var(--brand);
+  text-decoration: none;
+}
+.link-inline:hover {
+  text-decoration: underline;
+}
+
+/* My schedule page */
+.schedule-tools {
+  display: flex;
+  gap: 16px 24px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+.schedule-tz {
+  flex: 0 1 320px;
+  min-width: 240px;
+}
+.schedule-presets {
+  flex: 1 1 320px;
+  min-width: 0;
+}
+.schedule-grid-head {
+  margin-top: 4px;
+}
+.schedule-note {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin: 14px 0 0;
+}
+.schedule-signin {
+  text-align: center;
+}
+.schedule-signin .page-sub {
+  margin: 10px 0 20px;
+}
+.schedule-signin .schedule-note {
+  justify-content: center;
+}
+
 /* ---------- Modal (email draft) ---------- */
 .modal-backdrop {
   position: fixed;

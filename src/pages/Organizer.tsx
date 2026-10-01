@@ -6,6 +6,7 @@ import ResultPanel from "../components/ResultPanel";
 import EmailModal from "../components/EmailModal";
 import Icon from "../components/Icon";
 import InviteQR from "../components/InviteQR";
+import ScheduleFill from "../components/ScheduleFill";
 import {
   closePoll,
   finalizePoll,
@@ -286,7 +287,9 @@ function Organizer() {
   }, [meta, participants, durationMin]);
 
   // A new meeting length means different windows: clear the ticks.
-  useEffect(() => setPicks([]), [durationMin]);
+  useEffect(() => {
+    setPicks([]);
+  }, [durationMin]);
 
   if (!isFirebaseConfigured) {
     return <p className="muted">Firebase isn't configured yet (see README).</p>;
@@ -529,6 +532,16 @@ function Organizer() {
               <h2>Your availability</h2>
               <span className="muted small" role="status">{saveLabel}</span>
             </div>
+            {canEdit && (
+              <ScheduleFill
+                slots={meta.slots}
+                selected={mySelected}
+                onFill={(next) => {
+                  setMySelected(next);
+                  setAvailDirty(true);
+                }}
+              />
+            )}
             <AvailabilityBoard
               slots={meta.slots}
               tz={meta.organizerTz}

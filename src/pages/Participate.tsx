@@ -3,6 +3,7 @@ import { useParams } from "react-router-dom";
 import { DateTime } from "luxon";
 import AvailabilityBoard from "../components/AvailabilityBoard";
 import TimezonePicker from "../components/TimezonePicker";
+import ScheduleFill from "../components/ScheduleFill";
 import { detectTz, formatRange, formatSlot, tzInfo } from "../lib/slots";
 import {
   setParticipantEmail,
@@ -16,6 +17,7 @@ import { bestWindow } from "../lib/best";
 import { avatarColor, initial } from "../lib/avatar";
 import { isFirebaseConfigured } from "../firebase";
 import { useAuthState } from "../lib/useAuthState";
+import { useMySchedule } from "../lib/useMySchedule";
 import type { Participant, PollMeta } from "../lib/types";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
@@ -44,6 +46,14 @@ function Participate() {
   const [saveState, setSaveState] = useState<SaveState>(stored ? "saved" : "idle");
   const [focusMs, setFocusMs] = useState<number | null>(null);
   const inited = useRef(false);
+  const { user } = useMySchedule();
+
+  // Signed in with Google and no name yet: suggest their first name.
+  useEffect(() => {
+    if (codename || !user || user.isAnonymous || !user.displayName) return;
+    setCodename(user.displayName.split(" ")[0]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
   // What the private email doc last held, so it's only rewritten on change.
   const savedEmailKey = useRef(stored ? `${stored.email ?? ""}|${stored.codename}` : "");
 
@@ -247,6 +257,16 @@ function Participate() {
 
       <div className="poll-layout">
         <section className="card poll-main">
+          {!closed && (
+            <ScheduleFill
+              slots={meta.slots}
+              selected={selected}
+              onFill={(next) => {
+                setSelected(next);
+                setDirty(true);
+              }}
+            />
+          )}
           <AvailabilityBoard
             slots={meta.slots}
             tz={tz}

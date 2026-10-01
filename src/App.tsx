@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { isFirebaseConfigured } from "./firebase";
 import AccountMenu from "./components/AccountMenu";
@@ -10,6 +11,11 @@ export default function App() {
   // Promote the app on shared pages (invite / organizer) — but not on the
   // home page, which already *is* the create form.
   const showCta = pathname !== "/";
+
+  // A new page starts at the top (the router keeps the old scroll position).
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
 
   return (
     <div className="app">

@@ -5,6 +5,7 @@ import App from "./App";
 import Home from "./pages/Home";
 import Participate from "./pages/Participate";
 import Organizer from "./pages/Organizer";
+import MySchedule from "./pages/MySchedule";
 import "./styles.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
@@ -17,6 +18,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           <Route index element={<Home />} />
           <Route path="p/:pollId" element={<Participate />} />
           <Route path="o/:pollId" element={<Organizer />} />
+          <Route path="schedule" element={<MySchedule />} />
           <Route path="*" element={<Home />} />
         </Route>
       </Routes>

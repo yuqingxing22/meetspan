@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { User } from "firebase/auth";
+import { Link } from "react-router-dom";
 import Icon from "./Icon";
 import {
   isFirebaseConfigured,
@@ -62,6 +63,10 @@ export default function AccountMenu() {
   const name = user.displayName || user.email || "Signed in";
   return (
     <div className="account">
+      <Link to="/schedule" className="btn btn-sm" aria-label="My schedule">
+        <Icon name="clock" />
+        <span className="hide-narrow">My schedule</span>
+      </Link>
       {user.photoURL ? (
         <img
           className="account-photo"
