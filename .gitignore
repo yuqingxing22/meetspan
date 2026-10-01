@@ -2,7 +2,7 @@ node_modules
 dist
 dist-ssr
 # Third-party design-reference collection — kept locally, not shipped in the repo.
-awesome-design-md/
+design/references/awesome-design-md/
 *.local
 *.tsbuildinfo
 .DS_Store
