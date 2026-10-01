@@ -1387,6 +1387,10 @@ div.field.tz-field {
   font-size: 14px;
   color: var(--text-dim);
 }
+.board-hint-inline {
+  margin: 0;
+  flex: 1 1 260px;
+}
 .legend {
   display: flex;
   align-items: center;
@@ -1869,8 +1873,12 @@ div.field.tz-field {
 /* ---------- Organizer page ---------- */
 .head-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   align-items: center;
+}
+.only-narrow-inline {
+  display: none;
 }
 .stats {
   display: grid;
@@ -1925,6 +1933,41 @@ div.field.tz-field {
 }
 .empty-state .btn-row {
   margin-top: 20px;
+}
+.step-dot {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--brand-soft);
+  color: var(--brand-ink);
+  font-size: 13px;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.step-text {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  font-size: 13px;
+  color: var(--text-dim);
+}
+.step-text b {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--ink);
+}
+.notice-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  background: var(--brand-soft);
+  color: var(--brand-ink);
 }
 .locked-banner {
   display: flex;
@@ -2115,6 +2158,126 @@ div.field.tz-field {
   color: var(--brand-ink);
 }
 
+/* Organizer: sticky header so the view switch is always at hand */
+.page-head-sticky {
+  position: sticky;
+  top: 64px;
+  z-index: 15;
+  margin: -12px 0 8px;
+  padding: 12px 0;
+  background: var(--bg);
+}
+.page-head-sticky .page-sub {
+  margin-top: 2px;
+}
+
+/* Organizer "my times" view: setup steps in the margin + the grid */
+.times-layout {
+  display: grid;
+  grid-template-columns: 240px minmax(0, 1fr);
+  gap: 28px;
+  align-items: start;
+}
+.setup-rail {
+  position: sticky;
+  top: 180px;
+  padding-top: 8px;
+}
+.setup-rail ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+}
+.setup-rail li {
+  position: relative;
+  display: flex;
+  gap: 12px;
+  padding-bottom: 22px;
+}
+/* connector line between the step dots */
+.setup-rail li:not(:last-child)::before {
+  content: "";
+  position: absolute;
+  left: 12px;
+  top: 30px;
+  bottom: 4px;
+  width: 2px;
+  border-radius: 2px;
+  background: var(--border);
+}
+.setup-rail li.done:not(:last-child)::before {
+  background: var(--good-line);
+}
+.setup-rail li.done .step-dot {
+  background: var(--good);
+  color: #fff;
+}
+.setup-rail li.current:not(.done) .step-dot {
+  background: var(--brand);
+  color: #fff;
+  box-shadow: 0 0 0 4px var(--brand-soft);
+}
+.setup-rail li.current .step-text b {
+  color: var(--brand-ink);
+}
+.rail-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: none;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--brand);
+  cursor: pointer;
+  text-align: left;
+}
+.rail-link:hover {
+  color: var(--brand-hover);
+}
+.times-main {
+  padding: 20px;
+  margin-bottom: 0;
+}
+.times-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-card);
+}
+.created-next {
+  margin-top: 0;
+}
+
+/* Dashboard placeholder while nobody has replied */
+.empty-mini {
+  padding: 28px 22px;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.empty-mini img {
+  width: 180px;
+  max-width: 70%;
+  height: auto;
+}
+.empty-mini h2 {
+  margin: 20px 0 6px;
+}
+.empty-mini p {
+  margin: 0 0 16px;
+  font-size: 14px;
+  color: var(--text-dim);
+}
+
 /* ---------- Modal (email draft) ---------- */
 .modal-backdrop {
   position: fixed;
@@ -2209,6 +2372,9 @@ div.field.tz-field {
   .account-name {
     display: none;
   }
+  .only-narrow-inline {
+    display: inline;
+  }
   .content {
     padding: 24px 16px 56px;
   }
@@ -2247,5 +2413,44 @@ div.field.tz-field {
   .identity-bar .save-pill {
     width: 100%;
     justify-content: center;
+  }
+  .page-head-sticky {
+    position: static;
+    margin: 0 0 20px;
+    padding: 0;
+  }
+}
+@media (max-width: 900px) {
+  /* Steps become a compact row above the grid */
+  .times-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .setup-rail {
+    position: static;
+    padding: 0;
+  }
+  .setup-rail ol {
+    flex-direction: row;
+    gap: 8px;
+  }
+  .setup-rail li {
+    flex: 1;
+    padding: 10px;
+    gap: 8px;
+    align-items: center;
+    border: 1px solid var(--border-card);
+    border-radius: var(--radius);
+    background: var(--surface);
+  }
+  .setup-rail li::before {
+    display: none;
+  }
+  .setup-rail .step-text > span {
+    display: none;
+  }
+  .setup-rail .step-text b,
+  .rail-link {
+    font-size: 13px;
   }
 }

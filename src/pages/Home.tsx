@@ -323,13 +323,22 @@ export default function Home() {
           >
             Create another poll
           </button>
-          <button
-            type="button"
-            className="btn btn-dark btn-lg"
-            onClick={() => nav(`/o/${created.pollId}?k=${created.token}`)}
-          >
-            Open my dashboard <Icon name="arrowRight" size={18} />
-          </button>
+          <div className="btn-row created-next">
+            <button
+              type="button"
+              className="btn btn-link"
+              onClick={() => nav(`/o/${created.pollId}?k=${created.token}`)}
+            >
+              Skip to the dashboard
+            </button>
+            <button
+              type="button"
+              className="btn btn-dark btn-lg"
+              onClick={() => nav(`/o/${created.pollId}?k=${created.token}&view=times`)}
+            >
+              Next: add my own times <Icon name="arrowRight" size={18} />
+            </button>
+          </div>
         </div>
         {node}
       </div>

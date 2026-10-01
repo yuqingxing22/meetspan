@@ -24,6 +24,8 @@ interface Props {
   highlight?: Set<number>;
   /** Which view opens first (defaults to marking when editable). */
   defaultMode?: "paint" | "group";
+  /** Only the "mark my times" view, without the switch to the group view. */
+  paintOnly?: boolean;
   /** Report the slot being inspected in the group view (for a side panel). */
   onFocusSlot?: (ms: number | null) => void;
   focusMs?: number | null;
@@ -50,6 +52,7 @@ export default function AvailabilityBoard({
   nameOf,
   highlight,
   defaultMode,
+  paintOnly,
   onFocusSlot,
   focusMs,
 }: Props) {
@@ -57,7 +60,7 @@ export default function AvailabilityBoard({
     editable ? defaultMode ?? "paint" : "group"
   );
   const [ownFocus, setOwnFocus] = useState<number | null>(null);
-  const view = editable ? mode : "group";
+  const view = editable ? (paintOnly ? "paint" : mode) : "group";
 
   const { statsByMs, total, othersFree, othersTotal } = useMemo(() => {
     // Everyone except the viewer's stored copy — the viewer is represented by
@@ -109,10 +112,21 @@ export default function AvailabilityBoard({
   const setFocus = onFocusSlot ?? setOwnFocus;
   const focusStat = focus !== null ? statsByMs.get(focus) : undefined;
 
+  const hint =
+    view === "paint"
+      ? othersTotal > 0
+        ? "Click or drag across the grid to mark when you're free. Faint blue shows when others are free."
+        : "Click or drag across the grid to mark when you're free."
+      : total > 0
+      ? `Darker means more people are free. ${total} ${
+          total === 1 ? "person" : "people"
+        } so far. Hover or tap a slot to see who.`
+      : "No responses yet. The overlap fills in as people mark their times.";
+
   return (
     <div className="board">
       <div className="board-toolbar">
-        {editable ? (
+        {editable && !paintOnly ? (
           <div className="seg" role="group" aria-label="View">
             <button
               type="button"
@@ -131,6 +145,9 @@ export default function AvailabilityBoard({
               See everyone
             </button>
           </div>
+        ) : paintOnly ? (
+          // Paint-only: the hint sits where the view switch would be.
+          <p className="board-hint board-hint-inline only-wide">{hint}</p>
         ) : (
           <span />
         )}
@@ -158,17 +175,9 @@ export default function AvailabilityBoard({
         )}
       </div>
 
-      <p className={`board-hint${view === "paint" ? " only-wide" : ""}`}>
-        {view === "paint"
-          ? othersTotal > 0
-            ? "Click or drag across the grid to mark when you're free. Faint blue shows when others are free."
-            : "Click or drag across the grid to mark when you're free."
-          : total > 0
-          ? `Darker means more people are free. ${total} ${
-              total === 1 ? "person" : "people"
-            } so far. Hover or tap a slot to see who.`
-          : "No responses yet. The overlap fills in as people mark their times."}
-      </p>
+      {!paintOnly && (
+        <p className={`board-hint${view === "paint" ? " only-wide" : ""}`}>{hint}</p>
+      )}
 
       {view === "paint" ? (
         <>

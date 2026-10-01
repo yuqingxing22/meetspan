@@ -66,6 +66,51 @@ function sessionAt(
   };
 }
 
+/** Setup progress shown beside the organizer's "my times" view. */
+function SetupRail({ hasMine, onDashboard }: { hasMine: boolean; onDashboard: () => void }) {
+  return (
+    <nav className="setup-rail" aria-label="Setup steps">
+      <ol>
+        <li className="done">
+          <span className="step-dot">
+            <Icon name="check" size={14} strokeWidth={3} />
+          </span>
+          <span className="step-text">
+            <b>
+              <span className="hide-narrow">Share the invite link</span>
+              <span className="only-narrow-inline">Shared</span>
+            </b>
+            <span>Done when you created the poll. Copy it again from the top right any time.</span>
+          </span>
+        </li>
+        <li className={`current${hasMine ? " done" : ""}`} aria-current="step">
+          <span className="step-dot">
+            {hasMine ? <Icon name="check" size={14} strokeWidth={3} /> : 2}
+          </span>
+          <span className="step-text">
+            <b>
+              <span className="hide-narrow">Add your own times</span>
+              <span className="only-narrow-inline">My times</span>
+            </b>
+            <span>{hasMine ? "Saved. Keep adjusting until it's right." : "Optional. Mark them in the grid."}</span>
+          </span>
+        </li>
+        <li>
+          <span className="step-dot">3</span>
+          <span className="step-text">
+            <button type="button" className="rail-link" onClick={onDashboard}>
+              <span className="hide-narrow">See the dashboard</span>
+              <span className="only-narrow-inline">Dashboard</span>
+              <Icon name="arrowRight" size={14} />
+            </button>
+            <span>Best times and everyone's overlap. It fills in as people respond.</span>
+          </span>
+        </li>
+      </ol>
+    </nav>
+  );
+}
+
 // Remount per poll so switching polls (e.g. from "Your polls") never carries
 // one poll's state into another.
 export default function OrganizerRoute() {
@@ -75,7 +120,7 @@ export default function OrganizerRoute() {
 
 function Organizer() {
   const { pollId = "" } = useParams();
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const { show, node } = useToast();
   const auth = useAuthState();
   const uid = auth !== "loading" && auth !== "error" ? auth : null;
@@ -209,6 +254,13 @@ function Organizer() {
   }, [participants]);
   const nameOf = (id: string) => nameById.get(id) ?? "someone";
 
+  // Responses from people other than the organizer. The organizer's own
+  // times count toward the overlap, but they don't make the poll "answered":
+  // until someone else replies, the page stays in its waiting state.
+  const othersCount = participants.filter(
+    (p) => p.id !== myId && (!uid || p.ownerUid !== uid)
+  ).length;
+
   // Best times update live as people respond.
   const result = useMemo(() => {
     if (!meta || participants.length === 0) return null;
@@ -325,6 +377,20 @@ function Organizer() {
   }
 
   const open = meta.status === "open";
+  const canEdit = !!isAdmin && open;
+  // Two views of one poll: "times" (the organizer marks their own
+  // availability) and the dashboard (results). Kept in the URL so reloads and
+  // the back button behave.
+  const view: "times" | "dashboard" =
+    params.get("view") === "times" && isAdmin !== false && open ? "times" : "dashboard";
+  function go(v: "times" | "dashboard") {
+    const next = new URLSearchParams(params);
+    if (v === "times") next.set("view", "times");
+    else next.delete("view");
+    setParams(next);
+    window.scrollTo({ top: 0 });
+  }
+  const saveLabel = savingAvail || availDirty ? "Saving…" : myId && mySelected.size > 0 ? "Your times are saved" : "";
   const zone = tzInfo(meta.organizerTz);
   const win = meta.dailyWindow;
   const hoursLabel = `${DateTime.fromObject({ hour: win.startHour % 24 }).toFormat("h a")} – ${DateTime.fromObject({
@@ -360,7 +426,7 @@ function Organizer() {
 
   return (
     <div>
-      <div className="page-head page-head-row">
+      <div className="page-head page-head-row page-head-sticky">
         <div>
           <div className="title-row">
             <h1 className="page-title">{meta.title || "Meeting poll"}</h1>
@@ -376,9 +442,14 @@ function Organizer() {
           </p>
         </div>
         <div className="head-actions">
-          <button type="button" className={`btn ${copied ? "btn-success" : ""}`} onClick={copyInvite}>
+          <button
+            type="button"
+            className={`btn ${copied ? "btn-success" : ""}`}
+            onClick={copyInvite}
+            aria-label="Copy invite link"
+          >
             <Icon name={copied ? "check" : "copy"} />
-            {copied ? "Copied" : "Copy invite link"}
+            <span className="hide-narrow">{copied ? "Copied" : "Copy invite link"}</span>
           </button>
           <div className="menu-root" ref={qrRef}>
             <button
@@ -428,6 +499,18 @@ function Organizer() {
               )}
             </div>
           )}
+          {view === "times" ? (
+            <button type="button" className="btn btn-primary" onClick={() => go("dashboard")}>
+              Dashboard <Icon name="arrowRight" />
+            </button>
+          ) : (
+            canEdit && (
+              <button type="button" className="btn btn-dark" onClick={() => go("times")}>
+                <Icon name="calendar" />
+                {mySelected.size > 0 ? "Edit my times" : "Add my times"}
+              </button>
+            )
+          )}
         </div>
       </div>
 
@@ -438,16 +521,50 @@ function Organizer() {
         </div>
       )}
 
-      {participants.length === 0 ? (
-        <section className="card empty-state">
-          <img src={waitArt} alt="" />
-          <h2>Waiting for the first response</h2>
-          <p>
-            Send the invite link to your group. As people mark their times, the
-            best options show up here automatically.
-          </p>
-          <div className="btn-row btn-row-center">
-            <button type="button" className="btn btn-primary btn-lg" onClick={copyInvite}>
+      {view === "times" ? (
+        <div className="times-layout">
+          <SetupRail hasMine={mySelected.size > 0} onDashboard={() => go("dashboard")} />
+          <section className="card times-main">
+            <div className="results-head">
+              <h2>Your availability</h2>
+              <span className="muted small" role="status">{saveLabel}</span>
+            </div>
+            <AvailabilityBoard
+              slots={meta.slots}
+              tz={meta.organizerTz}
+              weekdayOnly={meta.dateMode === "weekly"}
+              selected={mySelected}
+              onChange={(next) => {
+                if (!canEdit) return;
+                setMySelected(next);
+                setAvailDirty(true);
+              }}
+              editable={canEdit}
+              paintOnly
+              participants={participants}
+              myId={myId}
+              nameOf={nameOf}
+            />
+            <div className="times-foot">
+              <span className="muted small">
+                Your times count toward the overlap, just like everyone else's.
+              </span>
+              <button type="button" className="btn btn-primary btn-lg" onClick={() => go("dashboard")}>
+                Done, see the dashboard <Icon name="arrowRight" size={18} />
+              </button>
+            </div>
+          </section>
+        </div>
+      ) : (
+        <>
+          {othersCount === 0 && (
+            <div className="notice notice-info">
+              <span>
+                {participants.length > 0
+                  ? "Only your own times so far. The results fill in by themselves as people respond."
+                  : "No responses yet. The results fill in by themselves as people respond."}
+              </span>
+              <button type="button" className={`btn btn-sm ${copied ? "btn-success" : "btn-primary"}`} onClick={copyInvite}>
               {copied ? (
                 <>
                   <Icon name="check" /> Copied
@@ -456,249 +573,247 @@ function Organizer() {
                 "Copy invite link"
               )}
             </button>
-            {isAdmin && open && (
-              <a className="btn btn-lg" href="#my-times" onClick={(e) => {
-                e.preventDefault();
-                document.getElementById("my-times")?.scrollIntoView({ behavior: "smooth" });
-              }}>
-                Add my own times
-              </a>
-            )}
-          </div>
-        </section>
-      ) : (
-        <div className="stats">
-          <div className="stat">
-            <div className="stat-label">Responses</div>
-            <div className="stat-row">
-              <span className="stat-value">{participants.length}</span>
-              <span className="avatar-stack">
-                {participants.slice(0, 6).map((p) => (
-                  <span
-                    key={p.id}
-                    className="avatar"
-                    title={p.codename}
-                    style={{ background: avatarColor(p.id) }}
-                  >
-                    {initial(p.codename)}
-                  </span>
-                ))}
-              </span>
             </div>
-          </div>
-          <div className="stat">
-            <div className="stat-label">Best overlap</div>
-            <div className="stat-value">
-              {topStat && topStat.count > 0 ? `${topStat.count} / ${participants.length}` : "–"}
-            </div>
-            <div className="stat-sub">
-              {topStat && topStat.count > 0
-                ? DateTime.fromMillis(topStat.ms, { zone: meta.organizerTz }).toFormat("ccc, LLL d, h:mm a")
-                : "No overlap yet"}
-            </div>
-          </div>
-          <div className="stat">
-            <div className="stat-label">Timezones</div>
-            <div className="stat-value">{zones.length}</div>
-            <div className="stat-sub">
-              {offsets.length > 1
-                ? `${tzInfo(offsets[0].z).city} to ${tzInfo(offsets[offsets.length - 1].z).city} · ${spanHours} hours apart`
-                : zones.length === 1
-                ? `Everyone in ${tzInfo(zones[0]).city}`
-                : ""}
-            </div>
-          </div>
-        </div>
-      )}
+          )}
 
-      {lockedSessions.length > 0 && (
-        <div className="locked-banner">
-          <span className="locked-icon">
-            <Icon name="check" size={18} strokeWidth={2.6} />
-          </span>
-          <div className="locked-text">
-            <div className="locked-title">Locked in: {lockedLabel}</div>
-            <div className="locked-sub">
-              Send the final time to everyone who left an email, or download a
-              calendar invite.
-            </div>
-          </div>
-          <button type="button" className="btn btn-on-dark" onClick={() => setShowEmail(true)}>
-            <Icon name="mail" /> Email &amp; calendar invite
-          </button>
-        </div>
-      )}
-
-      <div className="org-layout">
-        {result && (
-          <section className="org-results">
-            <div className="card">
-              <div className="results-head">
-                <h2>Best times</h2>
-                <div className="seg seg-sm" role="group" aria-label="Meeting length">
-                  {DURATIONS.map((d) => (
-                    <button
-                      type="button"
-                      key={d.min}
-                      className={durationMin === d.min ? "active" : ""}
-                      aria-pressed={durationMin === d.min}
-                      onClick={() => setDurationMin(d.min)}
+          {participants.length > 0 && (
+          <div className="stats">
+            <div className="stat">
+              <div className="stat-label">Responses</div>
+              <div className="stat-row">
+                <span className="stat-value">{participants.length}</span>
+                <span className="avatar-stack">
+                  {participants.slice(0, 6).map((p) => (
+                    <span
+                      key={p.id}
+                      className="avatar"
+                      title={p.codename}
+                      style={{ background: avatarColor(p.id) }}
                     >
-                      {d.label}
-                    </button>
+                      {initial(p.codename)}
+                    </span>
                   ))}
-                </div>
+                </span>
               </div>
-              <p className="hint">
-                Updates live as people respond. Hover a card to see it on the grid.
-              </p>
-              <details className="more-settings">
-                <summary>Meeting details</summary>
-                <div className="row">
-                  <label className="field">
-                    <span className="field-label">Meeting name</span>
-                    <input
-                      type="text"
-                      value={meetingName}
-                      placeholder="e.g. Research sync"
-                      onChange={(e) => setMeetingName(e.target.value)}
-                    />
-                  </label>
-                  <label className="field">
-                    <span className="field-label">Sessions per week</span>
-                    <select
-                      value={sessionsPerWeek}
-                      onChange={(e) => setSessionsPerWeek(Number(e.target.value))}
-                    >
-                      {[1, 2, 3, 4, 5].map((n) => (
-                        <option key={n} value={n}>
-                          {n === 1 ? "Once" : `${n} times`}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                  <label className="field">
-                    <span className="field-label">Meeting type</span>
-                    <select value={type} onChange={(e) => setType(e.target.value as MeetingType)}>
-                      {MEETING_TYPES.map((t) => (
-                        <option key={t.value} value={t.value}>
-                          {t.label}
-                        </option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-              </details>
             </div>
-            <ResultPanel
-              result={result}
-              meta={meta}
-              participants={participants}
-              nameOf={nameOf}
-              onUse={isAdmin ? onUse : () => show("Open your private organizer link to pick a time")}
-              onHover={setHoverSessions}
-              chosenStart={lockedSessions[0]?.startMs ?? null}
-            />
-
-            {(common.length > 0 || result.kind === "ok") && (
-              <div className="card common-card">
-                <div className="results-head">
-                  <h2>All times everyone can make it</h2>
-                  <span className="badge badge-ok">{common.length}</span>
-                </div>
-                <p className="hint">
-                  Every {DURATIONS.find((d) => d.min === durationMin)?.label ?? `${durationMin} min`}{" "}
-                  slot where all {participants.length} people are free, in your
-                  timezone. Tick one or more to lock them in.
-                </p>
-                {commonByDay.map((g) => (
-                  <div key={g.day} className="common-day">
-                    <div className="common-day-label">{g.day}</div>
-                    <div className="chips">
-                      {g.windows.map((w) => {
-                        const on = picks.includes(w.startMs);
-                        const locked = lockedStarts.has(w.startMs);
-                        return (
-                          <button
-                            type="button"
-                            key={w.startMs}
-                            className={`chip time-chip${on ? " on" : ""}${locked ? " locked" : ""}`}
-                            aria-pressed={on}
-                            onClick={() =>
-                              setPicks((p) =>
-                                p.includes(w.startMs)
-                                  ? p.filter((x) => x !== w.startMs)
-                                  : [...p, w.startMs]
-                              )
-                            }
-                            onMouseEnter={() =>
-                              setHoverSessions([sessionAt(w.startMs, durationMin, meta, participants)])
-                            }
-                            onMouseLeave={() => setHoverSessions(null)}
-                          >
-                            {(on || locked) && <Icon name="check" size={14} />}
-                            {shortRange(w)}
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  className="btn btn-primary btn-block"
-                  disabled={pickedSessions.length === 0}
-                  onClick={() => {
-                    if (!isAdmin) {
-                      show("Open your private organizer link to pick a time");
-                      return;
-                    }
-                    void onUse(pickedSessions);
-                    setPicks([]);
-                  }}
-                >
-                  {pickedSessions.length === 0
-                    ? "Tick the times you want"
-                    : `Pick ${pickedSessions.length} selected ${
-                        pickedSessions.length === 1 ? "time" : "times"
-                      }`}
-                </button>
+            <div className="stat">
+              <div className="stat-label">Best overlap</div>
+              <div className="stat-value">
+                {topStat && topStat.count > 0 ? `${topStat.count} / ${participants.length}` : "–"}
               </div>
-            )}
-          </section>
+              <div className="stat-sub">
+                {topStat && topStat.count > 0
+                  ? DateTime.fromMillis(topStat.ms, { zone: meta.organizerTz }).toFormat("ccc, LLL d, h:mm a")
+                  : "No overlap yet"}
+              </div>
+            </div>
+            <div className="stat">
+              <div className="stat-label">Timezones</div>
+              <div className="stat-value">{zones.length}</div>
+              <div className="stat-sub">
+                {offsets.length > 1
+                  ? `${tzInfo(offsets[0].z).city} to ${tzInfo(offsets[offsets.length - 1].z).city} · ${spanHours} hours apart`
+                  : zones.length === 1
+                  ? `Everyone in ${tzInfo(zones[0]).city}`
+                  : ""}
+              </div>
+            </div>
+          </div>
+          )}
+
+        {lockedSessions.length > 0 && (
+          <div className="locked-banner">
+            <span className="locked-icon">
+              <Icon name="check" size={18} strokeWidth={2.6} />
+            </span>
+            <div className="locked-text">
+              <div className="locked-title">Locked in: {lockedLabel}</div>
+              <div className="locked-sub">
+                Send the final time to everyone who left an email, or download a
+                calendar invite.
+              </div>
+            </div>
+            <button type="button" className="btn btn-on-dark" onClick={() => setShowEmail(true)}>
+              <Icon name="mail" /> Email &amp; calendar invite
+            </button>
+          </div>
         )}
 
-        <section className="card org-grid" id="my-times">
-          <div className="results-head">
-            <h2>Everyone's availability</h2>
-            {isAdmin && open && (
-              <span className="muted small">
-                {savingAvail || availDirty ? "Saving your times…" : myId ? "Your times are saved" : ""}
-              </span>
+          <div className="org-layout">
+            {result ? (
+              <section className="org-results">
+                <div className="card">
+                  <div className="results-head">
+                    <h2>Best times</h2>
+                    <div className="seg seg-sm" role="group" aria-label="Meeting length">
+                      {DURATIONS.map((d) => (
+                        <button
+                          type="button"
+                          key={d.min}
+                          className={durationMin === d.min ? "active" : ""}
+                          aria-pressed={durationMin === d.min}
+                          onClick={() => setDurationMin(d.min)}
+                        >
+                          {d.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <p className="hint">
+                    Updates live as people respond. Hover a card to see it on the grid.
+                  </p>
+                  <details className="more-settings">
+                    <summary>Meeting details</summary>
+                    <div className="row">
+                      <label className="field">
+                        <span className="field-label">Meeting name</span>
+                        <input
+                          type="text"
+                          value={meetingName}
+                          placeholder="e.g. Research sync"
+                          onChange={(e) => setMeetingName(e.target.value)}
+                        />
+                      </label>
+                      <label className="field">
+                        <span className="field-label">Sessions per week</span>
+                        <select
+                          value={sessionsPerWeek}
+                          onChange={(e) => setSessionsPerWeek(Number(e.target.value))}
+                        >
+                          {[1, 2, 3, 4, 5].map((n) => (
+                            <option key={n} value={n}>
+                              {n === 1 ? "Once" : `${n} times`}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                      <label className="field">
+                        <span className="field-label">Meeting type</span>
+                        <select value={type} onChange={(e) => setType(e.target.value as MeetingType)}>
+                          {MEETING_TYPES.map((t) => (
+                            <option key={t.value} value={t.value}>
+                              {t.label}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
+                  </details>
+                </div>
+                <ResultPanel
+                  result={result}
+                  meta={meta}
+                  participants={participants}
+                  nameOf={nameOf}
+                  onUse={isAdmin ? onUse : () => show("Open your private organizer link to pick a time")}
+                  onHover={setHoverSessions}
+                  chosenStart={lockedSessions[0]?.startMs ?? null}
+                />
+
+                {(common.length > 0 || result.kind === "ok") && (
+                  <div className="card common-card">
+                    <div className="results-head">
+                      <h2>All times everyone can make it</h2>
+                      <span className="badge badge-ok">{common.length}</span>
+                    </div>
+                    <p className="hint">
+                      Every {DURATIONS.find((d) => d.min === durationMin)?.label ?? `${durationMin} min`}{" "}
+                      slot where all {participants.length} people are free, in your
+                      timezone. Tick one or more to lock them in.
+                    </p>
+                    {commonByDay.map((g) => (
+                      <div key={g.day} className="common-day">
+                        <div className="common-day-label">{g.day}</div>
+                        <div className="chips">
+                          {g.windows.map((w) => {
+                            const on = picks.includes(w.startMs);
+                            const locked = lockedStarts.has(w.startMs);
+                            return (
+                              <button
+                                type="button"
+                                key={w.startMs}
+                                className={`chip time-chip${on ? " on" : ""}${locked ? " locked" : ""}`}
+                                aria-pressed={on}
+                                onClick={() =>
+                                  setPicks((p) =>
+                                    p.includes(w.startMs)
+                                      ? p.filter((x) => x !== w.startMs)
+                                      : [...p, w.startMs]
+                                  )
+                                }
+                                onMouseEnter={() =>
+                                  setHoverSessions([sessionAt(w.startMs, durationMin, meta, participants)])
+                                }
+                                onMouseLeave={() => setHoverSessions(null)}
+                              >
+                                {(on || locked) && <Icon name="check" size={14} />}
+                                {shortRange(w)}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      className="btn btn-primary btn-block"
+                      disabled={pickedSessions.length === 0}
+                      onClick={() => {
+                        if (!isAdmin) {
+                          show("Open your private organizer link to pick a time");
+                          return;
+                        }
+                        void onUse(pickedSessions);
+                        setPicks([]);
+                      }}
+                    >
+                      {pickedSessions.length === 0
+                        ? "Tick the times you want"
+                        : `Pick ${pickedSessions.length} selected ${
+                            pickedSessions.length === 1 ? "time" : "times"
+                          }`}
+                    </button>
+                  </div>
+                )}
+              </section>
+            ) : (
+              <section className="org-results">
+                <div className="card empty-mini">
+                  <img src={waitArt} alt="" />
+                  <h2>Waiting for responses</h2>
+                  <p>
+                    Send the invite link to your group. The best times show up
+                    here as soon as people mark when they're free.
+                  </p>
+                  {canEdit && (
+                    <button type="button" className="btn" onClick={() => go("times")}>
+                      <Icon name="calendar" /> Add my own times
+                    </button>
+                  )}
+                </div>
+              </section>
             )}
+
+            <section className="card org-grid">
+              <div className="results-head">
+                <h2>Everyone's availability</h2>
+              </div>
+              <AvailabilityBoard
+                slots={meta.slots}
+                tz={meta.organizerTz}
+                weekdayOnly={meta.dateMode === "weekly"}
+                selected={mySelected}
+                onChange={() => {}}
+                editable={false}
+                participants={participants}
+                myId={myId}
+                nameOf={nameOf}
+                highlight={highlight}
+              />
+            </section>
           </div>
-          <AvailabilityBoard
-            // Remount when admin status or "any responses yet" settles, so the
-            // default view (mark vs. see everyone) matches the poll's state.
-            key={`${isAdmin}-${participants.length === 0}`}
-            slots={meta.slots}
-            tz={meta.organizerTz}
-            weekdayOnly={meta.dateMode === "weekly"}
-            selected={mySelected}
-            onChange={(next) => {
-              if (!open) return;
-              setMySelected(next);
-              setAvailDirty(true);
-            }}
-            editable={!!isAdmin && open}
-            defaultMode={participants.length === 0 ? "paint" : "group"}
-            participants={participants}
-            myId={myId}
-            nameOf={nameOf}
-            highlight={highlight}
-          />
-        </section>
-      </div>
+        </>
+      )}
 
       {showEmail && lockedSessions.length > 0 && (
         <EmailModal
