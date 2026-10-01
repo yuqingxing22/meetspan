@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import type { User } from "firebase/auth";
+import Icon from "./Icon";
 import {
   isFirebaseConfigured,
   signInWithGoogle,
@@ -48,8 +49,10 @@ export default function AccountMenu() {
           disabled={busy}
           onClick={() => run(signInWithGoogle)}
           title="Optional: keep your polls across devices"
+          aria-label="Sign in with Google"
         >
-          Sign in with Google
+          <Icon name="user" />
+          <span className="hide-narrow">Sign in with Google</span>
         </button>
         {err && <span className="account-err">{err}</span>}
       </div>
@@ -59,15 +62,19 @@ export default function AccountMenu() {
   const name = user.displayName || user.email || "Signed in";
   return (
     <div className="account">
-      {user.photoURL && (
+      {user.photoURL ? (
         <img
           className="account-photo"
           src={user.photoURL}
           alt=""
-          width={24}
-          height={24}
+          width={28}
+          height={28}
           referrerPolicy="no-referrer"
         />
+      ) : (
+        <span className="avatar" aria-hidden="true">
+          {name.charAt(0).toUpperCase()}
+        </span>
       )}
       <span className="account-name" title={user.email ?? undefined}>
         {name}

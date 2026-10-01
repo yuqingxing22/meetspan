@@ -4,6 +4,16 @@
 const ADMIN_PREFIX = "meetspan.admin.";
 const PART_PREFIX = "meetspan.participant.";
 const MYPOLLS_KEY = "meetspan.mypolls";
+/** Fired on window when this browser's poll list changes. */
+export const MYPOLLS_EVENT = "meetspan:mypolls";
+
+function announce(): void {
+  try {
+    window.dispatchEvent(new Event(MYPOLLS_EVENT));
+  } catch {
+    /* not in a browser */
+  }
+}
 
 export function saveAdminToken(pollId: string, token: string): void {
   try {
@@ -44,6 +54,7 @@ export function addMyPoll(p: MyPoll): void {
     const list = listMyPolls().filter((x) => x.pollId !== p.pollId);
     list.unshift(p);
     localStorage.setItem(MYPOLLS_KEY, JSON.stringify(list));
+    announce();
   } catch {
     /* ignore */
   }
@@ -53,6 +64,7 @@ export function removeMyPoll(pollId: string): void {
   try {
     const list = listMyPolls().filter((x) => x.pollId !== pollId);
     localStorage.setItem(MYPOLLS_KEY, JSON.stringify(list));
+    announce();
   } catch {
     /* ignore */
   }

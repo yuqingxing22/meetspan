@@ -1,6 +1,8 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { isFirebaseConfigured } from "./firebase";
 import AccountMenu from "./components/AccountMenu";
+import YourPollsMenu from "./components/YourPollsMenu";
+import Icon from "./components/Icon";
 import markUrl from "./assets/meetspan-mark.svg";
 
 export default function App() {
@@ -13,17 +15,18 @@ export default function App() {
     <div className="app">
       <header className="topbar">
         <Link to="/" className="brand">
-          <img className="brand-mark" src={markUrl} alt="" width={22} height={22} />{" "}
+          <img className="brand-mark" src={markUrl} alt="" width={30} height={30} />
           MeetSpan
         </Link>
-        <span className="tagline">Find a time across timezones</span>
         <div className="topbar-right">
-          <AccountMenu />
+          <YourPollsMenu />
           {showCta && (
-            <Link to="/" className="btn btn-primary btn-sm topbar-cta">
-              ＋ Create my own poll
+            <Link to="/" className="btn btn-sm">
+              <Icon name="plus" />
+              <span className="hide-narrow">New poll</span>
             </Link>
           )}
+          <AccountMenu />
         </div>
       </header>
 
@@ -41,13 +44,8 @@ export default function App() {
       </main>
 
       <footer className="footer">
-        <div className="footer-brand">
-          <img className="brand-mark" src={markUrl} alt="" width={20} height={20} />{" "}
-          MeetSpan
-        </div>
-        <div className="footer-tag">
-          No sign-up · share-link only · your times stay in your own timezone
-        </div>
+        <span className="footer-brand">MeetSpan</span>
+        <span>No sign-up · Share-link only · Your times stay in your timezone</span>
       </footer>
     </div>
   );

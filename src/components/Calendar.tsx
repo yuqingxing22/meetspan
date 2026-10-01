@@ -1,18 +1,18 @@
 import { useState } from "react";
 import { DateTime } from "luxon";
+import Icon from "./Icon";
 
 interface Props {
   /** ISO dates (yyyy-mm-dd) to render as selected/highlighted. */
   selectedDates: Set<string>;
-  onDayClick: (iso: string) => void;
-  /** Marks range endpoints differently (optional). */
-  endpoints?: Set<string>;
+  /** `shift` is true when the day was Shift-clicked (range selection). */
+  onDayClick: (iso: string, shift: boolean) => void;
 }
 
-const DOW = ["S", "M", "T", "W", "T", "F", "S"];
+const DOW = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
 
 /** Lightweight month calendar with prev/next nav. Past days are disabled. */
-export default function Calendar({ selectedDates, onDayClick, endpoints }: Props) {
+export default function Calendar({ selectedDates, onDayClick }: Props) {
   const today = DateTime.now().startOf("day");
   const [view, setView] = useState(today.startOf("month"));
 
@@ -30,40 +30,38 @@ export default function Calendar({ selectedDates, onDayClick, endpoints }: Props
       <div className="cal-head">
         <button
           type="button"
-          className="cal-nav"
+          className="icon-btn"
           onClick={() => canGoPrev && setView(view.minus({ months: 1 }))}
           disabled={!canGoPrev}
           aria-label="Previous month"
         >
-          ‹
+          <Icon name="chevronLeft" />
         </button>
         <span className="cal-title">{view.toFormat("LLLL yyyy")}</span>
         <button
           type="button"
-          className="cal-nav"
+          className="icon-btn"
           onClick={() => setView(view.plus({ months: 1 }))}
           aria-label="Next month"
         >
-          ›
+          <Icon name="chevronRight" />
         </button>
       </div>
 
       <div className="cal-grid">
-        {DOW.map((d, i) => (
-          <div key={i} className="cal-dow">
+        {DOW.map((d) => (
+          <div key={d} className="cal-dow">
             {d}
           </div>
         ))}
         {cells.map((dt, i) => {
-          if (!dt) return <div key={i} className="cal-day empty" />;
+          if (!dt) return <div key={i} />;
           const iso = dt.toISODate()!;
           const disabled = dt < today;
           const sel = selectedDates.has(iso);
           const cls = [
             "cal-day",
-            disabled ? "disabled" : "",
             sel ? "sel" : "",
-            endpoints?.has(iso) ? "endpoint" : "",
             iso === today.toISODate() ? "today" : "",
           ]
             .filter(Boolean)
@@ -74,7 +72,9 @@ export default function Calendar({ selectedDates, onDayClick, endpoints }: Props
               key={i}
               className={cls}
               disabled={disabled}
-              onClick={() => onDayClick(iso)}
+              aria-pressed={sel}
+              aria-label={dt.toFormat("cccc, LLLL d")}
+              onClick={(e) => onDayClick(iso, e.shiftKey)}
             >
               {dt.day}
             </button>

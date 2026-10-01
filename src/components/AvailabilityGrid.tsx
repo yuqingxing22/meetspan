@@ -8,6 +8,8 @@ interface Props {
   weekdayOnly?: boolean;
   selected: Set<number>;
   onChange: (next: Set<number>) => void;
+  /** Faint background level 0–5 per slot (how many others are free). */
+  ghost?: Map<number, number>;
 }
 
 /**
@@ -20,6 +22,7 @@ export default function AvailabilityGrid({
   weekdayOnly,
   selected,
   onChange,
+  ghost,
 }: Props) {
   const model = buildGridModel(slots, tz, { weekdayOnly });
   const dragging = useRef(false);
@@ -66,13 +69,13 @@ export default function AvailabilityGrid({
   }
 
   const gridStyle = {
-    gridTemplateColumns: `70px repeat(${model.columns.length}, var(--cellw))`,
+    gridTemplateColumns: `70px repeat(${model.columns.length}, minmax(var(--cellw), 1fr))`,
   };
 
   return (
     <div className="grid-wrap">
       <div
-        className="grid"
+        className="grid grid-paint"
         style={gridStyle}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
@@ -99,17 +102,12 @@ export default function AvailabilityGrid({
             columns={model.columns}
             cells={model.cells}
             selected={selected}
+            ghost={ghost}
           />
         ))}
         <div className="grid-time-end">
           <span>{model.endLabel}</span>
         </div>
-      </div>
-      <div className="legend">
-        <span className="swatch" style={{ background: "var(--surface-2)" }} />
-        <span>Busy</span>
-        <span className="swatch" style={{ background: "var(--brand)" }} />
-        <span>Available — click or drag to paint</span>
       </div>
     </div>
   );
@@ -124,6 +122,7 @@ function RowFragment({
   columns,
   cells,
   selected,
+  ghost,
 }: {
   rowKey: number;
   rowLabel: string;
@@ -133,6 +132,7 @@ function RowFragment({
   columns: { key: string; label: string }[];
   cells: Map<string, number>;
   selected: Set<number>;
+  ghost?: Map<number, number>;
 }) {
   return (
     <>
@@ -152,7 +152,9 @@ function RowFragment({
           <div
             key={c.key}
             data-slot={ms}
-            className={`cell${selected.has(ms) ? " sel" : ""}${edge}`}
+            className={`cell${
+              selected.has(ms) ? " sel" : ghost ? ` g${ghost.get(ms) ?? 0}` : ""
+            }${edge}`}
           />
         );
       })}

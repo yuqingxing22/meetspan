@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useParams } from "react-router-dom";
+import { DateTime } from "luxon";
 import AvailabilityBoard from "../components/AvailabilityBoard";
 import TimezonePicker from "../components/TimezonePicker";
-import { detectTz } from "../lib/slots";
+import { detectTz, formatRange, formatSlot, tzInfo } from "../lib/slots";
 import {
   setParticipantEmail,
   subscribeParticipants,
@@ -11,31 +12,40 @@ import {
 } from "../lib/poll";
 import { loadParticipant, saveParticipant } from "../lib/adminStore";
 import { newParticipantId } from "../lib/ids";
+import { bestWindow } from "../lib/best";
+import { avatarColor, initial } from "../lib/avatar";
 import { isFirebaseConfigured } from "../firebase";
 import { useAuthState } from "../lib/useAuthState";
-import { useToast } from "../lib/useToast";
 import type { Participant, PollMeta } from "../lib/types";
 
-export default function Participate() {
+type SaveState = "idle" | "saving" | "saved" | "error";
+
+// Remount per poll so switching polls (e.g. from "Your polls") never carries
+// one poll's state into another.
+export default function ParticipateRoute() {
   const { pollId = "" } = useParams();
-  const { show, node } = useToast();
+  return <Participate key={pollId} />;
+}
+
+function Participate() {
+  const { pollId = "" } = useParams();
   const auth = useAuthState();
-  const uid = typeof auth === "string" ? auth : null;
-  const stored = loadParticipant(pollId);
+  const uid = auth !== "loading" && auth !== "error" ? auth : null;
+  const stored = useMemo(() => loadParticipant(pollId), [pollId]);
 
   const [meta, setMeta] = useState<PollMeta | null | undefined>(undefined);
   const [participants, setParticipants] = useState<Participant[]>([]);
-  const [phase, setPhase] = useState<"intro" | "grid">(
-    stored ? "grid" : "intro"
-  );
   const [pid, setPid] = useState<string>(stored?.id ?? "");
   const [codename, setCodename] = useState(stored?.codename ?? "");
   const [email, setEmail] = useState(stored?.email ?? "");
   const [tz, setTz] = useState(stored?.tz ?? detectTz());
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [dirty, setDirty] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [saveState, setSaveState] = useState<SaveState>(stored ? "saved" : "idle");
+  const [focusMs, setFocusMs] = useState<number | null>(null);
   const inited = useRef(false);
+  // What the private email doc last held, so it's only rewritten on change.
+  const savedEmailKey = useRef(stored ? `${stored.email ?? ""}|${stored.codename}` : "");
 
   useEffect(() => {
     // Wait for anonymous sign-in — Firestore rules require an authed user.
@@ -58,12 +68,77 @@ export default function Participate() {
     }
   }, [participants, pid]);
 
+  const closed = meta?.status === "closed";
+
+  async function save() {
+    const name = codename.trim();
+    if (!uid || !name || !meta) return;
+    const id = pid || newParticipantId();
+    const mail = email.trim();
+    setPid(id);
+    inited.current = true;
+    setDirty(false);
+    setSaveState("saving");
+    saveParticipant(pollId, { id, codename: name, tz, email: mail });
+    try {
+      await upsertParticipant(pollId, {
+        id,
+        codename: name,
+        tz,
+        ownerUid: uid,
+        selectedSlots: [...selected],
+        updatedAt: Date.now(),
+      });
+      const key = `${mail}|${name}`;
+      if (key !== savedEmailKey.current) {
+        await setParticipantEmail(pollId, uid, mail, name);
+        savedEmailKey.current = key;
+      }
+      setSaveState("saved");
+    } catch (e) {
+      console.error("Save failed", e);
+      setSaveState("error");
+    }
+  }
+
+  // Autosave shortly after the last edit, once we know who this is.
+  useEffect(() => {
+    if (!dirty || closed || !uid || !codename.trim()) return;
+    const t = window.setTimeout(() => void save(), 800);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dirty, selected, codename, tz, email, uid, closed]);
+
+  const nameOf = (id: string) => participants.find((p) => p.id === id)?.codename ?? "someone";
+  const others = participants.filter((p) => p.id !== pid);
+  const meIn = selected.size > 0 || participants.some((p) => p.id === pid);
+  const meName = codename.trim() || "You";
+
+  // Everyone, with the viewer's live selection standing in for their saved copy.
+  const everyone = useMemo(() => {
+    const list = others.map((p) => ({
+      id: p.id,
+      name: p.codename,
+      tz: p.tz,
+      slots: new Set(p.selectedSlots),
+      isMe: false,
+    }));
+    if (meIn) list.push({ id: pid || "me", name: `${meName} (you)`, tz, slots: selected, isMe: true });
+    return list;
+  }, [others, meIn, pid, meName, tz, selected]);
+
+  const best = useMemo(() => {
+    if (!meta) return null;
+    const k = Math.max(1, Math.round(60 / meta.granularityMin));
+    return bestWindow(meta.slots, meta.granularityMin, everyone, k);
+  }, [meta, everyone]);
+
   if (!isFirebaseConfigured) {
     return <p className="muted">Firebase isn't configured yet (see README).</p>;
   }
   if (auth === "error")
     return (
-      <div className="card">
+      <div className="card state-card">
         <h2>Couldn't sign in</h2>
         <p className="hint">
           This poll needs Anonymous sign-in, which the site owner hasn't enabled
@@ -75,201 +150,195 @@ export default function Participate() {
   if (meta === undefined) return <p className="muted">Loading…</p>;
   if (meta === null)
     return (
-      <div className="card">
+      <div className="card state-card">
         <h2>Poll not found</h2>
         <p className="hint">This invite link may be wrong or the poll was removed.</p>
       </div>
     );
 
-  const closed = meta.status === "closed";
-  const others = participants.filter((p) => p.id !== pid);
-  const nameOf = (id: string) =>
-    participants.find((p) => p.id === id)?.codename ?? "someone";
-
-  async function start() {
-    const name = codename.trim();
-    if (!name) {
-      show("Please enter a codename first");
-      return;
-    }
-    if (!uid) {
-      show("Still signing in — try again in a moment");
-      return;
-    }
-    const id = pid || newParticipantId();
-    const mail = email.trim();
-    setPid(id);
-    saveParticipant(pollId, { id, codename: name, tz, email: mail });
-    inited.current = true;
-    try {
-      await upsertParticipant(pollId, {
-        id,
-        codename: name,
-        tz,
-        ownerUid: uid,
-        selectedSlots: [...selected],
-        updatedAt: Date.now(),
-      });
-      await setParticipantEmail(pollId, uid, mail, name);
-    } catch (e) {
-      show(`Could not join: ${(e as Error).message}`);
-      return;
-    }
-    setPhase("grid");
+  function edit<T>(setter: (v: T) => void) {
+    return (v: T) => {
+      setter(v);
+      setDirty(true);
+    };
   }
 
-  async function save() {
-    if (!uid) {
-      show("Still signing in — try again in a moment");
-      return;
-    }
-    setSaving(true);
-    try {
-      const mail = email.trim();
-      saveParticipant(pollId, { id: pid, codename, tz, email: mail });
-      await upsertParticipant(pollId, {
-        id: pid,
-        codename,
-        tz,
-        ownerUid: uid,
-        selectedSlots: [...selected],
-        updatedAt: Date.now(),
-      });
-      await setParticipantEmail(pollId, uid, mail, codename);
-      setDirty(false);
-      show("Availability saved ✓");
-    } catch (e) {
-      show(`Save failed: ${(e as Error).message}`);
-    } finally {
-      setSaving(false);
-    }
-  }
+  const datesLabel =
+    meta.dateMode === "weekly"
+      ? `${meta.weekdays
+          .map((w) => DateTime.fromObject({ weekday: w as 1 }).toFormat("ccc"))
+          .join(", ")}, every week`
+      : meta.dates.length > 1
+      ? `${DateTime.fromISO(meta.dates[0]).toFormat("ccc, LLL d")} – ${DateTime.fromISO(
+          meta.dates[meta.dates.length - 1]
+        ).toFormat("ccc, LLL d")}`
+      : meta.dates.length === 1
+      ? DateTime.fromISO(meta.dates[0]).toFormat("cccc, LLL d")
+      : "";
+  const respondedCount = others.length + (meIn ? 1 : 0);
 
-  if (phase === "intro") {
-    return (
-      <div>
-        <h1 className="page-title">
-          You're invited{meta.title ? `: ${meta.title}` : ""}
-        </h1>
-        <p className="page-sub">
-          Pick a codename, confirm your timezone, then mark when you're free.
-        </p>
-        <div className="card">
-          <label className="field">
-            <span className="field-label">Your codename</span>
-            <input
-              type="text"
-              value={codename}
-              placeholder="e.g. Nightowl, Alex, 小明…"
-              onChange={(e) => setCodename(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && start()}
-              autoFocus
-            />
-          </label>
-          <TimezonePicker value={tz} onChange={setTz} label="Your timezone" />
-          <label className="field">
-            <span className="field-label">Email (optional)</span>
-            <input
-              type="email"
-              value={email}
-              placeholder="you@example.com — so the organizer can send you the final time"
-              onChange={(e) => setEmail(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && start()}
-            />
-          </label>
-          {others.length > 0 && (
-            <p className="muted">
-              Already responded:{" "}
-              {others.map((o) => o.codename).join(", ")}
-            </p>
-          )}
-          <div className="spacer" />
-          <button className="btn btn-primary btn-block" onClick={start}>
-            Start marking availability →
-          </button>
-        </div>
-        {node}
-      </div>
-    );
-  }
+  let status: { text: string; tone: string } = { text: "Mark your free times below", tone: "idle" };
+  if (saveState === "error") status = { text: "Couldn't save", tone: "warn" };
+  else if (dirty && !codename.trim()) status = { text: "Add your name to save", tone: "warn" };
+  else if (saveState === "saving" || dirty) status = { text: "Saving…", tone: "busy" };
+  else if (saveState === "saved") status = { text: "Saved automatically", tone: "ok" };
 
   return (
     <div>
-      <h1 className="page-title">
-        Hi {codename} 👋{meta.title ? ` · ${meta.title}` : ""}
-      </h1>
-      <p className="page-sub">
-        Paint the times you're free on the left; the group's overlap updates
-        live on the right. Everything's shown in your timezone.
-      </p>
+      <div className="page-head">
+        <div className="invited-by">
+          <span className="avatar avatar-sm" style={{ background: avatarColor(meta.organizerUid) }}>
+            {initial(meta.organizerName || "M")}
+          </span>
+          <span>
+            <b>{meta.organizerName || "Someone"}</b> invited you
+          </span>
+        </div>
+        <h1 className="page-title">{meta.title || "When are you free?"}</h1>
+        <p className="page-sub">
+          {datesLabel}
+          {datesLabel ? " · " : ""}
+          {respondedCount} {respondedCount === 1 ? "person has" : "people have"} responded
+        </p>
+      </div>
 
       {closed && (
-        <div className="banner banner-warn" style={{ borderRadius: 8 }}>
-          This poll is closed — your selections are read-only now.
+        <div className="notice notice-warn">
+          This poll is closed, so your times are read-only now.
         </div>
       )}
 
-      <div className="card">
-        <div className="row" style={{ marginBottom: 12 }}>
-          <TimezonePicker
-            value={tz}
-            onChange={(z) => {
-              setTz(z);
+      <div className="identity-bar">
+        <label className="inline-field">
+          <span>Responding as</span>
+          <input
+            type="text"
+            value={codename}
+            placeholder="Your name"
+            disabled={closed}
+            onChange={(e) => edit(setCodename)(e.target.value)}
+          />
+        </label>
+        <div className="inline-tz">
+          <TimezonePicker value={tz} onChange={edit(setTz)} label="Times shown in" />
+        </div>
+        <label className="inline-field">
+          <span>Email</span>
+          <input
+            type="email"
+            value={email}
+            placeholder="Optional, for the final time"
+            disabled={closed}
+            onChange={(e) => edit(setEmail)(e.target.value)}
+          />
+        </label>
+        {!closed && (
+          <div className={`save-pill ${status.tone}`} role="status">
+            <span className="dot" />
+            {status.text}
+            {saveState === "error" && (
+              <button type="button" className="link-btn" onClick={() => void save()}>
+                Try again
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+
+      <div className="poll-layout">
+        <section className="card poll-main">
+          <AvailabilityBoard
+            slots={meta.slots}
+            tz={tz}
+            weekdayOnly={meta.dateMode === "weekly"}
+            selected={selected}
+            onChange={(next) => {
+              if (closed) return;
+              setSelected(next);
               setDirty(true);
             }}
-            label="Viewing in timezone"
+            editable={!closed}
+            participants={participants}
+            myId={pid}
+            nameOf={nameOf}
+            focusMs={focusMs}
+            onFocusSlot={setFocusMs}
           />
-          <label className="field">
-            <span className="field-label">Email (optional)</span>
-            <input
-              type="email"
-              value={email}
-              placeholder="you@example.com"
-              onChange={(e) => {
-                setEmail(e.target.value);
-                setDirty(true);
-              }}
-            />
-          </label>
-        </div>
+        </section>
 
-        <AvailabilityBoard
-          slots={meta.slots}
-          tz={tz}
-          weekdayOnly={meta.dateMode === "weekly"}
-          selected={selected}
-          onChange={(next) => {
-            if (closed) return;
-            setSelected(next);
-            setDirty(true);
-          }}
-          editable={!closed}
-          participants={participants}
-          myId={pid}
-          nameOf={nameOf}
-        />
-
-        <div className="spacer" />
-        <div className="row">
-          <button
-            className="btn btn-primary"
-            onClick={save}
-            disabled={closed || saving || !dirty}
-          >
-            {saving ? "Saving…" : dirty ? "Save my availability" : "Saved ✓"}
-          </button>
-          {others.length > 0 && (
-            <div className="participant-tags" style={{ alignSelf: "center" }}>
-              {others.map((o) => (
-                <span key={o.id} className="tag">
-                  {o.codename}
-                </span>
-              ))}
+        <aside className="poll-side">
+          {focusMs !== null && (
+            <div className="card side-card">
+              <div className="eyebrow">Who's free</div>
+              <div className="side-title">{formatSlot(focusMs, tz)}</div>
+              <div className="side-sub">
+                {everyone.filter((p) => p.slots.has(focusMs)).length} of {everyone.length} free
+              </div>
+              <ul className="people">
+                {everyone.map((p) => {
+                  const free = p.slots.has(focusMs);
+                  const local = DateTime.fromMillis(focusMs, { zone: p.tz });
+                  const sameZone = p.tz === tz;
+                  return (
+                    <li key={p.id}>
+                      <span className="avatar" style={{ background: p.isMe ? "#14151A" : avatarColor(p.id) }}>
+                        {initial(p.name)}
+                      </span>
+                      <span className="people-main">
+                        <span className="people-name">{p.name}</span>
+                        <span className="people-sub">
+                          {sameZone
+                            ? "Same timezone as you"
+                            : `${local.toFormat("h:mm a ccc")} in ${tzInfo(p.tz).city}`}
+                        </span>
+                      </span>
+                      <span className={`badge ${free ? "badge-ok" : "badge-muted"}`}>
+                        {free ? "Free" : "Busy"}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
             </div>
           )}
-        </div>
+
+          <div className="card side-card">
+            <div className="eyebrow">Best 1-hour slot so far</div>
+            {best ? (
+              <>
+                <div className="side-title">{formatRange(best.startMs, best.endMs, tz)}</div>
+                <div className="bar">
+                  <span style={{ width: `${(best.freeIds.length / Math.max(everyone.length, 1)) * 100}%` }} />
+                </div>
+                <div className="side-sub">
+                  {best.freeIds.length} of {everyone.length} people free
+                </div>
+              </>
+            ) : (
+              <div className="side-sub">No overlap yet. It shows up as people mark their times.</div>
+            )}
+          </div>
+
+          <div className="card side-card">
+            <div className="eyebrow">Responded · {everyone.length}</div>
+            {everyone.length === 0 ? (
+              <div className="side-sub">Nobody yet. You could be first.</div>
+            ) : (
+              <ul className="people">
+                {everyone.map((p) => (
+                  <li key={p.id}>
+                    <span className="avatar" style={{ background: p.isMe ? "#14151A" : avatarColor(p.id) }}>
+                      {initial(p.name)}
+                    </span>
+                    <span className="people-name people-main">{p.name}</span>
+                    <span className="people-sub">{tzInfo(p.tz).city}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        </aside>
       </div>
-      {node}
     </div>
   );
 }

@@ -1,6 +1,8 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import AvailabilityGrid from "./AvailabilityGrid";
-import Heatmap, { type SlotStat } from "./Heatmap";
+import DayList from "./DayList";
+import Heatmap, { heatLevel, type SlotStat } from "./Heatmap";
+import { formatSlot } from "../lib/slots";
 import type { Participant } from "../lib/types";
 
 interface Props {
@@ -10,7 +12,7 @@ interface Props {
   /** The current viewer's own selection (editable). */
   selected: Set<number>;
   onChange: (next: Set<number>) => void;
-  /** Show the editable "Your availability" pane. */
+  /** Whether the viewer can mark their own times. */
   editable: boolean;
   /** Everyone who has responded (from Firestore). */
   participants: Participant[];
@@ -20,16 +22,21 @@ interface Props {
   nameOf: (id: string) => string;
   /** Slot starts to outline as the chosen/best window. */
   highlight?: Set<number>;
+  /** Which view opens first (defaults to marking when editable). */
+  defaultMode?: "paint" | "group";
+  /** Report the slot being inspected in the group view (for a side panel). */
+  onFocusSlot?: (ms: number | null) => void;
+  focusMs?: number | null;
 }
 
 // Sentinel id for the viewer's own live (possibly unsaved) selection.
-const ME = "__me__";
+export const ME = "__me__";
 
 /**
- * When2Meet-style board: paint your own availability on the left while a live
- * group heatmap on the right shows everyone's overlap (darker = more people
- * free). The heatmap folds in the viewer's in-progress edits immediately, so
- * the overlap updates as they paint.
+ * One grid, two views: paint your own free times (with faint blue showing when
+ * others are free), or see everyone's overlap as a heatmap (darker = more
+ * people free). The heatmap folds in the viewer's in-progress edits
+ * immediately, so the overlap updates as they paint.
  */
 export default function AvailabilityBoard({
   slots,
@@ -42,22 +49,35 @@ export default function AvailabilityBoard({
   myId,
   nameOf,
   highlight,
+  defaultMode,
+  onFocusSlot,
+  focusMs,
 }: Props) {
-  const { statsByMs, total } = useMemo(() => {
+  const [mode, setMode] = useState<"paint" | "group">(
+    editable ? defaultMode ?? "paint" : "group"
+  );
+  const [ownFocus, setOwnFocus] = useState<number | null>(null);
+  const view = editable ? mode : "group";
+
+  const { statsByMs, total, othersFree, othersTotal } = useMemo(() => {
     // Everyone except the viewer's stored copy — the viewer is represented by
     // their live `selected` set instead, so unsaved edits show up right away.
     const others = participants.filter((p) => p.id !== myId);
-    const meResponded =
-      selected.size > 0 || participants.some((p) => p.id === myId);
+    const meResponded = selected.size > 0 || participants.some((p) => p.id === myId);
 
     const stats = new Map<number, SlotStat>();
-    for (const ms of slots) stats.set(ms, { count: 0, available: [] });
+    const free = new Map<number, number>();
+    for (const ms of slots) {
+      stats.set(ms, { count: 0, available: [] });
+      free.set(ms, 0);
+    }
     for (const p of others)
       for (const ms of p.selectedSlots) {
         const s = stats.get(ms);
         if (s) {
           s.available.push(p.id);
           s.count++;
+          free.set(ms, (free.get(ms) ?? 0) + 1);
         }
       }
     if (meResponded)
@@ -71,47 +91,135 @@ export default function AvailabilityBoard({
     return {
       statsByMs: stats,
       total: others.length + (meResponded ? 1 : 0),
+      othersFree: free,
+      othersTotal: others.length,
     };
   }, [participants, myId, selected, slots]);
 
-  const nameOfWithMe = (id: string) =>
-    id === ME || id === myId ? "You" : nameOf(id);
+  const ghost = useMemo(() => {
+    const m = new Map<number, number>();
+    for (const [ms, n] of othersFree) m.set(ms, heatLevel(n, othersTotal));
+    return m;
+  }, [othersFree, othersTotal]);
+
+  const nameOfWithMe = (id: string) => (id === ME || id === myId ? "You" : nameOf(id));
+
+  // Inspect state: lifted to the parent when it shows its own side panel.
+  const focus = onFocusSlot ? focusMs ?? null : ownFocus;
+  const setFocus = onFocusSlot ?? setOwnFocus;
+  const focusStat = focus !== null ? statsByMs.get(focus) : undefined;
 
   return (
     <div className="board">
-      {editable && (
-        <div className="board-col">
-          <div className="board-head">
-            <span className="board-title">Your availability</span>
-            <span className="hint">Click or drag to paint when you're free</span>
+      <div className="board-toolbar">
+        {editable ? (
+          <div className="seg" role="group" aria-label="View">
+            <button
+              type="button"
+              className={view === "paint" ? "active" : ""}
+              aria-pressed={view === "paint"}
+              onClick={() => setMode("paint")}
+            >
+              Mark my times
+            </button>
+            <button
+              type="button"
+              className={view === "group" ? "active" : ""}
+              aria-pressed={view === "group"}
+              onClick={() => setMode("group")}
+            >
+              See everyone
+            </button>
           </div>
-          <AvailabilityGrid
+        ) : (
+          <span />
+        )}
+        {view === "paint" ? (
+          <div className="legend">
+            <span className="swatch swatch-me" />
+            You're free
+            {othersTotal > 0 && (
+              <>
+                <span className="swatch swatch-ghost" />
+                Others free (faint)
+              </>
+            )}
+          </div>
+        ) : (
+          <div className="legend">
+            0
+            <span className="ramp" aria-hidden="true">
+              {[0, 1, 2, 3, 4, 5].map((l) => (
+                <span key={l} className={`h${l}`} />
+              ))}
+            </span>
+            {total} free
+          </div>
+        )}
+      </div>
+
+      <p className={`board-hint${view === "paint" ? " only-wide" : ""}`}>
+        {view === "paint"
+          ? othersTotal > 0
+            ? "Click or drag across the grid to mark when you're free. Faint blue shows when others are free."
+            : "Click or drag across the grid to mark when you're free."
+          : total > 0
+          ? `Darker means more people are free. ${total} ${
+              total === 1 ? "person" : "people"
+            } so far. Hover or tap a slot to see who.`
+          : "No responses yet. The overlap fills in as people mark their times."}
+      </p>
+
+      {view === "paint" ? (
+        <>
+          <div className="only-wide">
+            <AvailabilityGrid
+              slots={slots}
+              tz={tz}
+              weekdayOnly={weekdayOnly}
+              selected={selected}
+              onChange={onChange}
+              ghost={othersTotal > 0 ? ghost : undefined}
+            />
+          </div>
+          <div className="only-narrow">
+            <DayList
+              slots={slots}
+              tz={tz}
+              weekdayOnly={weekdayOnly}
+              selected={selected}
+              onChange={onChange}
+              othersFree={othersFree}
+              othersTotal={othersTotal}
+            />
+          </div>
+        </>
+      ) : (
+        <>
+          <Heatmap
             slots={slots}
             tz={tz}
             weekdayOnly={weekdayOnly}
-            selected={selected}
-            onChange={onChange}
+            total={total}
+            statsByMs={statsByMs}
+            nameOf={nameOfWithMe}
+            highlight={highlight}
+            focusMs={focus}
+            onFocusSlot={setFocus}
           />
-        </div>
+          {!onFocusSlot && (
+            <div className="hover-line">
+              {focus !== null && focusStat
+                ? `${formatSlot(focus, tz)}: ${
+                    focusStat.available.length
+                      ? `${focusStat.available.map(nameOfWithMe).join(", ")} free`
+                      : "nobody free"
+                  }`
+                : "Hover or tap the grid to see who is free at any time."}
+            </div>
+          )}
+        </>
       )}
-      <div className="board-col">
-        <div className="board-head">
-          <span className="board-title">Group's availability</span>
-          <span className="hint">
-            Darker = more people free
-            {total > 0 ? ` · ${total} in so far` : ""}. Hover to see who.
-          </span>
-        </div>
-        <Heatmap
-          slots={slots}
-          tz={tz}
-          weekdayOnly={weekdayOnly}
-          total={total}
-          statsByMs={statsByMs}
-          nameOf={nameOfWithMe}
-          highlight={highlight}
-        />
-      </div>
     </div>
   );
 }

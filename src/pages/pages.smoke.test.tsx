@@ -15,7 +15,7 @@ describe("page render smoke tests", () => {
         <Home />
       </MemoryRouter>
     );
-    expect(html).toContain("Schedule across timezones");
+    expect(html).toContain("Find a time that works for everyone");
   });
 
   it("Participate mounts (loading or not-configured state)", () => {

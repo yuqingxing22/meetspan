@@ -1,94 +1,162 @@
+import { DateTime } from "luxon";
+import Icon from "./Icon";
 import { formatRange } from "../lib/slots";
 import type { ComputeResult, Session } from "../lib/overlap";
-import type { PollMeta } from "../lib/types";
+import type { Participant, PollMeta } from "../lib/types";
 
 interface Props {
   result: ComputeResult;
   meta: PollMeta;
+  participants: Participant[];
   nameOf: (id: string) => string;
   onUse: (sessions: Session[]) => void;
+  /** Preview an option on the grid (null when the pointer leaves it). */
+  onHover?: (sessions: Session[] | null) => void;
+  /** Start of the session that's currently locked in, if any. */
+  chosenStart?: number | null;
 }
 
-function SessionPills({
+function OptionCard({
   sessions,
+  label,
+  tone,
+  detail,
   meta,
+  participants,
+  nameOf,
   total,
+  primary,
+  onUse,
+  onHover,
+  chosen,
 }: {
   sessions: Session[];
+  label: string;
+  tone: "ok" | "brand" | "muted";
+  detail?: string;
   meta: PollMeta;
+  participants: Participant[];
+  nameOf: (id: string) => string;
   total: number;
+  primary: boolean;
+  onUse: (sessions: Session[]) => void;
+  onHover?: (sessions: Session[] | null) => void;
+  chosen: boolean;
 }) {
+  const first = sessions[0];
+  const missing = Array.from(new Set(sessions.flatMap((s) => s.missing)));
+  const minFree = Math.min(...sessions.map((s) => s.count));
   return (
-    <div>
-      {sessions.map((s, i) => (
-        <span key={i} className="session-pill">
-          {formatRange(s.startMs, s.endMs, meta.organizerTz)}
-          <small>
-            {s.count}/{total} free · {Math.round(
-              (s.endMs - s.startMs) / 60000
-            )}{" "}
-            min
-          </small>
+    <div
+      className={`option-card${chosen ? " chosen" : ""}`}
+      onMouseEnter={() => onHover?.(sessions)}
+      onMouseLeave={() => onHover?.(null)}
+    >
+      <div className="option-top">
+        <span className={`badge badge-${tone}`}>{label}</span>
+        <span className="muted small">
+          {minFree} of {total} free
+          {sessions.length > 1 ? ` · ${sessions.length} sessions` : ""}
         </span>
+      </div>
+      {sessions.map((s, i) => (
+        <div key={i} className="option-title">
+          {formatRange(s.startMs, s.endMs, meta.organizerTz)}
+        </div>
       ))}
+      {detail && <p className="option-detail">{detail}</p>}
+      <div className="bar">
+        <span
+          className={minFree === total ? "bar-ok" : ""}
+          style={{ width: `${(minFree / Math.max(total, 1)) * 100}%` }}
+        />
+      </div>
+      <div className="chips chips-sm">
+        {participants.map((p) => {
+          const ok = !missing.includes(p.id);
+          const local = DateTime.fromMillis(first.startMs, { zone: p.tz });
+          return (
+            <span key={p.id} className={`chip chip-static${ok ? "" : " chip-miss"}`}>
+              {p.codename} · {local.toFormat("h:mm a ccc")}
+            </span>
+          );
+        })}
+      </div>
+      {missing.length > 0 && (
+        <p className="miss-text">
+          {missing.map(nameOf).join(" and ")} can't make{" "}
+          {sessions.length > 1 ? "every session" : "it"}
+        </p>
+      )}
+      <button
+        type="button"
+        className={`btn btn-block ${chosen ? "btn-success" : primary ? "btn-primary" : ""}`}
+        onClick={() => onUse(sessions)}
+      >
+        {chosen ? (
+          <>
+            <Icon name="check" /> Picked
+          </>
+        ) : sessions.length > 1 ? (
+          "Pick these times"
+        ) : (
+          "Pick this time"
+        )}
+      </button>
     </div>
   );
 }
 
-export default function ResultPanel({ result, meta, nameOf, onUse }: Props) {
+export default function ResultPanel({
+  result,
+  meta,
+  participants,
+  nameOf,
+  onUse,
+  onHover,
+  chosenStart,
+}: Props) {
   const { total } = result;
+  const common = { meta, participants, nameOf, total, onUse, onHover };
+  const isChosen = (ss: Session[]) => chosenStart != null && ss[0]?.startMs === chosenStart;
 
   return (
-    <div>
+    <div className="options">
       {result.kind === "ok" ? (
-        <div className="card result-good">
-          <h2>✓ Found a time everyone can make</h2>
-          <p className="hint">
-            Shown in your timezone ({meta.organizerTz.replace(/_/g, " ")}).
-          </p>
-          <SessionPills sessions={result.sessions} meta={meta} total={total} />
-          <div className="spacer" />
-          <button
-            className="btn btn-primary"
-            onClick={() => onUse(result.sessions)}
-          >
-            Use these times & draft email →
-          </button>
-        </div>
+        <OptionCard
+          {...common}
+          sessions={result.sessions}
+          label="Recommended · everyone can make it"
+          tone="ok"
+          primary
+          chosen={isChosen(result.sessions)}
+        />
       ) : (
-        <div className="card result-warn">
-          <h2>No single time fits everyone for the full duration</h2>
-          <p className="hint">
-            Here's what the numbers say and a few ways forward:
-          </p>
+        <div className="notice notice-warn">
+          No single time fits everyone for the full meeting. Here are the closest
+          options.
         </div>
       )}
 
-      {result.suggestions.map((s, i) => (
-        <div key={i} className="suggestion">
-          <b>{s.title}</b>
-          <div className="muted" style={{ margin: "4px 0 8px" }}>
-            {s.detail}
+      {result.suggestions.map((s, i) =>
+        s.sessions && s.sessions.length > 0 ? (
+          <OptionCard
+            {...common}
+            key={i}
+            sessions={s.sessions}
+            label={s.title}
+            tone={result.kind === "none" && i === 0 ? "brand" : "muted"}
+            detail={s.detail}
+            primary={result.kind === "none" && i === 0}
+            chosen={isChosen(s.sessions)}
+          />
+        ) : (
+          <div key={i} className="option-card option-note">
+            <b>{s.title}</b>
+            <p className="option-detail">{s.detail}</p>
           </div>
-          {s.excluded && s.excluded.length > 0 && (
-            <div className="muted" style={{ marginBottom: 8 }}>
-              Would leave out: {s.excluded.map(nameOf).join(", ")}
-            </div>
-          )}
-          {s.sessions && s.sessions.length > 0 && (
-            <>
-              <SessionPills sessions={s.sessions} meta={meta} total={total} />
-              <div className="spacer" />
-              <button
-                className="btn btn-sm"
-                onClick={() => onUse(s.sessions!)}
-              >
-                Use these times & draft email →
-              </button>
-            </>
-          )}
-        </div>
-      ))}
+        )
+      )}
     </div>
   );
 }

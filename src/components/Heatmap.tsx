@@ -15,6 +15,15 @@ interface Props {
   nameOf: (id: string) => string;
   /** Slot start ms to outline as chosen/best. */
   highlight?: Set<number>;
+  /** Slot to ring as the one being inspected. */
+  focusMs?: number | null;
+  /** Hover / tap on a slot (null when the pointer leaves the grid). */
+  onFocusSlot?: (ms: number | null) => void;
+}
+
+export function heatLevel(count: number, total: number): number {
+  if (count <= 0 || total <= 0) return 0;
+  return Math.min(5, Math.ceil((count / total) * 5));
 }
 
 /** Aggregated When2Meet-style heatmap: darker = more people free. */
@@ -26,20 +35,50 @@ export default function Heatmap({
   statsByMs,
   nameOf,
   highlight,
+  focusMs,
+  onFocusSlot,
 }: Props) {
   const model = buildGridModel(slots, tz, { weekdayOnly });
+  // Slot length, to find where an outlined window starts and ends.
+  let step = Infinity;
+  for (let i = 1; i < slots.length; i++) step = Math.min(step, slots[i] - slots[i - 1]);
   const gridStyle = {
-    gridTemplateColumns: `70px repeat(${model.columns.length}, var(--cellw))`,
+    gridTemplateColumns: `70px repeat(${model.columns.length}, minmax(var(--cellw), 1fr))`,
   };
 
-  function level(count: number): number {
-    if (count <= 0 || total <= 0) return 0;
-    return Math.min(5, Math.ceil((count / total) * 5));
+  function slotFromEvent(e: React.PointerEvent | React.MouseEvent): number | null {
+    const cell = (e.target as HTMLElement).closest("[data-slot]") as HTMLElement | null;
+    if (!cell) return null;
+    const ms = Number(cell.dataset.slot);
+    return Number.isFinite(ms) ? ms : null;
   }
 
   return (
     <div className="grid-wrap">
-      <div className="grid" style={gridStyle}>
+      <div
+        className="grid"
+        style={gridStyle}
+        onPointerMove={
+          onFocusSlot
+            ? (e) => {
+                if (e.pointerType !== "mouse") return;
+                const ms = slotFromEvent(e);
+                if (ms !== null && ms !== focusMs) onFocusSlot(ms);
+              }
+            : undefined
+        }
+        onPointerLeave={
+          onFocusSlot ? (e) => e.pointerType === "mouse" && onFocusSlot(null) : undefined
+        }
+        onClick={
+          onFocusSlot
+            ? (e) => {
+                const ms = slotFromEvent(e);
+                if (ms !== null) onFocusSlot(ms);
+              }
+            : undefined
+        }
+      >
         <div className="grid-corner" />
         {model.columns.map((c) => (
           <div key={c.key} className="grid-col-head">
@@ -69,16 +108,20 @@ export default function Heatmap({
                 const stat = statsByMs.get(ms) ?? { count: 0, available: [] };
                 const names = stat.available.map(nameOf).join(", ");
                 const cls =
-                  `cell h${level(stat.count)}` +
-                  (highlight?.has(ms) ? " best" : "") +
+                  `cell heat h${heatLevel(stat.count, total)}` +
+                  (highlight?.has(ms)
+                    ? " best" +
+                      (highlight.has(ms - step) ? "" : " best-top") +
+                      (highlight.has(ms + step) ? "" : " best-bottom")
+                    : "") +
+                  (focusMs === ms ? " focus" : "") +
                   edge;
                 return (
                   <div
                     key={c.key}
+                    data-slot={ms}
                     className={cls}
-                    title={`${stat.count}/${total} free${
-                      names ? ` — ${names}` : ""
-                    }`}
+                    title={`${stat.count}/${total} free${names ? ` — ${names}` : ""}`}
                   />
                 );
               })}
@@ -88,13 +131,6 @@ export default function Heatmap({
         <div className="grid-time-end">
           <span>{model.endLabel}</span>
         </div>
-      </div>
-      <div className="legend">
-        <span>Fewer free</span>
-        {[0, 1, 2, 3, 4, 5].map((l) => (
-          <span key={l} className={`swatch cell h${l}`} style={{ height: 14 }} />
-        ))}
-        <span>Everyone free</span>
       </div>
     </div>
   );
