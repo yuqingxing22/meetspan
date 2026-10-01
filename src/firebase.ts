@@ -4,7 +4,13 @@ import {
   getAuth,
   onAuthStateChanged,
   signInAnonymously,
+  signInWithCredential,
+  signInWithPopup,
+  linkWithPopup,
+  signOut,
+  GoogleAuthProvider,
   type Auth,
+  type User,
 } from "firebase/auth";
 
 // The Firebase *web* config is public by design — it only identifies your
@@ -80,4 +86,52 @@ export function subscribeAuth(cb: (uid: string | null) => void): () => void {
     return () => {};
   }
   return onAuthStateChanged(authInstance, (u) => cb(u?.uid ?? null));
+}
+
+/** Current Firebase user (anonymous or Google), or null. */
+export function currentUser(): User | null {
+  return authInstance?.currentUser ?? null;
+}
+
+/** Subscribe to the full user object (to show name / photo / anonymous state). */
+export function subscribeUser(cb: (u: User | null) => void): () => void {
+  if (!authInstance) {
+    cb(null);
+    return () => {};
+  }
+  return onAuthStateChanged(authInstance, cb);
+}
+
+/**
+ * Optional Google sign-in. If the visitor is currently anonymous, the Google
+ * account is *linked* to the same uid, so polls they already created stay
+ * theirs. If that Google account was already used before (on another device),
+ * switch to it instead, which brings back that account's polls.
+ */
+export async function signInWithGoogle(): Promise<void> {
+  if (!authInstance) throw new Error("Firebase is not configured.");
+  const provider = new GoogleAuthProvider();
+  const user = authInstance.currentUser;
+  if (user?.isAnonymous) {
+    try {
+      await linkWithPopup(user, provider);
+      return;
+    } catch (e) {
+      const code = (e as { code?: string }).code;
+      const cred = GoogleAuthProvider.credentialFromError(e as never);
+      if (code === "auth/credential-already-in-use" && cred) {
+        await signInWithCredential(authInstance, cred);
+        return;
+      }
+      throw e;
+    }
+  }
+  await signInWithPopup(authInstance, provider);
+}
+
+/** Sign out, then drop back to a fresh anonymous session so the app keeps working. */
+export async function signOutToAnonymous(): Promise<void> {
+  if (!authInstance) return;
+  await signOut(authInstance);
+  await signInAnonymously(authInstance);
 }

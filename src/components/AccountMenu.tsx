@@ -1,0 +1,86 @@
+import { useEffect, useState } from "react";
+import type { User } from "firebase/auth";
+import {
+  isFirebaseConfigured,
+  signInWithGoogle,
+  signOutToAnonymous,
+  subscribeUser,
+} from "../firebase";
+
+/**
+ * Topbar account control. Everyone starts anonymous (no sign-in needed); this
+ * lets them optionally sign in with Google, or sign out again.
+ */
+export default function AccountMenu() {
+  const [user, setUser] = useState<User | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
+
+  useEffect(() => subscribeUser(setUser), []);
+
+  if (!isFirebaseConfigured || !user) return null;
+
+  const run = async (fn: () => Promise<void>) => {
+    setBusy(true);
+    setErr(null);
+    try {
+      await fn();
+    } catch (e) {
+      const code = (e as { code?: string }).code ?? "";
+      // Closing the popup is not an error worth shouting about.
+      if (
+        code !== "auth/popup-closed-by-user" &&
+        code !== "auth/cancelled-popup-request"
+      ) {
+        setErr(code || "Sign-in failed");
+      }
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (user.isAnonymous) {
+    return (
+      <div className="account">
+        <button
+          type="button"
+          className="btn btn-sm"
+          disabled={busy}
+          onClick={() => run(signInWithGoogle)}
+          title="Optional: keep your polls across devices"
+        >
+          Sign in with Google
+        </button>
+        {err && <span className="account-err">{err}</span>}
+      </div>
+    );
+  }
+
+  const name = user.displayName || user.email || "Signed in";
+  return (
+    <div className="account">
+      {user.photoURL && (
+        <img
+          className="account-photo"
+          src={user.photoURL}
+          alt=""
+          width={24}
+          height={24}
+          referrerPolicy="no-referrer"
+        />
+      )}
+      <span className="account-name" title={user.email ?? undefined}>
+        {name}
+      </span>
+      <button
+        type="button"
+        className="btn btn-ghost btn-sm"
+        disabled={busy}
+        onClick={() => run(signOutToAnonymous)}
+      >
+        Sign out
+      </button>
+      {err && <span className="account-err">{err}</span>}
+    </div>
+  );
+}

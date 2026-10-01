@@ -130,16 +130,44 @@ body {
   font-size: 0.85rem;
   align-self: center;
 }
-.topbar-cta {
+.topbar-right {
   margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.topbar-cta {
   flex: none;
   white-space: nowrap;
+}
+.account {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.account-photo {
+  border-radius: 50%;
+}
+.account-name {
+  font-size: 0.84rem;
+  color: var(--text-faint);
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.account-err {
+  font-size: 0.75rem;
+  color: var(--danger);
 }
 @media (max-width: 560px) {
   .topbar {
     padding: 12px 16px;
   }
   .topbar .tagline {
+    display: none;
+  }
+  .account-name {
     display: none;
   }
   .topbar-cta {

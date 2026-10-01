@@ -1,5 +1,6 @@
 import { Link, Outlet, useLocation } from "react-router-dom";
 import { isFirebaseConfigured } from "./firebase";
+import AccountMenu from "./components/AccountMenu";
 import markUrl from "./assets/meetspan-mark.svg";
 
 export default function App() {
@@ -16,11 +17,14 @@ export default function App() {
           MeetSpan
         </Link>
         <span className="tagline">Find a time across timezones</span>
-        {showCta && (
-          <Link to="/" className="btn btn-primary btn-sm topbar-cta">
-            ＋ Create my own poll
-          </Link>
-        )}
+        <div className="topbar-right">
+          <AccountMenu />
+          {showCta && (
+            <Link to="/" className="btn btn-primary btn-sm topbar-cta">
+              ＋ Create my own poll
+            </Link>
+          )}
+        </div>
       </header>
 
       {!isFirebaseConfigured && (
