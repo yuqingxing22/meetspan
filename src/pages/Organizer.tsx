@@ -31,6 +31,7 @@ import {
 import { newParticipantId } from "../lib/ids";
 import { computeSchedule, type Session } from "../lib/overlap";
 import { formatRange, formatSlot, tzInfo } from "../lib/slots";
+import { weeklyRangeLabel } from "../lib/repeat";
 import { commonWindows } from "../lib/best";
 import { sessionAt } from "../lib/finalized";
 import { windowComfort } from "../lib/comfort";
@@ -420,7 +421,7 @@ function Organizer() {
           days: meta.weekdays
             .map((w) => DateTime.fromObject({ weekday: w as 1 }).toFormat("ccc"))
             .join(getLang() === "zh" ? "、" : ", "),
-        })
+        }) + `${getLang() === "zh" ? "，" : ", "}${weeklyRangeLabel(meta)}`
       : meta.dates.length > 1
       ? `${DateTime.fromISO(meta.dates[0]).toFormat("ccc, LLL d")} – ${DateTime.fromISO(
           meta.dates[meta.dates.length - 1]

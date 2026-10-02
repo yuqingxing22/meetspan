@@ -2,10 +2,12 @@ import { useState } from "react";
 import { DateTime } from "luxon";
 import Calendar from "./Calendar";
 import DateField from "./DateField";
+import RepeatEndField from "./RepeatEndField";
+import { firstWeekMonday, repeatEndError } from "../lib/repeat";
 import Icon from "./Icon";
 import { buildSlots, enumerateDateRange } from "../lib/slots";
 import { updatePoll } from "../lib/poll";
-import type { PollMeta } from "../lib/types";
+import type { PollMeta, RepeatEnd } from "../lib/types";
 import { t } from "../lib/i18n";
 
 const WEEKDAYS = [
@@ -43,6 +45,9 @@ export default function EditPollModal({ pollId, meta, responses, onClose, onSave
   const [weekdays, setWeekdays] = useState<number[]>(meta.weekdays);
   const [startHour, setStartHour] = useState(meta.dailyWindow.startHour);
   const [endHour, setEndHour] = useState(meta.dailyWindow.endHour);
+  const initialFirstWeek = firstWeekMonday(meta).toISODate()!;
+  const [firstWeek, setFirstWeek] = useState(initialFirstWeek);
+  const [repeatEnd, setRepeatEnd] = useState<RepeatEnd | undefined>(meta.repeatEnd);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
@@ -59,7 +64,15 @@ export default function EditPollModal({ pollId, meta, responses, onClose, onSave
     endHour !== meta.dailyWindow.endHour ||
     resolvedDates.join() !== [...meta.dates].sort().join();
   const badRange = endHour <= startHour;
-  const canSave = !busy && !badRange && resolvedDates.length > 0;
+  // The first meeting day in the (possibly moved) start week, to check the end against.
+  const firstMeetingDay = weekly
+    ? DateTime.fromISO(firstWeek, { zone: meta.organizerTz })
+        .startOf("week")
+        .plus({ days: Math.min(...weekdays, 7) - 1 })
+        .toISODate()!
+    : undefined;
+  const endError = weekly ? repeatEndError(repeatEnd, firstMeetingDay) : "";
+  const canSave = !busy && !badRange && !endError && resolvedDates.length > 0;
 
   function pickDay(iso: string, shift: boolean) {
     if (shift && lastPick && lastPick !== iso) {
@@ -84,6 +97,11 @@ export default function EditPollModal({ pollId, meta, responses, onClose, onSave
           .map((n) => n.trim())
           .filter(Boolean),
       };
+      if (weekly) {
+        const monday = DateTime.fromISO(firstWeek, { zone: meta.organizerTz }).startOf("week").toISODate()!;
+        if (monday !== initialFirstWeek) patch.firstWeek = monday;
+        patch.repeatEnd = repeatEnd ?? null;
+      }
       if (timesChanged) {
         patch.dates = resolvedDates;
         patch.weekdays = weekly ? weekdays : [];
@@ -161,7 +179,27 @@ export default function EditPollModal({ pollId, meta, responses, onClose, onSave
               );
             })}
           </div>
-        ) : (
+        ) : null}
+        {weekly && (
+          <div className="row week-extra">
+            <div className="field">
+              <label className="field-label" htmlFor="edit-first-week">{t("First week")}</label>
+              <DateField
+                id="edit-first-week"
+                value={firstWeek}
+                onChange={(iso) => setFirstWeek(iso || initialFirstWeek)}
+                clearable={false}
+                format={(iso) =>
+                  t("Week of {date}", {
+                    date: DateTime.fromISO(iso, { zone: meta.organizerTz }).startOf("week").toFormat("LLL d, yyyy"),
+                  })
+                }
+              />
+            </div>
+            <RepeatEndField value={repeatEnd} onChange={setRepeatEnd} firstDate={firstMeetingDay} />
+          </div>
+        )}
+        {weekly ? null : (
           <div className="daypick">
             <Calendar selectedDates={new Set(dates)} onDayClick={pickDay} />
             <div className="daypick-side">

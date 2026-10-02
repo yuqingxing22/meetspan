@@ -4,6 +4,8 @@ import { DateTime } from "luxon";
 import TimezonePicker from "../components/TimezonePicker";
 import Calendar from "../components/Calendar";
 import DateField from "../components/DateField";
+import RepeatEndField from "../components/RepeatEndField";
+import { repeatEndError, repeatEndLabel } from "../lib/repeat";
 import Icon from "../components/Icon";
 import InviteQR from "../components/InviteQR";
 import TitleInput from "../components/TitleInput";
@@ -24,7 +26,7 @@ import { googleFirstName, useUser } from "../lib/useUser";
 import { copyText, useToast } from "../lib/useToast";
 import InviteByEmail from "../components/InviteByEmail";
 import { emailOrganizerLink, mailerEnabled } from "../lib/mailer";
-import type { Granularity, PollMeta } from "../lib/types";
+import type { Granularity, PollMeta, RepeatEnd } from "../lib/types";
 import heroArt from "../assets/illustrations/time-management.svg";
 import shareArt from "../assets/illustrations/share-link.svg";
 import { getLang, t } from "../lib/i18n";
@@ -77,9 +79,10 @@ export default function Home() {
   const [dates, setDates] = useState<string[]>([]);
   const [lastPick, setLastPick] = useState<string | null>(null);
   const [weekdays, setWeekdays] = useState<number[]>([1, 3, 5]);
-  // 0 = the next occurrence of each weekday from today; n = the week n
-  // Mondays from now.
-  const [weekStart, setWeekStart] = useState(0);
+  // "" = the next occurrence of each weekday from today; otherwise any day in
+  // the week the meeting starts.
+  const [firstWeek, setFirstWeek] = useState("");
+  const [repeatEnd, setRepeatEnd] = useState<RepeatEnd | undefined>(undefined);
   const [preset, setPreset] = useState<string>("work");
   const [startHour, setStartHour] = useState(9);
   const [endHour, setEndHour] = useState(17);
@@ -100,16 +103,16 @@ export default function Home() {
     token: string;
   } | null>(null);
 
-  const thisMonday = DateTime.now().setZone(tz).startOf("week");
 
   const resolvedDates = useMemo(() => {
     if (pickMode === "dates") return dates;
-    if (weekStart === 0) return nextDatesForWeekdays(weekdays, tz);
-    const monday = DateTime.now().setZone(tz).startOf("week").plus({ weeks: weekStart });
+    const monday = firstWeek ? DateTime.fromISO(firstWeek, { zone: tz }).startOf("week") : null;
+    if (!monday || monday <= DateTime.now().setZone(tz).startOf("week"))
+      return nextDatesForWeekdays(weekdays, tz);
     return [...weekdays]
       .sort((a, b) => a - b)
       .map((wd) => monday.plus({ days: wd - 1 }).toISODate()!);
-  }, [pickMode, dates, weekdays, weekStart, tz]);
+  }, [pickMode, dates, weekdays, firstWeek, tz]);
 
   function pickDay(iso: string, shift: boolean) {
     if (shift && lastPick && lastPick !== iso) {
@@ -127,14 +130,17 @@ export default function Home() {
 
   const dayCount = pickMode === "dates" ? dates.length : weekdays.length;
   const badRange = endHour <= startHour;
+  const endError =
+    pickMode === "weekly" ? repeatEndError(repeatEnd, [...resolvedDates].sort()[0]) : "";
   const canCreate =
-    isFirebaseConfigured && Boolean(uid) && !badRange && resolvedDates.length > 0 && !busy;
+    isFirebaseConfigured && Boolean(uid) && !badRange && !endError && resolvedDates.length > 0 && !busy;
 
   let createLabel = t("Create poll & get link");
   if (busy) createLabel = t("Creating…");
   else if (dayCount === 0)
     createLabel = pickMode === "dates" ? t("Pick at least one day to continue") : t("Pick at least one weekday");
   else if (badRange) createLabel = t("Fix the hours to continue");
+  else if (endError) createLabel = t("Fix the end date to continue");
   else if (isFirebaseConfigured && auth === "loading") createLabel = t("Connecting…");
 
   const zone = tzInfo(tz);
@@ -175,6 +181,7 @@ export default function Home() {
         weekdays: pickMode === "weekly" ? weekdays : [],
         slots,
         ...(deadline ? { deadline } : {}),
+        ...(pickMode === "weekly" && repeatEnd ? { repeatEnd } : {}),
         lang: getLang(),
       };
       await createPoll(pollId, meta);
@@ -533,22 +540,27 @@ export default function Home() {
                     })}
                   </div>
                   <div className="row week-extra">
-                    <label className="field">
-                      <span className="field-label">{t("First week")}</span>
-                      <select
-                        value={weekStart}
-                        onChange={(e) => setWeekStart(Number(e.target.value))}
-                      >
-                        <option value={0}>{t("Starting this week")}</option>
-                        {[1, 2, 3].map((n) => (
-                          <option key={n} value={n}>
-                            {t(n === 1 ? "Week of {date} (next week)" : "Week of {date}", {
-                              date: thisMonday.plus({ weeks: n }).toFormat("LLL d"),
-                            })}
-                          </option>
-                        ))}
-                      </select>
-                    </label>
+                    <div className="field">
+                      <label className="field-label" htmlFor="first-week">{t("First week")}</label>
+                      <DateField
+                        id="first-week"
+                        value={firstWeek}
+                        onChange={setFirstWeek}
+                        placeholder={t("Starting this week")}
+                        format={(iso) =>
+                          t("Week of {date}", {
+                            date: DateTime.fromISO(iso, { zone: tz }).startOf("week").toFormat("LLL d, yyyy"),
+                          })
+                        }
+                      />
+                    </div>
+                    <RepeatEndField
+                      value={repeatEnd}
+                      onChange={setRepeatEnd}
+                      firstDate={[...resolvedDates].sort()[0]}
+                    />
+                  </div>
+                  <div className="row week-extra">
                     <div className="first-dates">
                       <span className="field-label">{t("First meetings could fall on")}</span>
                       {resolvedDates.length === 0 ? (
@@ -562,7 +574,10 @@ export default function Home() {
                               {fmtDate(d)}
                             </span>
                           ))}
-                          <span className="muted small">{t("then every week")}</span>
+                          <span className="muted small">
+                            {t("then every week")}
+                            {repeatEnd && !endError ? `${getLang() === "zh" ? "，" : ", "}${repeatEndLabel(repeatEnd)}` : ""}
+                          </span>
                         </div>
                       )}
                     </div>

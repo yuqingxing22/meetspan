@@ -1627,6 +1627,31 @@ div.field.tz-field {
   text-decoration: underline;
 }
 
+/* "Ends" for weekly meetings: a select, plus a week count or a date. */
+.repeat-end-row {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+.repeat-end-row > select {
+  flex: 1 1 170px;
+  width: auto;
+}
+.repeat-end-row > .date-field {
+  flex: 1 1 170px;
+}
+.repeat-count {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 14px;
+  color: var(--text-dim);
+}
+.repeat-count input {
+  width: 84px;
+}
+
 /* Single-date field (e.g. "Respond by"): looks like an input, opens the calendar. */
 .date-field {
   position: relative;

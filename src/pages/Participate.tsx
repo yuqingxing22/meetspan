@@ -20,6 +20,7 @@ import { avatarColor, initial } from "../lib/avatar";
 import { comfortLabel, windowComfort } from "../lib/comfort";
 import { finalizedSessions } from "../lib/finalized";
 import { buildICS, downloadICS, googleCalendarLink } from "../lib/ics";
+import { repeatEndLabel, toFirstWeek, weeklyRangeLabel, weeklyRRule } from "../lib/repeat";
 import { isFirebaseConfigured } from "../firebase";
 import { useAuthState } from "../lib/useAuthState";
 import { googleFirstName } from "../lib/useUser";
@@ -191,7 +192,7 @@ function Participate() {
           days: meta.weekdays
             .map((w) => DateTime.fromObject({ weekday: w as 1 }).toFormat("ccc"))
             .join(getLang() === "zh" ? "、" : ", "),
-        })
+        }) + `${getLang() === "zh" ? "，" : ", "}${weeklyRangeLabel(meta)}`
       : meta.dates.length > 1
       ? `${DateTime.fromISO(meta.dates[0]).toFormat("ccc, LLL d")} – ${DateTime.fromISO(
           meta.dates[meta.dates.length - 1]
@@ -253,6 +254,7 @@ function Participate() {
             <div className="locked-sub">
               {finalTitle} · {t("in your timezone")}
               {meta.dateMode === "weekly" ? ` · ${t("repeats every week")}` : ""}
+              {meta.dateMode === "weekly" && meta.repeatEnd ? ` · ${repeatEndLabel(meta.repeatEnd)}` : ""}
             </div>
           </div>
           <div className="btn-row final-actions">
@@ -262,12 +264,12 @@ function Participate() {
                 className="btn btn-on-dark"
                 href={googleCalendarLink(
                   finalTitle,
-                  s.startMs,
-                  s.endMs,
+                  toFirstWeek(meta, s.startMs),
+                  toFirstWeek(meta, s.endMs),
                   meta.organizerName
                     ? t("Scheduled with MeetSpan by {name}.", { name: meta.organizerName })
                     : t("Scheduled with MeetSpan."),
-                  meta.dateMode === "weekly"
+                  meta.dateMode === "weekly" ? weeklyRRule(meta) : undefined
                 )}
                 target="_blank"
                 rel="noopener noreferrer"

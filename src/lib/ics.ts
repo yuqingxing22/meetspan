@@ -1,13 +1,14 @@
 import { DateTime } from "luxon";
 import type { Session } from "./overlap";
 import type { Participant, PollMeta } from "./types";
+import { sessionInFirstWeek, weeklyRRule } from "./repeat";
 
 export interface IcsInput {
   meta: PollMeta;
   meetingName: string;
   sessions: Session[];
   participants: Participant[];
-  /** True for weekly/recurring polls → each event repeats weekly. */
+  /** True for weekly/recurring polls → each event repeats weekly, from the start week to the end (if any). */
   recurring: boolean;
 }
 
@@ -59,7 +60,7 @@ export function buildICS(input: IcsInput, nowMs: number): string {
     "METHOD:PUBLISH",
   ];
 
-  sessions.forEach((s, i) => {
+  sessions.map((s) => (recurring ? sessionInFirstWeek(meta, s) : s)).forEach((s, i) => {
     const desc = [
       `Proposed with MeetSpan.`,
       names ? `Attendees: ${names}.` : "",
@@ -74,7 +75,7 @@ export function buildICS(input: IcsInput, nowMs: number): string {
     lines.push(`DTEND:${stamp(s.endMs)}`);
     lines.push(fold(`SUMMARY:${esc(title)}`));
     if (desc) lines.push(fold(`DESCRIPTION:${esc(desc)}`));
-    if (recurring) lines.push("RRULE:FREQ=WEEKLY");
+    if (recurring) lines.push(weeklyRRule(meta));
     lines.push("END:VEVENT");
   });
 
@@ -84,14 +85,15 @@ export function buildICS(input: IcsInput, nowMs: number): string {
 
 /**
  * A Google Calendar "add event" link for one session — opens a prefilled event
- * in the viewer's own calendar (and timezone). Weekly polls repeat weekly.
+ * in the viewer's own calendar (and timezone). `recur` is an RRULE line for
+ * weekly meetings (see weeklyRRule).
  */
 export function googleCalendarLink(
   title: string,
   startMs: number,
   endMs: number,
   details: string,
-  weekly: boolean
+  recur?: string
 ): string {
   const q = new URLSearchParams({
     action: "TEMPLATE",
@@ -99,7 +101,7 @@ export function googleCalendarLink(
     dates: `${stamp(startMs)}/${stamp(endMs)}`,
     details,
   });
-  if (weekly) q.set("recur", "RRULE:FREQ=WEEKLY");
+  if (recur) q.set("recur", recur);
   return `https://calendar.google.com/calendar/render?${q.toString()}`;
 }
 

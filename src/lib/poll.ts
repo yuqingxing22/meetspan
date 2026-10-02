@@ -1,6 +1,7 @@
 import {
   collection,
   deleteDoc,
+  deleteField,
   doc,
   getDoc,
   getDocs,
@@ -17,6 +18,7 @@ import type {
   Participant,
   ParticipantEmail,
   PollMeta,
+  RepeatEnd,
 } from "./types";
 
 function pollRef(pollId: string) {
@@ -137,11 +139,27 @@ export async function updatePoll(
   patch: Partial<
     Pick<
       PollMeta,
-      "title" | "requiredIds" | "deadline" | "expected" | "dates" | "weekdays" | "dailyWindow" | "slots"
+      | "title"
+      | "requiredIds"
+      | "deadline"
+      | "expected"
+      | "dates"
+      | "weekdays"
+      | "dailyWindow"
+      | "slots"
+      | "firstWeek"
     >
-  >
+  > & {
+    /** null removes the end (the meeting repeats with no end date). */
+    repeatEnd?: RepeatEnd | null;
+  }
 ): Promise<void> {
-  await updateDoc(pollRef(pollId), { ...patch, lastActivityAt: Date.now() });
+  const { repeatEnd, ...rest } = patch;
+  await updateDoc(pollRef(pollId), {
+    ...rest,
+    ...(repeatEnd === null ? { repeatEnd: deleteField() } : repeatEnd ? { repeatEnd } : {}),
+    lastActivityAt: Date.now(),
+  });
 }
 
 export async function finalizePoll(

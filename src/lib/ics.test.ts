@@ -87,7 +87,7 @@ describe("googleCalendarLink", () => {
   it("prefills title, UTC times and weekly recurrence", async () => {
     const { googleCalendarLink } = await import("./ics");
     const start = Date.UTC(2026, 9, 14, 16, 0);
-    const url = new URL(googleCalendarLink("Research sync", start, start + 3600_000, "Via MeetSpan", true));
+    const url = new URL(googleCalendarLink("Research sync", start, start + 3600_000, "Via MeetSpan", "RRULE:FREQ=WEEKLY"));
     expect(url.hostname).toBe("calendar.google.com");
     expect(url.searchParams.get("text")).toBe("Research sync");
     expect(url.searchParams.get("dates")).toBe("20261014T160000Z/20261014T170000Z");

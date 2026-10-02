@@ -8,6 +8,8 @@ export const MEETING_TYPES: { value: MeetingType; label: string }[] = [
 ];
 
 export type DateMode = "specific" | "weekly";
+/** When a weekly meeting stops: after `count` weeks, or on `until` (ISO date, organizer tz, inclusive). */
+export type RepeatEnd = { count: number } | { until: string };
 /** Slot length in minutes. 15/30/60 are presets; a custom value is allowed. */
 export type Granularity = number;
 
@@ -45,6 +47,14 @@ export interface PollMeta {
   dates: string[];
   /** Luxon weekdays 1–7 (Mon–Sun) chosen in weekly mode, for display context. */
   weekdays: number[];
+  /**
+   * Weekly mode: Monday (ISO date, organizer tz) of the week the meeting starts,
+   * when changed after creation. Absent: the week of `dates`. Answers stay on
+   * `dates`; the final schedule and invites move to this week.
+   */
+  firstWeek?: string;
+  /** Weekly mode: when the meeting stops. Absent: it repeats with no end date. */
+  repeatEnd?: RepeatEnd;
   /** Ordered UTC epoch-ms starts — the source of truth for the grid. */
   slots: number[];
   finalized?: Finalized;

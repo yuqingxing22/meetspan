@@ -9,6 +9,12 @@ interface Props {
   value: string;
   onChange: (iso: string) => void;
   id?: string;
+  /** Shown when empty (default "Pick a date"). */
+  placeholder?: string;
+  /** How to show the chosen date (default "Fri, Dec 18, 2026"). */
+  format?: (iso: string) => string;
+  /** Hide the × (when empty already means something, e.g. "this week"). */
+  clearable?: boolean;
 }
 
 /**
@@ -16,7 +22,7 @@ interface Props {
  * the browser's language (mm/dd/yyyy even on the Chinese page), so this shows
  * the date in the page's language and opens our calendar instead.
  */
-export default function DateField({ value, onChange, id }: Props) {
+export default function DateField({ value, onChange, id, placeholder, format, clearable = true }: Props) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -41,7 +47,7 @@ export default function DateField({ value, onChange, id }: Props) {
     };
   }, [open]);
 
-  const label = value ? DateTime.fromISO(value).toFormat("ccc, LLL d, yyyy") : "";
+  const label = value ? (format ? format(value) : DateTime.fromISO(value).toFormat("ccc, LLL d, yyyy")) : "";
 
   return (
     <div className="date-field" ref={rootRef}>
@@ -55,9 +61,9 @@ export default function DateField({ value, onChange, id }: Props) {
         onClick={() => setOpen((o) => !o)}
       >
         <Icon name="calendar" size={16} />
-        <span>{label || t("Pick a date")}</span>
+        <span>{label || placeholder || t("Pick a date")}</span>
       </button>
-      {value && (
+      {value && clearable && (
         <button
           type="button"
           className="date-field-clear"

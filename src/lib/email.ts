@@ -3,6 +3,7 @@ import { formatRange } from "./slots";
 import { getLang, withLang, type Lang } from "./i18n";
 import type { Session } from "./overlap";
 import type { MeetingType, Participant, PollMeta } from "./types";
+import { repeatEndLabel, sessionInFirstWeek } from "./repeat";
 
 export interface EmailInput {
   meta: PollMeta;
@@ -62,12 +63,16 @@ function sessionBlock(input: EmailInput, lang: Lang): string {
   return lines.join("\n").trimEnd();
 }
 
-/** "Starting the week of Oct 12" for weekly meetings; empty otherwise. */
+/** "Starting the week of Oct 12, for 10 weeks." for weekly meetings; empty otherwise. */
 function startLine(input: EmailInput, lang: Lang): string {
   if (input.meta.dateMode !== "weekly" || input.sessions.length === 0) return "";
+  // Sessions are already moved to the start week (see generateEmail).
   const first = Math.min(...input.sessions.map((s) => s.startMs));
   const monday = DateTime.fromMillis(first, { zone: input.meta.organizerTz }).startOf("week").toFormat("LLL d");
-  return lang === "zh" ? `从 ${monday} 那周开始。` : `Starting the week of ${monday}.`;
+  const end = repeatEndLabel(input.meta.repeatEnd);
+  return lang === "zh"
+    ? `从 ${monday} 那周开始${end ? `，${end}` : ""}。`
+    : `Starting the week of ${monday}${end ? `, ${end}` : ""}.`;
 }
 
 /**
@@ -176,6 +181,9 @@ function flavor(type: MeetingType): Flavor {
 
 export function generateEmail(input: EmailInput): GeneratedEmail {
   const lang = input.lang ?? getLang();
+  // Weekly meetings start in the chosen week, which can differ from the poll's own week.
+  if (input.meta.dateMode === "weekly")
+    input = { ...input, sessions: input.sessions.map((s) => sessionInFirstWeek(input.meta, s)) };
   // Dates in the email follow the email's language, not the interface's.
   return withLang(lang, () => (lang === "zh" ? generateZh(input) : generateEn(input)));
 }
