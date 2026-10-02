@@ -23,7 +23,7 @@ import { isFirebaseConfigured } from "../firebase";
 import { useAuthState } from "../lib/useAuthState";
 import { useMySchedule } from "../lib/useMySchedule";
 import type { Participant, PollMeta } from "../lib/types";
-import { t } from "../lib/i18n";
+import { getLang, t } from "../lib/i18n";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
@@ -185,7 +185,9 @@ function Participate() {
   const datesLabel =
     meta.dateMode === "weekly"
       ? t("{days}, every week", {
-          days: meta.weekdays.map((w) => DateTime.fromObject({ weekday: w as 1 }).toFormat("ccc")).join(", "),
+          days: meta.weekdays
+            .map((w) => DateTime.fromObject({ weekday: w as 1 }).toFormat("ccc"))
+            .join(getLang() === "zh" ? "、" : ", "),
         })
       : meta.dates.length > 1
       ? `${DateTime.fromISO(meta.dates[0]).toFormat("ccc, LLL d")} – ${DateTime.fromISO(
@@ -242,7 +244,7 @@ function Participate() {
             <div className="final-eyebrow">{t("The time is set")}</div>
             {finalSessions.map((s) => (
               <div key={s.startMs} className="locked-title">
-                {formatRange(s.startMs, s.endMs, tz)}
+                {formatRange(s.startMs, s.endMs, tz, meta.dateMode === "weekly")}
               </div>
             ))}
             <div className="locked-sub">
@@ -378,7 +380,7 @@ function Participate() {
           {focusMs !== null && (
             <div className="card side-card">
               <div className="eyebrow">{t("Who's free")}</div>
-              <div className="side-title">{formatSlot(focusMs, tz)}</div>
+              <div className="side-title">{formatSlot(focusMs, tz, meta.dateMode === "weekly")}</div>
               <div className="side-sub">
                 {t("{n} of {total} free", { n: everyone.filter((p) => p.slots.has(focusMs)).length, total: everyone.length })}
               </div>
@@ -422,7 +424,7 @@ function Participate() {
             <div className="eyebrow">{t("Best 1-hour slot so far")}</div>
             {best ? (
               <>
-                <div className="side-title">{formatRange(best.startMs, best.endMs, tz)}</div>
+                <div className="side-title">{formatRange(best.startMs, best.endMs, tz, meta.dateMode === "weekly")}</div>
                 <div className="bar">
                   <span style={{ width: `${(best.freeIds.length / Math.max(everyone.length, 1)) * 100}%` }} />
                 </div>

@@ -27,7 +27,7 @@ import {
 } from "../lib/adminStore";
 import { newParticipantId } from "../lib/ids";
 import { computeSchedule, type Session } from "../lib/overlap";
-import { formatRange, tzInfo } from "../lib/slots";
+import { formatRange, formatSlot, tzInfo } from "../lib/slots";
 import { commonWindows } from "../lib/best";
 import { sessionAt } from "../lib/finalized";
 import { windowComfort } from "../lib/comfort";
@@ -38,7 +38,7 @@ import { copyText, useToast } from "../lib/useToast";
 import { MEETING_TYPES } from "../lib/types";
 import type { MeetingType, Participant, ParticipantEmail, PollMeta } from "../lib/types";
 import waitArt from "../assets/illustrations/wait-in-line.svg";
-import { joinNames, t } from "../lib/i18n";
+import { getLang, joinNames, t } from "../lib/i18n";
 
 const DURATIONS = [
   { min: 30, label: "30 min" },
@@ -127,6 +127,8 @@ function Organizer() {
   const [editOpen, setEditOpen] = useState(false);
   // Start times ticked in the "all times everyone can make it" list.
   const [picks, setPicks] = useState<number[]>([]);
+  // Ticked times sent as choices (more than the meetings per week), not locked in.
+  const [optionSessions, setOptionSessions] = useState<Session[] | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const qrRef = useRef<HTMLDivElement>(null);
 
@@ -318,6 +320,8 @@ function Organizer() {
     .filter((ms) => common.some((w) => w.startMs === ms))
     .sort((a, b) => a - b)
     .map((ms) => sessionAt(ms, durationMin, meta, participants));
+  // More ticks than meetings per week means "let people choose", not "meet at all of these".
+  const asOptions = pickedSessions.length > Math.max(1, sessionsPerWeek);
   const lockedStarts = new Set(lockedSessions.map((s) => s.startMs));
 
   // Common windows grouped by day, in the organizer's timezone.
@@ -390,9 +394,11 @@ function Organizer() {
   }).toFormat("h a")}`;
   const datesLabel =
     meta.dateMode === "weekly"
-      ? `${meta.weekdays
-          .map((w) => DateTime.fromObject({ weekday: w as 1 }).toFormat("ccc"))
-          .join(", ")}, weekly`
+      ? t("{days}, every week", {
+          days: meta.weekdays
+            .map((w) => DateTime.fromObject({ weekday: w as 1 }).toFormat("ccc"))
+            .join(getLang() === "zh" ? "、" : ", "),
+        })
       : meta.dates.length > 1
       ? `${DateTime.fromISO(meta.dates[0]).toFormat("ccc, LLL d")} – ${DateTime.fromISO(
           meta.dates[meta.dates.length - 1]
@@ -487,7 +493,7 @@ function Organizer() {
     ) : null;
 
   const lockedLabel = lockedSessions
-    .map((s) => formatRange(s.startMs, s.endMs, meta.organizerTz))
+    .map((s) => formatRange(s.startMs, s.endMs, meta.organizerTz, meta.dateMode === "weekly"))
     .join(" · ");
 
   return (
@@ -702,7 +708,7 @@ function Organizer() {
               </div>
               <div className="stat-sub">
                 {topStat && topStat.count > 0
-                  ? DateTime.fromMillis(topStat.ms, { zone: meta.organizerTz }).toFormat("ccc, LLL d, h:mm a")
+                  ? formatSlot(topStat.ms, meta.organizerTz, meta.dateMode === "weekly")
                   : t("No overlap yet")}
               </div>
             </div>
@@ -820,7 +826,7 @@ function Organizer() {
                       <span className="badge badge-ok">{common.length}</span>
                     </div>
                     <p className="hint">
-                      {t("Every {d} slot where all {n} people are free, in your timezone. Tick one or more to lock them in.", {
+                      {t("Every {d} slot where all {n} people are free, in your timezone. Tick the time to lock it in, or tick several to email them as options for people to choose from.", {
                         d: t(DURATIONS.find((d) => d.min === durationMin)?.label ?? `${durationMin} min`),
                         n: participants.length,
                       })}
@@ -878,12 +884,15 @@ function Organizer() {
                           show(t("Open your private organizer link to pick a time"));
                           return;
                         }
-                        void onUse(pickedSessions);
+                        if (asOptions) setOptionSessions(pickedSessions);
+                        else void onUse(pickedSessions);
                         setPicks([]);
                       }}
                     >
                       {pickedSessions.length === 0
                         ? t("Tick the times you want")
+                        : asOptions
+                        ? t("Email these {n} times as options", { n: pickedSessions.length })
                         : t(pickedSessions.length === 1 ? "Pick 1 selected time" : "Pick {n} selected times", {
                             n: pickedSessions.length,
                           })}
@@ -950,6 +959,20 @@ function Organizer() {
           participants={participants}
           recipientEmails={emails.map((e) => e.email)}
           onClose={() => setShowEmail(false)}
+        />
+      )}
+      {optionSessions && (
+        <EmailModal
+          meta={meta}
+          meetingName={meetingName || meta.title || t("Our meeting")}
+          durationMin={durationMin}
+          sessionsPerWeek={sessionsPerWeek}
+          type={type}
+          sessions={optionSessions}
+          participants={participants}
+          recipientEmails={emails.map((e) => e.email)}
+          options
+          onClose={() => setOptionSessions(null)}
         />
       )}
       {node}

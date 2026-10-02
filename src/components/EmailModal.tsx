@@ -17,6 +17,8 @@ interface Props {
   participants: Participant[];
   /** Emails collected from participants (organizer-only), for the "To" field. */
   recipientEmails: string[];
+  /** The sessions are candidates for people to choose from, not a confirmed time. */
+  options?: boolean;
   onClose: () => void;
 }
 
@@ -44,6 +46,7 @@ export default function EmailModal({
   sessions,
   participants,
   recipientEmails,
+  options = false,
   onClose,
 }: Props) {
   const { show, node } = useToast();
@@ -62,8 +65,9 @@ export default function EmailModal({
         sessions,
         participants,
         lang: emailLang,
+        options,
       }),
-    [meta, meetingName, durationMin, sessionsPerWeek, type, sessions, participants, emailLang]
+    [meta, meetingName, durationMin, sessionsPerWeek, type, sessions, participants, emailLang, options]
   );
 
   // Recipients collected from participants who shared an email (organizer-only).
@@ -221,17 +225,25 @@ export default function EmailModal({
         </p>
 
         <div className="divider" />
-        <div className="field-label">{tr("Add to everyone’s calendar")}</div>
-        <button className="btn btn-block" onClick={saveIcs}>
-          ⤓ {tr("Download calendar file (.ics)")}
-        </button>
-        <p className="hint" style={{ marginTop: 8, marginBottom: 0 }}>
-          {tr(
-            meta.dateMode === "weekly"
-              ? "Opens in Apple Calendar, Google Calendar, Outlook and more. Attach it to the email so guests add it in one click — it shows in each person’s own timezone and repeats weekly."
-              : "Opens in Apple Calendar, Google Calendar, Outlook and more. Attach it to the email so guests add it in one click — it shows in each person’s own timezone."
-          )}
-        </p>
+        {options ? (
+          <p className="hint" style={{ margin: 0 }}>
+            {tr("These are options, so nothing is locked in yet. Once people reply, tick the winning time and pick it to get a calendar file.")}
+          </p>
+        ) : (
+          <>
+          <div className="field-label">{tr("Add to everyone’s calendar")}</div>
+          <button className="btn btn-block" onClick={saveIcs}>
+            ⤓ {tr("Download calendar file (.ics)")}
+          </button>
+          <p className="hint" style={{ marginTop: 8, marginBottom: 0 }}>
+            {tr(
+              meta.dateMode === "weekly"
+                ? "Opens in Apple Calendar, Google Calendar, Outlook and more. Attach it to the email so guests add it in one click — it shows in each person’s own timezone and repeats weekly."
+                : "Opens in Apple Calendar, Google Calendar, Outlook and more. Attach it to the email so guests add it in one click — it shows in each person’s own timezone."
+            )}
+          </p>
+          </>
+        )}
         {node}
       </div>
     </div>

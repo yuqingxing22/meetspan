@@ -269,7 +269,7 @@ export default function AvailabilityBoard({
           {!onFocusSlot && (
             <div className="hover-line">
               {focus !== null && focusStat
-                ? `${formatSlot(focus, tz)}: ${
+                ? `${formatSlot(focus, tz, weekdayOnly)}: ${
                     focusStat.available.length
                       ? t("{names} free", { names: focusStat.available.map(nameOfWithMe).join(", ") })
                       : t("nobody free")

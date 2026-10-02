@@ -1,5 +1,6 @@
 import { DateTime } from "luxon";
 import type { DailyWindow, Granularity } from "./types";
+import { getLang } from "./i18n";
 
 /**
  * Expand candidate dates + a daily window into an ordered list of absolute
@@ -128,18 +129,31 @@ export function buildGridModel(
   return { columns, rows, cells, endLabel };
 }
 
-/** Format a single slot instant in a given timezone. */
-export function formatSlot(ms: number, tz: string): string {
-  return DateTime.fromMillis(ms, { zone: tz }).toFormat("ccc, LLL d · h:mm a");
+/**
+ * The day of a weekly meeting, e.g. "Wednesdays" or "每周三". Weekly polls are
+ * stored on a reference week, so their dates mean nothing to people reading them.
+ */
+export function weeklyDay(dt: DateTime): string {
+  return getLang() === "zh" ? `每${dt.setLocale("zh-CN").toFormat("ccc")}` : `${dt.toFormat("cccc")}s`;
+}
+
+/** Format a single slot instant in a given timezone (weekday only for weekly polls). */
+export function formatSlot(ms: number, tz: string, weekly = false): string {
+  const dt = DateTime.fromMillis(ms, { zone: tz });
+  return weekly ? `${weeklyDay(dt)} · ${dt.toFormat("h:mm a")}` : dt.toFormat("ccc, LLL d · h:mm a");
 }
 
 /** Format a time range [startMs, endMs) in a given timezone (+ zone abbr). */
-export function formatRange(startMs: number, endMs: number, tz: string): string {
+export function formatRange(startMs: number, endMs: number, tz: string, weekly = false): string {
   const s = DateTime.fromMillis(startMs, { zone: tz });
   const e = DateTime.fromMillis(endMs, { zone: tz });
   const sameDay = s.hasSame(e, "day");
-  const left = s.toFormat("ccc, LLL d · h:mm a");
-  const right = sameDay ? e.toFormat("h:mm a") : e.toFormat("ccc, LLL d · h:mm a");
+  const left = weekly ? `${weeklyDay(s)} · ${s.toFormat("h:mm a")}` : s.toFormat("ccc, LLL d · h:mm a");
+  const right = sameDay
+    ? e.toFormat("h:mm a")
+    : weekly
+    ? `${weeklyDay(e)} · ${e.toFormat("h:mm a")}`
+    : e.toFormat("ccc, LLL d · h:mm a");
   return `${left} – ${right} ${s.toFormat("ZZZZ")}`;
 }
 

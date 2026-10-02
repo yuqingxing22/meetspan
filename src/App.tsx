@@ -59,7 +59,7 @@ export default function App() {
       </main>
 
       <footer className="footer">
-        <span className="footer-brand">MeetSpan</span>
+        <span className="footer-brand">© {new Date().getFullYear()} MeetSpan</span>
         <span>{t("No sign-up · Share-link only · Your times stay in your timezone")}</span>
       </footer>
     </div>

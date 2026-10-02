@@ -74,7 +74,7 @@ function OptionCard({
       </div>
       {sessions.map((s, i) => (
         <div key={i} className="option-title">
-          {formatRange(s.startMs, s.endMs, meta.organizerTz)}
+          {formatRange(s.startMs, s.endMs, meta.organizerTz, meta.dateMode === "weekly")}
         </div>
       ))}
       {detail && <p className="option-detail">{detail}</p>}

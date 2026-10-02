@@ -1,3 +1,4 @@
+import { DateTime } from "luxon";
 import { formatRange } from "./slots";
 import { getLang, withLang, type Lang } from "./i18n";
 import type { Session } from "./overlap";
@@ -13,6 +14,8 @@ export interface EmailInput {
   participants: Participant[];
   /** Email language; defaults to the interface language. */
   lang?: Lang;
+  /** The sessions are candidates to choose from, not a confirmed schedule. */
+  options?: boolean;
 }
 
 export interface GeneratedEmail {
@@ -30,28 +33,63 @@ function freqLabel(f: number, lang: Lang): string {
 /** Sessions listed in the organizer's timezone, with each attendee's local time. */
 function sessionBlock(input: EmailInput, lang: Lang): string {
   const { meta, sessions, participants } = input;
+  const weekly = meta.dateMode === "weekly";
   const lines: string[] = [];
   sessions.forEach((s, i) => {
-    const label =
-      lang === "zh"
+    const letter = String.fromCharCode(65 + i);
+    const label = input.options
+      ? lang === "zh"
+        ? `选项 ${letter}`
+        : `Option ${letter}`
+      : lang === "zh"
         ? sessions.length > 1
           ? `第 ${i + 1} 次`
           : "时间"
         : sessions.length > 1
         ? `Session ${i + 1}`
         : "Time";
-    lines.push(`  ${label}${lang === "zh" ? "：" : ": "}${formatRange(s.startMs, s.endMs, meta.organizerTz)}`);
+    lines.push(`  ${label}${lang === "zh" ? "：" : ": "}${formatRange(s.startMs, s.endMs, meta.organizerTz, weekly)}`);
     // Attendees who are free for this window, in their own timezone.
     const free = participants.filter((p) => s.freeIds.includes(p.id));
     const shown = free.length ? free : participants;
     for (const p of shown) {
       lines.push(
-        `      • ${p.codename} — ${formatRange(s.startMs, s.endMs, p.tz)}`
+        `      • ${p.codename} — ${formatRange(s.startMs, s.endMs, p.tz, weekly)}`
       );
     }
     lines.push("");
   });
   return lines.join("\n").trimEnd();
+}
+
+/** "Starting the week of Oct 12" for weekly meetings; empty otherwise. */
+function startLine(input: EmailInput, lang: Lang): string {
+  if (input.meta.dateMode !== "weekly" || input.sessions.length === 0) return "";
+  const first = Math.min(...input.sessions.map((s) => s.startMs));
+  const monday = DateTime.fromMillis(first, { zone: input.meta.organizerTz }).startOf("week").toFormat("LLL d");
+  return lang === "zh" ? `从 ${monday} 那周开始。` : `Starting the week of ${monday}.`;
+}
+
+/**
+ * Weekly times stay fixed in the organizer's timezone, so a daylight-saving
+ * change on either side moves everyone else's local time by an hour. Note it
+ * when that happens within the next six months.
+ */
+function dstLine(input: EmailInput, lang: Lang): string {
+  const { meta, sessions, participants } = input;
+  if (meta.dateMode !== "weekly" || sessions.length === 0) return "";
+  const first = Math.min(...sessions.map((s) => s.startMs));
+  const gap = (ms: number, tz: string) =>
+    DateTime.fromMillis(ms, { zone: tz }).offset - DateTime.fromMillis(ms, { zone: meta.organizerTz }).offset;
+  const week = 7 * 86_400_000;
+  const shifts = participants.some(
+    (p) => p.tz !== meta.organizerTz && [...Array(26).keys()].some((k) => gap(first + k * week, p.tz) !== gap(first, p.tz))
+  );
+  if (!shifts) return "";
+  const zone = DateTime.fromMillis(first, { zone: meta.organizerTz }).toFormat("ZZZZ");
+  return lang === "zh"
+    ? `时间以 ${zone} 为准。夏令时切换后，部分时区的本地时间会相差一小时，日历邀请会自动调整。`
+    : `Times are anchored to ${zone}. After a daylight-saving change, some local times above will shift by an hour; the calendar invite adjusts automatically.`;
 }
 
 interface Flavor {
@@ -146,6 +184,7 @@ function generateEn(input: EmailInput): GeneratedEmail {
   const { meetingName, durationMin, sessionsPerWeek, type, meta, sessions } =
     input;
   const f = flavor(type);
+  if (input.options) return optionsEn(input, f);
   const cadence =
     sessions.length > 1
       ? `${durationMin} min each, ${freqLabel(sessionsPerWeek, "en")}`
@@ -164,6 +203,8 @@ function generateEn(input: EmailInput): GeneratedEmail {
     `Duration: ${cadence}`,
     "",
     sessionBlock(input, "en"),
+    ...(startLine(input, "en") ? ["", startLine(input, "en")] : []),
+    ...(dstLine(input, "en") ? [dstLine(input, "en")] : []),
     "",
     f.extra,
     "",
@@ -179,6 +220,7 @@ function generateEn(input: EmailInput): GeneratedEmail {
 function generateZh(input: EmailInput): GeneratedEmail {
   const { meetingName, durationMin, sessionsPerWeek, type, meta, sessions } = input;
   const f = flavorZh(type);
+  if (input.options) return optionsZh(input, f);
   const cadence =
     sessions.length > 1
       ? `每次 ${durationMin} 分钟，${freqLabel(sessionsPerWeek, "zh")}`
@@ -195,6 +237,8 @@ function generateZh(input: EmailInput): GeneratedEmail {
     `时长：${cadence}`,
     "",
     sessionBlock(input, "zh"),
+    ...(startLine(input, "zh") ? ["", startLine(input, "zh")] : []),
+    ...(dstLine(input, "zh") ? [dstLine(input, "zh")] : []),
     "",
     f.extra,
     "",
@@ -207,6 +251,102 @@ function generateZh(input: EmailInput): GeneratedEmail {
   ].join("\n");
 
   return { subject, body };
+}
+
+/** One-on-one and interview emails go to one person; the rest to a group. */
+function isPersonal(type: MeetingType): boolean {
+  return type === "one_on_one" || type === "interview";
+}
+
+/**
+ * Several times that all work, sent so people can say which they prefer.
+ * Nothing is confirmed yet, so there's no agenda block and the sign-off is neutral.
+ */
+function optionsEn(input: EmailInput, f: Flavor): GeneratedEmail {
+  const { meetingName, durationMin, sessionsPerWeek, type, meta, sessions } = input;
+  const personal = isPersonal(type);
+  const weekly = meta.dateMode === "weekly";
+  const n = sessions.length;
+  const per = Math.max(1, sessionsPerWeek);
+  const choose = personal
+    ? `All ${n} times below work for both of us. Which one suits you best?`
+    : `All ${n} times below work for everyone, so please pick the one(s) you prefer:`;
+  const intro = weekly
+    ? `Thanks${personal ? "" : " everyone"} for sharing your availability. We'll meet ${freqLabel(per, "en")}, ${durationMin} min each time. ${choose}`
+    : `Thanks${personal ? "" : " everyone"} for sharing your availability. ${choose}`;
+  const next = weekly
+    ? personal
+      ? "Just reply with the option that works best for you, and I'll send a calendar invite that repeats every week."
+      : per > 1
+      ? `Reply with the option(s) that suit you (more than one is fine). I'll pick the ${per} times that work for the most people and send a calendar invite that repeats every week.`
+      : "Reply with the option(s) that suit you (more than one is fine). Once I've heard from everyone, I'll confirm the regular time and send a calendar invite that repeats every week."
+    : personal
+    ? "Just reply with the option that works best for you, and I'll send a calendar invite."
+    : "Reply with the option(s) that suit you (more than one is fine). I'll confirm the final time once I've heard from everyone.";
+  const body = [
+    personal ? "Hi," : "Hi all,",
+    "",
+    intro,
+    "",
+    `Meeting: ${meetingName}`,
+    ...(weekly ? [] : [`Duration: ${durationMin} min`]),
+    "",
+    sessionBlock(input, "en"),
+    ...(startLine(input, "en") ? ["", startLine(input, "en")] : []),
+    ...(dstLine(input, "en") ? [dstLine(input, "en")] : []),
+    "",
+    next,
+    "",
+    "Thanks,",
+    meta.organizerName || "[your name]",
+  ].join("\n");
+  return { subject: `${meetingName} — time options (${f.subjectTag})`, body };
+}
+
+function optionsZh(input: EmailInput, f: Flavor): GeneratedEmail {
+  const { meetingName, durationMin, sessionsPerWeek, type, meta, sessions } = input;
+  const personal = isPersonal(type);
+  const weekly = meta.dateMode === "weekly";
+  const n = sessions.length;
+  const per = Math.max(1, sessionsPerWeek);
+  const times = per === 1 ? "一次" : ` ${per} 次`;
+  const choose = personal
+    ? `以下 ${n} 个时间我们都方便，请您选择最合适的一个：`
+    : `以下 ${n} 个时间所有人都可以，请选出你方便的：`;
+  const intro = weekly
+    ? personal
+      ? `感谢您提供空闲时间。我们每周见${times}，每次 ${durationMin} 分钟。${choose}`
+      : `感谢大家提供空闲时间。我们每周开${times}会，每次 ${durationMin} 分钟。${choose}`
+    : personal
+    ? `感谢您提供空闲时间。${choose}`
+    : `感谢大家提供空闲时间。${choose}`;
+  const next = weekly
+    ? personal
+      ? "请回复您选择的选项，确认后我会发送每周重复的日历邀请。"
+      : per > 1
+      ? `请回复你方便的选项（可多选）。我会选出最多人方便的 ${per} 个时间，并发送每周重复的日历邀请。`
+      : "请回复你方便的选项（可多选）。收齐大家的回复后，我会确定固定时间，并发送每周重复的日历邀请。"
+    : personal
+    ? "请回复您选择的选项，确认后我会发送日历邀请。"
+    : "请回复你方便的选项（可多选），收齐大家的回复后我会确定最终时间。";
+  const body = [
+    personal ? "您好，" : "大家好，",
+    "",
+    intro,
+    "",
+    `会议：${meetingName}`,
+    ...(weekly ? [] : [`时长：${durationMin} 分钟`]),
+    "",
+    sessionBlock(input, "zh"),
+    ...(startLine(input, "zh") ? ["", startLine(input, "zh")] : []),
+    ...(dstLine(input, "zh") ? [dstLine(input, "zh")] : []),
+    "",
+    next,
+    "",
+    personal ? "谢谢！" : "谢谢大家！",
+    meta.organizerName || "[你的名字]",
+  ].join("\n");
+  return { subject: `${meetingName}：时间选项（${f.subjectTag}）`, body };
 }
 
 // Encode a query string with %20 for spaces and %0A for newlines. We can't use
