@@ -1,4 +1,5 @@
-import { t } from "../lib/i18n";
+import { useState } from "react";
+import { getLang, t } from "../lib/i18n";
 
 interface Props {
   title: string;
@@ -10,6 +11,10 @@ interface Props {
 
 /** Asks the organizer to confirm before a poll is deleted for good. */
 export default function DeletePollModal({ title, busy, error, onCancel, onConfirm }: Props) {
+  // A second, deliberate step: deleting is permanent, unlike closing.
+  const word = getLang() === "zh" ? "删除" : "delete";
+  const [typed, setTyped] = useState("");
+  const confirmed = typed.trim().toLowerCase() === word;
   return (
     <div className="modal-backdrop" onClick={busy ? undefined : onCancel}>
       <div
@@ -27,12 +32,25 @@ export default function DeletePollModal({ title, busy, error, onCancel, onConfir
           })}
         </p>
         <p className="hint">{t("If you only want to stop new replies, use “Close poll” instead.")}</p>
+        <label className="field delete-confirm">
+          <span className="field-label">{t("To confirm, type “{word}” below", { word })}</span>
+          <input
+            type="text"
+            value={typed}
+            autoFocus
+            autoComplete="off"
+            onChange={(e) => setTyped(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && confirmed && !busy) onConfirm();
+            }}
+          />
+        </label>
         {error && <p className="error-text">{error}</p>}
         <div className="btn-row modal-actions">
           <button type="button" className="btn btn-ghost" disabled={busy} onClick={onCancel}>
             {t("Cancel")}
           </button>
-          <button type="button" className="btn btn-danger" disabled={busy} onClick={onConfirm}>
+          <button type="button" className="btn btn-danger" disabled={busy || !confirmed} onClick={onConfirm}>
             {busy ? t("Deleting…") : t("Delete poll")}
           </button>
         </div>

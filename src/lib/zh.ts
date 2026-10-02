@@ -23,6 +23,8 @@ export const ZH: Record<string, string> = {
   "Terms of use": "使用条款",
   "Sending…": "发送中…",
   "Delete poll…": "删除排期…",
+  "To confirm, type “{word}” below": "请在下面输入“{word}”以确认",
+  "Hide “{name}” from this list? The poll itself is not deleted and its links keep working. To delete it, open the poll and choose ⋯ → Delete poll.": "要把“{name}”从这个列表里隐藏吗？排期本身不会被删除，链接也仍然有效。要删除排期，请打开它，在 ⋯ 菜单里选择“删除排期”。",
   "Delete poll": "删除排期",
   "Deleting…": "删除中…",
   "Delete this poll?": "要删除这个排期吗？",

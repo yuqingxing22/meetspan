@@ -122,7 +122,15 @@ export default function YourPollsMenu() {
                   className="icon-btn icon-btn-quiet"
                   aria-label={t("Remove {name} from this list", { name: p.title || t("Untitled poll") })}
                   title={t("Remove from this list (doesn't delete the poll)")}
-                  onClick={() => removeMyPoll(p.pollId)}
+                  onClick={() => {
+                    const name = p.title || t("Untitled poll");
+                    if (
+                      window.confirm(
+                        t("Hide “{name}” from this list? The poll itself is not deleted and its links keep working. To delete it, open the poll and choose ⋯ → Delete poll.", { name })
+                      )
+                    )
+                      removeMyPoll(p.pollId);
+                  }}
                 >
                   <Icon name="x" size={14} />
                 </button>

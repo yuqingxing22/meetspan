@@ -2930,3 +2930,6 @@ div.field.tz-field {
 .btn-danger:hover:not(:disabled) {
   filter: brightness(0.92);
 }
+.delete-confirm {
+  margin-top: 12px;
+}
