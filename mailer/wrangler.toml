@@ -11,8 +11,8 @@ SITE_URL = "https://meetspan.app"
 ALLOWED_ORIGINS = "https://meetspan.app,https://yuqingxing22.github.io,http://localhost:5173"
 SENDER_EMAIL = "noreply@meetspan.app"
 REPLY_TO_EMAIL = "hello@meetspan.app"
-# Daily cleanup of polls inactive for 12 months. Dry run (only logs) until set to "true".
-CLEANUP_ENABLED = "false"
+# Daily cleanup of polls with no activity for 12 months. Set to "false" for a dry run that only logs.
+CLEANUP_ENABLED = "true"
 
 [triggers]
 crons = ["17 3 * * *"]
