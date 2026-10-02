@@ -1482,6 +1482,132 @@ div.field.tz-field {
   gap: 10px;
   flex-wrap: wrap;
 }
+/* Link page: title on the left, Share on the right. */
+.card-head-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.card-head-row .hint {
+  margin-bottom: 0;
+}
+.share-wrap {
+  position: relative;
+  flex: none;
+}
+.share-menu {
+  position: absolute;
+  z-index: 40;
+  top: calc(100% + 6px);
+  right: 0;
+  min-width: 200px;
+  padding: 6px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-lg);
+}
+.share-menu > button,
+.share-menu > a {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 9px 10px;
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  color: var(--text);
+  text-decoration: none;
+  text-align: left;
+  cursor: pointer;
+}
+.share-menu > button:hover,
+.share-menu > a:hover {
+  background: var(--brand-soft);
+}
+.invite-body {
+  display: flex;
+  gap: 16px;
+  align-items: flex-start;
+  flex-wrap: wrap;
+}
+.invite-main {
+  flex: 1 1 260px;
+  min-width: 0;
+}
+.preview-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 10px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--brand);
+  text-decoration: none;
+}
+.preview-link:hover {
+  text-decoration: underline;
+}
+.qr-compact {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.notice-ok {
+  display: flex;
+  gap: 8px;
+  align-items: flex-start;
+  background: var(--good-soft);
+  color: var(--good);
+}
+.notice-ok svg {
+  flex: none;
+  margin-top: 3px;
+}
+.notice-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+/* Hover / focus tooltip from data-tip, e.g. on "Copy private link". */
+.tip-wrap {
+  position: relative;
+  display: inline-block;
+}
+.tip-wrap::after {
+  content: attr(data-tip);
+  position: absolute;
+  z-index: 40;
+  bottom: calc(100% + 8px);
+  left: 0;
+  width: max-content;
+  max-width: min(300px, calc(100vw - 48px));
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  background: var(--ink);
+  color: #fff;
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: normal;
+  opacity: 0;
+  transform: translateY(4px);
+  pointer-events: none;
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+.tip-wrap:hover::after,
+.tip-wrap:focus-within::after {
+  opacity: 1;
+  transform: none;
+}
 
 /* ---------- Calendar ---------- */
 .cal {

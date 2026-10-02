@@ -20,11 +20,10 @@ import { hashToken, newAdminToken, newPollId } from "../lib/ids";
 import { createPoll } from "../lib/poll";
 import { addMyPoll, loadMyName, saveAdminToken, saveMyName } from "../lib/adminStore";
 import { rememberTitle } from "../lib/titleHistory";
-import { isFirebaseConfigured } from "../firebase";
+import { isFirebaseConfigured, signInWithGoogle } from "../firebase";
 import { useAuthState } from "../lib/useAuthState";
 import { googleFirstName, useUser } from "../lib/useUser";
 import { copyText, useToast } from "../lib/useToast";
-import InviteByEmail from "../components/InviteByEmail";
 import { emailOrganizerLink, mailerEnabled } from "../lib/mailer";
 import type { Granularity, PollMeta, RepeatEnd } from "../lib/types";
 import heroArt from "../assets/illustrations/time-management.svg";
@@ -88,10 +87,9 @@ export default function Home() {
   const [endHour, setEndHour] = useState(17);
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState<"" | "invite" | "organizer">("");
-  const [showQR, setShowQR] = useState(false);
   const user = useUser();
-  const [emailing, setEmailing] = useState(false);
-  const [showInvite, setShowInvite] = useState(false);
+  const [mailState, setMailState] = useState<"idle" | "sending" | "failed" | { to: string }>("idle");
+  const [shareOpen, setShareOpen] = useState(false);
   // No name typed before on this browser: start from the Google first name.
   const googleName = googleFirstName(user);
   useEffect(() => {
@@ -203,33 +201,71 @@ export default function Home() {
     window.setTimeout(() => setCopied((c) => (c === which ? "" : c)), 1600);
   }
 
+  // The private organizer link is emailed automatically to a Google-signed-in
+  // organizer (anonymous visitors have no address we could use).
+  const canEmailMe = mailerEnabled && !!user && !user.isAnonymous;
+  useEffect(() => {
+    if (!created || !canEmailMe || mailState !== "idle") return;
+    setMailState("sending");
+    emailOrganizerLink(created.pollId, created.token)
+      .then((to) => setMailState({ to }))
+      .catch(() => setMailState("failed"));
+  }, [created, canEmailMe, mailState]);
+
   if (created) {
     const base = window.location.href.split("#")[0];
     const participantLink = `${base}#/p/${created.pollId}`;
     const organizerLink = `${base}#/o/${created.pollId}?k=${created.token}`;
     const pollName = title.trim() || t("Untitled poll");
-    const emailSubject = `${t("MeetSpan organizer link")}${title ? ` — ${title}` : ""}`;
-    const emailBody =
-      `${t("Keep this private — it's your key to manage the poll and pick the final time:")}\n${organizerLink}\n\n` +
-      `${t("Participant invite link (this is the one to share):")}\n${participantLink}`;
-    // Signed in with Google: MeetSpan emails the link from noreply@ to that account.
-    // Otherwise fall back to the visitor's own mail app (they have no known address).
-    const canEmailMe = mailerEnabled && !!user && !user.isAnonymous;
-    async function emailMe() {
-      if (!created) return;
-      setEmailing(true);
-      try {
-        const to = await emailOrganizerLink(created.pollId, created.token);
-        show(t("Sent to {email}", { email: to }));
-      } catch {
-        show(t("Couldn't send the email. Copy the private link instead."));
-      } finally {
-        setEmailing(false);
-      }
-    }
     const inviteSubject = `${t("When are you free?")}${title ? ` ${title}` : ""}`;
     const inviteBody = `${t("Mark when you're free (it shows in your own timezone, no sign-up needed):")}\n${participantLink}`;
     const canShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
+
+    function share() {
+      if (canShare) {
+        navigator.share({ title: pollName, text: inviteBody, url: participantLink }).catch(() => {});
+      } else {
+        setShareOpen((v) => !v);
+      }
+    }
+
+    let mailNote: React.ReactNode;
+    if (mailState === "sending") {
+      mailNote = <div className="notice notice-info">{t("Emailing your private link to you…")}</div>;
+    } else if (typeof mailState === "object") {
+      mailNote = (
+        <div className="notice notice-ok">
+          <Icon name="check" />
+          <span>
+            {t("MeetSpan emailed this link to {email}. It usually arrives within a minute or two; if you don't see it, check your spam folder.", {
+              email: mailState.to,
+            })}
+          </span>
+        </div>
+      );
+    } else if (mailState === "failed") {
+      mailNote = (
+        <div className="notice notice-warn notice-row">
+          <span>{t("We couldn't email the link. Copy it and keep it somewhere safe.")}</span>
+          <button type="button" className="btn btn-sm" onClick={() => setMailState("idle")}>
+            {t("Try again")}
+          </button>
+        </div>
+      );
+    } else if (mailerEnabled) {
+      mailNote = (
+        <div className="notice notice-info notice-row">
+          <span>{t("Sign in with Google and MeetSpan will email you this link. Or copy it and keep it somewhere safe.")}</span>
+          <button
+            type="button"
+            className="btn btn-sm"
+            onClick={() => signInWithGoogle().catch(() => show(t("Sign-in failed")))}
+          >
+            <Icon name="user" /> {t("Sign in with Google")}
+          </button>
+        </div>
+      );
+    }
 
     return (
       <div className="narrow">
@@ -247,69 +283,82 @@ export default function Home() {
         </div>
 
         <section className="card">
-          <h2>{t("Invite your group")}</h2>
-          <p className="hint">{t("Anyone with this link can add their times.")}</p>
-          <div className="linkbox">
-            <code>{participantLink}</code>
-            <button
-              type="button"
-              className={`btn btn-sm ${copied === "invite" ? "btn-success" : "btn-primary"}`}
-              onClick={() => {
-                copyText(participantLink);
-                markCopied("invite");
-              }}
-            >
-              {copied === "invite" ? (
-                <>
-                  <Icon name="check" /> {t("Copied")}
-                </>
-              ) : (
-                t("Copy link")
+          <div className="card-head-row">
+            <div>
+              <h2>{t("Invite your group")}</h2>
+              <p className="hint">{t("Anyone with this link can add their times.")}</p>
+            </div>
+            <div className="share-wrap">
+              <button
+                type="button"
+                className="btn btn-primary"
+                aria-expanded={canShare ? undefined : shareOpen}
+                onClick={share}
+              >
+                <Icon name="share" /> {t("Share")}
+              </button>
+              {shareOpen && !canShare && (
+                <div className="share-menu" role="menu">
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      copyText(`${inviteBody}`);
+                      setShareOpen(false);
+                      show(t("Invite message copied"));
+                    }}
+                  >
+                    <Icon name="copy" /> {t("Copy invite message")}
+                  </button>
+                  <a
+                    role="menuitem"
+                    href={`mailto:?subject=${encodeURIComponent(inviteSubject)}&body=${encodeURIComponent(inviteBody)}`}
+                    onClick={() => setShareOpen(false)}
+                  >
+                    <Icon name="mail" /> {t("Email")}
+                  </a>
+                  <a
+                    role="menuitem"
+                    href={`https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent(
+                      inviteSubject
+                    )}&body=${encodeURIComponent(inviteBody)}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => setShareOpen(false)}
+                  >
+                    <Icon name="mail" /> Gmail
+                  </a>
+                </div>
               )}
-            </button>
+            </div>
           </div>
-          <div className="btn-row">
-            {canShare && (
-              <button
-                type="button"
-                className="btn"
-                onClick={() =>
-                  navigator.share({ title: pollName, text: inviteBody, url: participantLink }).catch(() => {})
-                }
-              >
-                <Icon name="share" /> {t("Share…")}
-              </button>
-            )}
-            <a
-              className="btn"
-              href={`mailto:?subject=${encodeURIComponent(inviteSubject)}&body=${encodeURIComponent(inviteBody)}`}
-            >
-              <Icon name="mail" /> {t("Email")}
-            </a>
-            {mailerEnabled && (
-              <button
-                type="button"
-                className={`btn${showInvite ? " btn-on" : ""}`}
-                aria-pressed={showInvite}
-                onClick={() => setShowInvite((v) => !v)}
-              >
-                <Icon name="mail" /> {t("Send invites")}
-              </button>
-            )}
-            <button
-              type="button"
-              className={`btn${showQR ? " btn-on" : ""}`}
-              aria-pressed={showQR}
-              onClick={() => setShowQR((v) => !v)}
-            >
-              <Icon name="qr" /> {t("QR code")}
-            </button>
-            <Link className="btn btn-link" to={`/p/${created.pollId}`}>
-              {t("Preview as a guest")} <Icon name="arrowRight" />
-            </Link>
+          <div className="invite-body">
+            <div className="invite-main">
+              <div className="linkbox">
+                <code>{participantLink}</code>
+                <button
+                  type="button"
+                  className={`btn btn-sm ${copied === "invite" ? "btn-success" : ""}`}
+                  onClick={() => {
+                    copyText(participantLink);
+                    markCopied("invite");
+                  }}
+                >
+                  {copied === "invite" ? (
+                    <>
+                      <Icon name="check" /> {t("Copied")}
+                    </>
+                  ) : (
+                    t("Copy link")
+                  )}
+                </button>
+              </div>
+              <Link className="preview-link" to={`/p/${created.pollId}`}>
+                {t("Preview as a guest")} <Icon name="arrowRight" size={14} />
+              </Link>
+            </div>
+            <InviteQR url={participantLink} title={title.trim()} compact />
           </div>
-          {showInvite && <InviteByEmail pollId={created.pollId} />}
-          {showQR && <InviteQR url={participantLink} title={title.trim()} />}
         </section>
 
         <section className="card">
@@ -318,9 +367,13 @@ export default function Home() {
             {t("Your private organizer link")}
           </h2>
           <p className="hint">
-            {t("Keep this one to yourself. It's how you see results and lock in the time. It's saved under “Your polls” in this browser; email it to yourself as a backup (we can't recover it for you).")}
+            {t("Keep this one to yourself. It's how you see results and lock in the time. It's also saved under “Your polls” in this browser.")}
           </p>
-          <div className="btn-row">
+          {mailNote}
+          <span
+            className="tip-wrap"
+            data-tip={t("Save this link somewhere safe: it's the only key to manage your poll, and we can't recover it for you.")}
+          >
             <button
               type="button"
               className={`btn ${copied === "organizer" ? "btn-success" : ""}`}
@@ -339,29 +392,7 @@ export default function Home() {
                 </>
               )}
             </button>
-            {canEmailMe ? (
-              <button type="button" className="btn" disabled={emailing} onClick={emailMe}>
-                <Icon name="mail" /> {emailing ? t("Sending…") : t("Email it to me")}
-              </button>
-            ) : (
-              <a
-                className="btn"
-                href={`mailto:?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`}
-              >
-                <Icon name="mail" /> {t("Email it to me")}
-              </a>
-            )}
-            <a
-              className="btn"
-              href={`https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent(
-                emailSubject
-              )}&body=${encodeURIComponent(emailBody)}`}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Gmail
-            </a>
-          </div>
+          </span>
         </section>
 
         <div className="created-actions">
@@ -370,7 +401,8 @@ export default function Home() {
             className="btn btn-ghost"
             onClick={() => {
               setCreated(null);
-              setShowQR(false);
+              setMailState("idle");
+              setShareOpen(false);
               setDates([]);
               setTitle("");
               setLastPick(null);
@@ -378,22 +410,13 @@ export default function Home() {
           >
             {t("Create another poll")}
           </button>
-          <div className="btn-row created-next">
-            <button
-              type="button"
-              className="btn btn-link"
-              onClick={() => nav(`/o/${created.pollId}?k=${created.token}`)}
-            >
-              {t("Skip to the dashboard")}
-            </button>
-            <button
-              type="button"
-              className="btn btn-dark btn-lg"
-              onClick={() => nav(`/o/${created.pollId}?k=${created.token}&view=times`)}
-            >
-              {t("Next: add my own times")} <Icon name="arrowRight" size={18} />
-            </button>
-          </div>
+          <button
+            type="button"
+            className="btn btn-dark btn-lg"
+            onClick={() => nav(`/o/${created.pollId}?k=${created.token}&view=times`)}
+          >
+            {t("Next: add my own times")} <Icon name="arrowRight" size={18} />
+          </button>
         </div>
         {node}
       </div>
