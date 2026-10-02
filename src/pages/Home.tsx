@@ -21,7 +21,7 @@ import { copyText, useToast } from "../lib/useToast";
 import type { Granularity, PollMeta } from "../lib/types";
 import heroArt from "../assets/illustrations/time-management.svg";
 import shareArt from "../assets/illustrations/share-link.svg";
-import { t } from "../lib/i18n";
+import { getLang, t } from "../lib/i18n";
 
 type PickMode = "dates" | "weekly";
 
@@ -161,6 +161,7 @@ export default function Home() {
         weekdays: pickMode === "weekly" ? weekdays : [],
         slots,
         ...(deadline ? { deadline } : {}),
+        lang: getLang(),
       };
       await createPoll(pollId, meta);
       saveAdminToken(pollId, token);

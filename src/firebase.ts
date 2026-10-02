@@ -12,6 +12,7 @@ import {
   type Auth,
   type User,
 } from "firebase/auth";
+import { sendWelcomeEmail } from "./lib/mailer";
 
 // The Firebase *web* config is public by design — it only identifies your
 // project. Real security is enforced by Firestore rules + Anonymous Auth
@@ -79,6 +80,11 @@ export function currentUid(): string | null {
   return authInstance?.currentUser?.uid ?? null;
 }
 
+/** A fresh Firebase ID token for the current user (sent to the mailer), or null. */
+export async function getIdToken(forceRefresh = false): Promise<string | null> {
+  return (await authInstance?.currentUser?.getIdToken(forceRefresh)) ?? null;
+}
+
 /** Subscribe to auth changes. Fires with the uid (or null when signed out). */
 export function subscribeAuth(cb: (uid: string | null) => void): () => void {
   if (!authInstance) {
@@ -115,18 +121,21 @@ export async function signInWithGoogle(): Promise<void> {
   if (user?.isAnonymous) {
     try {
       await linkWithPopup(user, provider);
+      void sendWelcomeEmail();
       return;
     } catch (e) {
       const code = (e as { code?: string }).code;
       const cred = GoogleAuthProvider.credentialFromError(e as never);
       if (code === "auth/credential-already-in-use" && cred) {
         await signInWithCredential(authInstance, cred);
+        void sendWelcomeEmail();
         return;
       }
       throw e;
     }
   }
   await signInWithPopup(authInstance, provider);
+  void sendWelcomeEmail();
 }
 
 /** Sign out, then drop back to a fresh anonymous session so the app keeps working. */

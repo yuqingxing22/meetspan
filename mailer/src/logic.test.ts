@@ -1,0 +1,92 @@
+import { describe, expect, it } from "vitest";
+import { escapeHtml, expectedKey, fromFsFields, isEmail, isInactive, norm, retentionCutoff, waitingOn } from "./logic";
+import { allRespondedEmail, inviteEmail, welcomeEmail } from "./templates";
+
+describe("waitingOn", () => {
+  it("matches names the same way the organizer dashboard does", () => {
+    expect(waitingOn(["Mei", " alex "], ["mei", "ALEX"])).toEqual([]);
+    expect(waitingOn(["Mei", "Alex"], ["mei"])).toEqual(["Alex"]);
+  });
+  it("keeps norm trim + lowercase only", () => {
+    expect(norm("  Mei Lin ")).toBe("mei lin");
+  });
+});
+
+describe("expectedKey", () => {
+  it("ignores order and case, changes when the list changes", () => {
+    expect(expectedKey(["B", "a"])).toBe(expectedKey(["A", "b"]));
+    expect(expectedKey(["a"])).not.toBe(expectedKey(["a", "b"]));
+  });
+});
+
+describe("isEmail", () => {
+  it("accepts normal addresses and rejects junk", () => {
+    expect(isEmail("a@b.co")).toBe(true);
+    expect(isEmail("a@b")).toBe(false);
+    expect(isEmail("a b@c.com")).toBe(false);
+    expect(isEmail("a@b.com,c@d.com")).toBe(false);
+  });
+});
+
+describe("fromFsFields", () => {
+  it("decodes Firestore REST values", () => {
+    expect(
+      fromFsFields({
+        title: { stringValue: "Sync" },
+        n: { integerValue: "3" },
+        expected: { arrayValue: { values: [{ stringValue: "Mei" }] } },
+        nested: { mapValue: { fields: { ok: { booleanValue: true } } } },
+        none: { nullValue: null },
+      })
+    ).toEqual({ title: "Sync", n: 3, expected: ["Mei"], nested: { ok: true }, none: null });
+  });
+  it("treats a missing array as empty", () => {
+    expect(fromFsFields({ a: { arrayValue: {} } })).toEqual({ a: [] });
+  });
+});
+
+describe("templates", () => {
+  it("escapes user-controlled text in every email", () => {
+    const evil = `<img src=x onerror=alert(1)>`;
+    const mails = [
+      inviteEmail("en", { organizerName: evil, title: evil, url: "https://meetspan.app/#/p/x", deadline: evil }),
+      inviteEmail("zh", { organizerName: evil, title: evil, url: "https://meetspan.app/#/p/x" }),
+      allRespondedEmail("en", { title: evil, count: 2, url: "https://meetspan.app/#/o/x" }),
+      welcomeEmail("en", "https://meetspan.app", evil),
+    ];
+    for (const m of mails) expect(m.html).not.toContain("<img");
+  });
+  it("renders both languages with a subject and a link", () => {
+    for (const lang of ["en", "zh"] as const) {
+      const m = allRespondedEmail(lang, { title: "Sync", count: 3, url: "https://meetspan.app/#/o/abc" });
+      expect(m.subject).toContain("Sync");
+      expect(m.html).toContain("https://meetspan.app/#/o/abc");
+      expect(m.text).toContain("https://meetspan.app/#/o/abc");
+    }
+  });
+  it("escapeHtml covers the dangerous characters", () => {
+    expect(escapeHtml(`<a href="x">&'`)).toBe("&lt;a href=&quot;x&quot;&gt;&amp;&#39;");
+  });
+});
+
+describe("retention", () => {
+  const now = Date.UTC(2026, 9, 2);
+  const cutoff = retentionCutoff(now);
+  it("puts the cutoff 12 months back", () => {
+    expect(cutoff).toBe(Date.UTC(2025, 9, 2));
+  });
+  it("keeps a poll with any recent activity", () => {
+    const old = cutoff - 1000;
+    expect(isInactive(cutoff, { createdAt: old }, [old])).toBe(true);
+    expect(isInactive(cutoff, { createdAt: old }, [old, cutoff + 1])).toBe(false); // recent reply
+    expect(isInactive(cutoff, { createdAt: old, lastActivityAt: cutoff + 1 }, [])).toBe(false); // organizer edit
+    expect(isInactive(cutoff, { createdAt: cutoff + 1 }, [])).toBe(false); // new poll
+  });
+  it("never deletes when there are no usable timestamps", () => {
+    expect(isInactive(cutoff, {}, [undefined, "x"])).toBe(false);
+  });
+  it("ignores junk values and the exact cutoff counts as recent", () => {
+    expect(isInactive(cutoff, { createdAt: cutoff }, [])).toBe(false);
+    expect(isInactive(cutoff, { createdAt: cutoff - 1 }, ["bad", null])).toBe(true);
+  });
+});

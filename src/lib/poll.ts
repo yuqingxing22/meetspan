@@ -124,11 +124,11 @@ export function subscribeEmails(
 }
 
 export async function closePoll(pollId: string): Promise<void> {
-  await updateDoc(pollRef(pollId), { status: "closed" });
+  await updateDoc(pollRef(pollId), { status: "closed", lastActivityAt: Date.now() });
 }
 
 export async function reopenPoll(pollId: string): Promise<void> {
-  await updateDoc(pollRef(pollId), { status: "open" });
+  await updateDoc(pollRef(pollId), { status: "open", lastActivityAt: Date.now() });
 }
 
 /** Update organizer-editable poll settings (required people, deadline, dates…). */
@@ -141,14 +141,14 @@ export async function updatePoll(
     >
   >
 ): Promise<void> {
-  await updateDoc(pollRef(pollId), patch);
+  await updateDoc(pollRef(pollId), { ...patch, lastActivityAt: Date.now() });
 }
 
 export async function finalizePoll(
   pollId: string,
   finalized: Finalized
 ): Promise<void> {
-  await updateDoc(pollRef(pollId), { finalized });
+  await updateDoc(pollRef(pollId), { finalized, lastActivityAt: Date.now() });
 }
 
 /** Verify a plaintext admin token against the stored hash. */

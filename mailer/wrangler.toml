@@ -1,0 +1,26 @@
+name = "meetspan-mailer"
+main = "src/index.ts"
+compatibility_date = "2026-01-01"
+
+workers_dev = false
+routes = [{ pattern = "mail-api.meetspan.app", custom_domain = true }]
+
+[vars]
+FIREBASE_PROJECT_ID = "meetspan"
+SITE_URL = "https://meetspan.app"
+ALLOWED_ORIGINS = "https://meetspan.app,https://yuqingxing22.github.io,http://localhost:5173"
+SENDER_EMAIL = "noreply@meetspan.app"
+REPLY_TO_EMAIL = "hello@meetspan.app"
+# Daily cleanup of polls inactive for 12 months. Dry run (only logs) until set to "true".
+CLEANUP_ENABLED = "false"
+
+[triggers]
+crons = ["17 3 * * *"]
+
+[[kv_namespaces]]
+binding = "STATE"
+id = "462ffc98f2ad435f976c326fa84e00ad"
+
+# Secrets (never committed) are set with `wrangler secret put`:
+#   BREVO_API_KEY            Brevo API key (not the SMTP key)
+#   FIREBASE_SERVICE_ACCOUNT the service-account JSON, as one string
