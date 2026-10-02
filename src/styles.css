@@ -1542,6 +1542,90 @@ div.field.tz-field {
   color: #fff;
   font-weight: 600;
 }
+/* Month title doubles as the button that opens the month picker. */
+.cal-title-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  font-family: inherit;
+  cursor: pointer;
+}
+.cal-title-btn svg {
+  color: var(--text-faint);
+}
+.cal-title-btn:hover {
+  background: var(--surface-2);
+}
+.cal-months {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+.cal-month {
+  position: relative;
+  height: 52px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--surface-3);
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink);
+  cursor: pointer;
+}
+.cal-month:hover:not(:disabled):not(.sel) {
+  background: var(--brand-soft);
+}
+.cal-month:disabled {
+  background: transparent;
+  color: #b8bac3;
+  cursor: default;
+}
+.cal-month.today:not(.sel) {
+  background: #fff;
+  color: var(--brand);
+  box-shadow: inset 0 0 0 1.5px var(--brand);
+}
+.cal-month.sel {
+  background: var(--brand);
+  color: #fff;
+  font-weight: 600;
+}
+/* A month that has picked days. */
+.cal-month-dot {
+  position: absolute;
+  left: 50%;
+  bottom: 8px;
+  width: 5px;
+  height: 5px;
+  margin-left: -2.5px;
+  border-radius: 50%;
+  background: var(--brand);
+}
+.cal-month.sel .cal-month-dot {
+  background: #fff;
+}
+.cal-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  margin-top: 10px;
+  padding: 4px 0;
+  border: 0;
+  background: none;
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--brand);
+  cursor: pointer;
+}
+.cal-back:hover {
+  text-decoration: underline;
+}
 
 /* ---------- Availability board ---------- */
 .board-toolbar {
