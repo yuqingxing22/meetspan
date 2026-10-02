@@ -51,3 +51,13 @@ export async function sendInvites(pollId: string, emails: string[]): Promise<num
   if (!res.ok) throw new Error(data.error ?? `Could not send (${res.status})`);
   return data.sent ?? 0;
 }
+
+/** Delete a poll with all its replies and emails. Proves ownership with the organizer token. */
+export async function deletePoll(pollId: string, organizerToken: string | null): Promise<void> {
+  const res = await call("/delete-poll", { pollId, token: organizerToken ?? "" });
+  if (!res) throw new Error("Deleting isn't set up yet.");
+  if (!res.ok) {
+    const data = (await res.json().catch(() => ({}))) as { error?: string };
+    throw new Error(data.error ?? `Could not delete (${res.status})`);
+  }
+}

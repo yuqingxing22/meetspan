@@ -50,7 +50,7 @@ const EN: Section[] = [
   {
     h: "Your choices",
     p: [
-      "You can use MeetSpan without signing in or giving an email address. You can sign out at any time, and you can ask us to see, correct or delete your data.",
+      "You can use MeetSpan without signing in or giving an email address. You can sign out at any time. An organizer can delete their own poll, with its replies and email addresses, from the poll’s ⋯ menu, and anyone can ask us to see, correct or delete their data.",
     ],
   },
   {
@@ -93,7 +93,7 @@ const ZH_SECTIONS: Section[] = [
   },
   {
     h: "你的选择",
-    p: ["你可以不登录、不留邮箱就使用 MeetSpan。你随时可以退出登录，也可以要求我们查看、更正或删除你的数据。"],
+    p: ["你可以不登录、不留邮箱就使用 MeetSpan。你随时可以退出登录。组织者可以在排期的 ⋯ 菜单里自行删除自己的排期，连同其中的回复和邮箱；任何人也都可以要求我们查看、更正或删除自己的数据。"],
   },
   {
     h: "联系我们",

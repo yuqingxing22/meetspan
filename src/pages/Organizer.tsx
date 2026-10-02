@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useParams, useSearchParams } from "react-router-dom";
+import { Link, useParams, useSearchParams } from "react-router-dom";
 import { DateTime } from "luxon";
 import AvailabilityBoard from "../components/AvailabilityBoard";
 import ResultPanel from "../components/ResultPanel";
@@ -7,6 +7,7 @@ import EmailModal from "../components/EmailModal";
 import Icon from "../components/Icon";
 import InviteQR from "../components/InviteQR";
 import EditPollModal from "../components/EditPollModal";
+import DeletePollModal from "../components/DeletePollModal";
 import ScheduleFill from "../components/ScheduleFill";
 import CalendarImport from "../components/CalendarImport";
 import {
@@ -23,6 +24,7 @@ import {
 import {
   loadAdminToken,
   loadParticipant,
+  removeMyPoll,
   saveAdminToken,
   saveParticipant,
 } from "../lib/adminStore";
@@ -35,7 +37,7 @@ import { windowComfort } from "../lib/comfort";
 import { avatarColor, initial } from "../lib/avatar";
 import { isFirebaseConfigured } from "../firebase";
 import InviteByEmail from "../components/InviteByEmail";
-import { mailerEnabled } from "../lib/mailer";
+import { deletePoll, mailerEnabled } from "../lib/mailer";
 import { useAuthState } from "../lib/useAuthState";
 import { copyText, useToast } from "../lib/useToast";
 import { MEETING_TYPES } from "../lib/types";
@@ -127,6 +129,10 @@ function Organizer() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleted, setDeleted] = useState(false);
   const [emailOpen, setEmailOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   // Start times ticked in the "all times everyone can make it" list.
@@ -303,6 +309,16 @@ function Organizer() {
     );
   if (auth === "loading") return <p className="muted">{t("Signing you in…")}</p>;
   if (meta === undefined) return <p className="muted">{t("Loading…")}</p>;
+  if (deleted)
+    return (
+      <div className="card state-card">
+        <h2>{t("Poll deleted")}</h2>
+        <p className="hint">{t("The poll, its replies and any email addresses are gone.")}</p>
+        <Link to="/" className="btn btn-primary">
+          {t("Create a new poll")}
+        </Link>
+      </div>
+    );
   if (meta === null)
     return (
       <div className="card state-card">
@@ -612,6 +628,19 @@ function Organizer() {
                   >
                     {open ? t("Close poll") : t("Reopen poll")}
                   </button>
+                  {mailerEnabled && (
+                    <button
+                      type="button"
+                      className="menu-item danger"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        setDeleteError(null);
+                        setDeleteOpen(true);
+                      }}
+                    >
+                      {t("Delete poll…")}
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -979,6 +1008,33 @@ function Organizer() {
         </>
       )}
 
+      {deleteOpen && (
+        <DeletePollModal
+          title={meta.title}
+          busy={deleting}
+          error={deleteError}
+          onCancel={() => setDeleteOpen(false)}
+          onConfirm={async () => {
+            setDeleting(true);
+            setDeleteError(null);
+            try {
+              await deletePoll(pollId, token);
+              removeMyPoll(pollId);
+              setDeleteOpen(false);
+              setDeleted(true);
+            } catch (e) {
+              const msg = (e as Error).message;
+              setDeleteError(
+                /not the organizer/i.test(msg)
+                  ? t("Only the organizer can delete this poll. Open your private organizer link.")
+                  : t("Couldn't delete the poll. Please try again.")
+              );
+            } finally {
+              setDeleting(false);
+            }
+          }}
+        />
+      )}
       {editOpen && (
         <EditPollModal
           pollId={pollId}

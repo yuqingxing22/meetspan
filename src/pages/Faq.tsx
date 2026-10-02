@@ -57,7 +57,7 @@ const EN: Item[] = [
   },
   {
     q: "How do I delete a poll or my data?",
-    a: ["Closing a poll stops new replies but doesn’t remove it. To have a poll and its replies deleted, write to privacy@meetspan.app with the poll’s invite link, or from the email address you used, and we’ll remove it."],
+    a: ["Closing a poll stops new replies but doesn’t remove it. To delete a poll for good, open your organizer page, choose “Delete poll…” in the ⋯ menu and confirm: the poll, everyone’s replies and any email addresses they left are removed. For anything else, or if you can’t open the organizer page, write to privacy@meetspan.app with the poll’s invite link and we’ll remove it."],
   },
   {
     q: "Is MeetSpan available in other languages?",
@@ -116,7 +116,7 @@ const ZH: Item[] = [
   },
   {
     q: "怎么删除排期或我的数据？",
-    a: ["关闭排期只是停止接收新回复，并不会删除它。如果想删除排期及其中的回复，请发邮件到 privacy@meetspan.app，附上排期的邀请链接，或用你填写过的邮箱发信，我们会帮你删除。"],
+    a: ["关闭排期只是停止接收新回复，并不会删除它。要永久删除排期，请打开你的组织者页面，在 ⋯ 菜单里选择“删除排期…”并确认：排期、大家的回复和留下的邮箱都会被删除。其他情况，或者打不开组织者页面时，请发邮件到 privacy@meetspan.app，附上排期的邀请链接，我们会帮你删除。"],
   },
   {
     q: "有其他语言吗？",

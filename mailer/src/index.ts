@@ -1,6 +1,7 @@
 import { accessToken, getDoc, verifyIdToken, type IdTokenClaims } from "./google";
 import { isEmail, sha256Hex } from "./logic";
 import { cleanupInactivePolls } from "./cleanup";
+import { deletePollAndChildren } from "./deletion";
 import { inviteEmail, organizerLinkEmail, welcomeEmail, type Lang, type Mail } from "./templates";
 
 export interface Env {
@@ -182,6 +183,33 @@ async function organizerLink(
   return json(req, env, 200, { sent: true, to: claims.email });
 }
 
+/**
+ * The organizer deletes their own poll, with all replies and collected emails.
+ * Allowed to the holder of the poll's secret organizer token, or to the account that
+ * created it. Any signed-in session may ask; the proof is the token or ownership.
+ */
+async function deletePoll(
+  req: Request,
+  env: Env,
+  claims: IdTokenClaims,
+  body: { pollId?: string; token?: string }
+) {
+  const pollId = String(body.pollId ?? "");
+  const secret = String(body.token ?? "");
+  if (!pollId) return json(req, env, 400, { error: "pollId required" });
+
+  const token = await accessToken(env.FIREBASE_SERVICE_ACCOUNT);
+  const poll = await getDoc(env.FIREBASE_PROJECT_ID, token, `polls/${pollId}`);
+  if (!poll) return json(req, env, 404, { error: "poll not found" });
+  const tokenOk = secret !== "" && (await sha256Hex(secret)) === poll.adminTokenHash;
+  const ownerOk = poll.organizerUid === claims.sub;
+  if (!tokenOk && !ownerOk) return json(req, env, 403, { error: "not the organizer" });
+
+  await deletePollAndChildren(env.FIREBASE_PROJECT_ID, token, pollId);
+  await env.STATE.delete(`invites-poll:${pollId}`);
+  return json(req, env, 200, { deleted: true });
+}
+
 export default {
   async scheduled(_event: ScheduledEvent, env: Env): Promise<void> {
     await cleanupInactivePolls(env);
@@ -202,6 +230,7 @@ export default {
       const body = (await req.json().catch(() => ({}))) as Record<string, never>;
       if (path === "/welcome") return await welcome(req, env, claims, body);
       if (path === "/invite") return await invite(req, env, claims, body);
+      if (path === "/delete-poll") return await deletePoll(req, env, claims, body);
       if (path === "/organizer-link") return await organizerLink(req, env, claims, body);
       return json(req, env, 404, { error: "not found" });
     } catch (e) {

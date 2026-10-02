@@ -1,4 +1,5 @@
-import { accessToken, deleteDocPath, listDocNames, listDocs, pollsCreatedBefore } from "./google";
+import { accessToken, listDocs, pollsCreatedBefore } from "./google";
+import { deletePollAndChildren } from "./deletion";
 import { isInactive, retentionCutoff } from "./logic";
 import type { Env } from "./index";
 
@@ -25,12 +26,7 @@ export async function cleanupInactivePolls(env: Env, nowMs = Date.now()): Promis
       console.log(`[cleanup dry run] would delete poll ${id}`);
       continue;
     }
-    for (const sub of ["participants", "emails"]) {
-      for (const name of await listDocNames(project, token, `polls/${id}/${sub}`)) {
-        await deleteDocPath(project, token, name);
-      }
-    }
-    await deleteDocPath(project, token, `polls/${id}`);
+    await deletePollAndChildren(project, token, id);
     deleted++;
   }
   console.log(`[cleanup] checked ${candidates.length}, inactive ${stale}, deleted ${deleted} (${live ? "live" : "dry run"})`);

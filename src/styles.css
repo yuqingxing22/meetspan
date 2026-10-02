@@ -2911,3 +2911,22 @@ div.field.tz-field {
 .invite-err {
   color: var(--danger, #b42318);
 }
+
+/* ---------- Delete poll ---------- */
+.modal-narrow {
+  max-width: 460px;
+  margin-top: 12vh;
+}
+.modal-text {
+  margin: 0 0 8px;
+  line-height: 1.55;
+  color: var(--text-body);
+}
+.btn-danger {
+  background: var(--danger, #b42318);
+  border-color: var(--danger, #b42318);
+  color: #fff;
+}
+.btn-danger:hover:not(:disabled) {
+  filter: brightness(0.92);
+}
