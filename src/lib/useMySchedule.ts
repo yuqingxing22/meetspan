@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import type { User } from "firebase/auth";
-import { isFirebaseConfigured, subscribeUser } from "../firebase";
+import { useUser } from "./useUser";
 import { loadSchedule, type WeeklySchedule } from "./schedule";
 
 export interface MySchedule {
@@ -16,10 +16,8 @@ export interface MySchedule {
 
 /** The visitor's saved weekly schedule, if any. Anonymous visitors keep one too (per browser). */
 export function useMySchedule(): MySchedule {
-  const [user, setUser] = useState<User | null>(null);
+  const user = useUser();
   const [schedule, setSchedule] = useState<WeeklySchedule | null | undefined>(undefined);
-
-  useEffect(() => (isFirebaseConfigured ? subscribeUser(setUser) : undefined), []);
 
   const signedIn = !!user && !user.isAnonymous;
   const uid = user?.uid ?? null;

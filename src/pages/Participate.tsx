@@ -13,7 +13,7 @@ import {
   subscribePoll,
   upsertParticipant,
 } from "../lib/poll";
-import { firstName, loadMyName, loadParticipant, saveMyName, saveParticipant } from "../lib/adminStore";
+import { loadMyName, loadParticipant, saveMyName, saveParticipant } from "../lib/adminStore";
 import { newParticipantId } from "../lib/ids";
 import { bestWindow } from "../lib/best";
 import { avatarColor, initial } from "../lib/avatar";
@@ -22,6 +22,7 @@ import { finalizedSessions } from "../lib/finalized";
 import { buildICS, downloadICS, googleCalendarLink } from "../lib/ics";
 import { isFirebaseConfigured } from "../firebase";
 import { useAuthState } from "../lib/useAuthState";
+import { googleFirstName } from "../lib/useUser";
 import { useMySchedule } from "../lib/useMySchedule";
 import type { Participant, PollMeta } from "../lib/types";
 import { getLang, t } from "../lib/i18n";
@@ -57,11 +58,10 @@ function Participate() {
   const { user } = useMySchedule();
 
   // Signed in with Google and no name yet: suggest their first name.
+  const googleName = googleFirstName(user);
   useEffect(() => {
-    if (codename || !user || user.isAnonymous || !user.displayName) return;
-    setCodename(firstName(user.displayName));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+    if (googleName) setCodename((n) => n || googleName);
+  }, [googleName]);
   // What the private email doc last held, so it's only rewritten on change.
   const savedEmailKey = useRef(stored ? `${stored.email ?? ""}|${stored.codename}` : "");
 

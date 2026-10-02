@@ -3,6 +3,7 @@ import { getFirestore, type Firestore } from "firebase/firestore";
 import {
   getAuth,
   onAuthStateChanged,
+  onIdTokenChanged,
   signInAnonymously,
   signInWithCredential,
   signInWithPopup,
@@ -106,6 +107,19 @@ export function subscribeUser(cb: (u: User | null) => void): () => void {
     return () => {};
   }
   return onAuthStateChanged(authInstance, cb);
+}
+
+/**
+ * Like subscribeUser, but also fires when the same user changes in place, e.g.
+ * an anonymous visitor linking Google (the uid stays, so onAuthStateChanged
+ * stays silent). The user object is mutated, not replaced.
+ */
+export function subscribeUserChanges(cb: (u: User | null) => void): () => void {
+  if (!authInstance) {
+    cb(null);
+    return () => {};
+  }
+  return onIdTokenChanged(authInstance, cb);
 }
 
 /**

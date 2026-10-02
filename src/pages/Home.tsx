@@ -15,11 +15,11 @@ import {
 } from "../lib/slots";
 import { hashToken, newAdminToken, newPollId } from "../lib/ids";
 import { createPoll } from "../lib/poll";
-import { addMyPoll, firstName, loadMyName, saveAdminToken, saveMyName } from "../lib/adminStore";
+import { addMyPoll, loadMyName, saveAdminToken, saveMyName } from "../lib/adminStore";
 import { rememberTitle } from "../lib/titleHistory";
-import type { User } from "firebase/auth";
-import { isFirebaseConfigured, subscribeUser } from "../firebase";
+import { isFirebaseConfigured } from "../firebase";
 import { useAuthState } from "../lib/useAuthState";
+import { googleFirstName, useUser } from "../lib/useUser";
 import { copyText, useToast } from "../lib/useToast";
 import InviteByEmail from "../components/InviteByEmail";
 import { emailOrganizerLink, mailerEnabled } from "../lib/mailer";
@@ -85,16 +85,14 @@ export default function Home() {
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState<"" | "invite" | "organizer">("");
   const [showQR, setShowQR] = useState(false);
-  const [user, setUser] = useState<User | null>(null);
+  const user = useUser();
   const [emailing, setEmailing] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
-  useEffect(() => subscribeUser(setUser), []);
   // No name typed before on this browser: start from the Google first name.
+  const googleName = googleFirstName(user);
   useEffect(() => {
-    if (!user || user.isAnonymous) return;
-    const name = firstName(user.displayName);
-    if (name) setOrganizerName((n) => n || name);
-  }, [user]);
+    if (googleName) setOrganizerName((n) => n || googleName);
+  }, [googleName]);
 
   const [created, setCreated] = useState<{
     pollId: string;
