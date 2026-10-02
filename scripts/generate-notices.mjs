@@ -41,7 +41,7 @@ for (const p of list) {
 const out = [];
 out.push("MeetSpan: third-party notices", "meetspan.app", "");
 out.push(
-  "MeetSpan is built with the open-source software, fonts and illustrations listed below.",
+  "MeetSpan is built with the open-source software, fonts, illustrations and data listed below.",
   "Their licenses allow commercial use. This file reproduces their notices.",
   ""
 );
@@ -55,6 +55,15 @@ out.push(
   "Four illustrations come from unDraw (https://undraw.co), by Katerina Limpitsouni,",
   "used under the unDraw license, which allows free use, including commercial use,",
   "without attribution.",
+  ""
+);
+
+out.push("=".repeat(70), "DATA", "=".repeat(70), "");
+out.push(
+  "Chinese timezone city names come from the Unicode Common Locale Data Repository",
+  "(CLDR, https://cldr.unicode.org), used under the Unicode License v3.",
+  "",
+  readFileSync("src/lib/tzZh.LICENSE.txt", "utf8").trim(),
   ""
 );
 

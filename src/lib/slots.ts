@@ -1,6 +1,7 @@
 import { DateTime } from "luxon";
 import type { DailyWindow, Granularity } from "./types";
 import { getLang } from "./i18n";
+import { TZ_ZH } from "./tzZh";
 
 /**
  * Expand candidate dates + a daily window into an ordered list of absolute
@@ -276,6 +277,15 @@ export function canonicalTz(tz: string): string {
   return RENAMED[tz] ?? tz;
 }
 
+const LEGACY_OF: Record<string, string> = Object.fromEntries(
+  Object.entries(RENAMED).map(([oldId, newId]) => [newId, oldId])
+);
+
+/** CLDR's Chinese city name, which is keyed by either the old or the new id. */
+function zhCityOf(tz: string, key: string): string | undefined {
+  return TZ_ZH[tz] ?? TZ_ZH[key] ?? TZ_ZH[LEGACY_OF[key]];
+}
+
 /**
  * IANA collapses whole countries into a single zone — all of mainland China is
  * "Asia/Shanghai", all of India is "Asia/Kolkata", etc. — so the canonical city
@@ -388,9 +398,15 @@ export function tzInfo(tz: string, ref?: DateTime): TzInfo {
     .replace(/_/g, " ")
     .replace(/\//g, " · ");
   const extra = TZ_EXTRAS[key];
-  const city = extra ? (getLang() === "zh" ? extra.zh : extra.label) : derivedCity;
+  const zhCity = zhCityOf(tz, key);
+  const city =
+    getLang() === "zh" ? extra?.zh ?? zhCity ?? derivedCity : extra?.label ?? derivedCity;
   const offsetLabel = formatOffset(offsetMin);
-  const labels = [derivedCity, ...(extra ? [extra.label, extra.zh, ...extra.terms] : [])].map(norm);
+  const labels = [
+    derivedCity,
+    ...(zhCity ? [zhCity] : []),
+    ...(extra ? [extra.label, extra.zh, ...extra.terms] : []),
+  ].map(norm);
   const words = labels.flatMap((l) => l.split(/[\s·,、()（）]+/)).filter(Boolean);
   const names = Array.from(new Set([...labels, ...words]));
   // Keep the raw ids too (old and new), so "calcutta" or "kolkata" both match.

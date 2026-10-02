@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DateTime } from "luxon";
-import { buildSlots, buildGridModel, tzInfo, groupTimeZones, searchTimeZones } from "./slots";
+import { allTzNames, buildSlots, buildGridModel, tzInfo, groupTimeZones, searchTimeZones } from "./slots";
 
 const S30 = 30 * 60_000;
 
@@ -128,6 +128,29 @@ describe("tzInfo aliases", () => {
     expect(order).toEqual(["America", "Europe", "Africa", "Asia", "Oceania", "Other"]);
     const other = groupTimeZones(["Antarctica/Palmer", "UTC", "Antarctica/Troll"]).find((g) => g.region === "Other")!;
     expect(other.zones[0].key).toBe("UTC");
+  });
+});
+
+describe("Chinese timezone names", () => {
+  it("names every zone the runtime lists, old or new id", async () => {
+    const { setLang } = await import("./i18n");
+    setLang("zh");
+    try {
+      expect(tzInfo("America/Adak").city).toBe("埃达克");
+      expect(tzInfo("Atlantic/Reykjavik").city).toBe("雷克雅未克");
+      expect(tzInfo("America/Argentina/Jujuy").city).toBe("胡胡伊");
+      expect(tzInfo("Asia/Shanghai").city).toBe("中国 · 北京、上海"); // curated label wins
+      const names = allTzNames();
+      const english = names.filter((tz) => /^[\x00-\x7f]+$/.test(tzInfo(tz).city));
+      expect(english).toEqual([]);
+    } finally {
+      setLang("en");
+    }
+  });
+
+  it("finds obscure zones by their Chinese name", () => {
+    const zones = ["America/Adak", "Atlantic/Reykjavik"].map((tz) => tzInfo(tz));
+    expect(searchTimeZones(zones, "雷克雅未克")[0].key).toBe("Atlantic/Reykjavik");
   });
 });
 
