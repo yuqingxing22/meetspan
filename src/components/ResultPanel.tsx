@@ -94,6 +94,7 @@ function OptionCard({
               className={`chip chip-static${!ok ? " chip-miss" : c === "night" ? " chip-night" : c === "edge" ? " chip-edge" : ""}`}
             >
               {ok && c === "night" && <Icon name="moon" size={12} />}
+              {meta.requiredIds?.includes(p.id) && <span className="req-star" aria-label="must attend">★</span>}
               {p.codename} · {local.toFormat("h:mm a ccc")}
               {stretched.includes(p.id) && <span className="chip-flag">if needed</span>}
             </span>

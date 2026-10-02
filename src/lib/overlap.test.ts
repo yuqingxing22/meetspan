@@ -174,3 +174,44 @@ describe("cross-timezone preferences", () => {
     expect(s?.stretched).toEqual(["mei"]);
   });
 });
+
+describe("required participants", () => {
+  const slots = day(0, 4);
+  const people: EngineParticipant[] = [
+    { id: "boss", selectedSlots: [slots[2], slots[3]] },
+    { id: "a", selectedSlots: [slots[0], slots[1]] },
+    { id: "b", selectedSlots: [slots[0], slots[1], slots[2], slots[3]] },
+  ];
+
+  it("suggests the best time that includes everyone required", () => {
+    const res = computeSchedule({
+      slots,
+      granularityMin: G,
+      participants: people,
+      durationMin: 60,
+      sessionsPerWeek: 1,
+      required: ["boss"],
+    });
+    expect(res.kind).toBe("none");
+    const s = res.suggestions.find((x) => x.kind === "required");
+    expect(s?.sessions?.[0].startMs).toBe(slots[2]);
+    expect(s?.sessions?.[0].freeIds).toContain("boss");
+  });
+
+  it("never suggests leaving out a required person", () => {
+    const res = computeSchedule({
+      slots,
+      granularityMin: G,
+      participants: people,
+      durationMin: 60,
+      sessionsPerWeek: 1,
+      required: ["boss"],
+    });
+    for (const s of res.suggestions) {
+      expect(s.excluded ?? []).not.toContain("boss");
+      for (const w of s.sessions ?? []) {
+        if (s.kind !== "shorten" && s.kind !== "split") expect(w.freeIds).toContain("boss");
+      }
+    }
+  });
+});

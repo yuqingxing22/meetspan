@@ -48,6 +48,12 @@ export interface PollMeta {
   /** Ordered UTC epoch-ms starts — the source of truth for the grid. */
   slots: number[];
   finalized?: Finalized;
+  /** Participant ids who must attend; recommended times always include them. */
+  requiredIds?: string[];
+  /** Respond-by date (ISO yyyy-mm-dd), shown to guests. */
+  deadline?: string;
+  /** Names the organizer expects to hear from, to show who hasn't replied. */
+  expected?: string[];
 }
 
 /** A participant document at polls/{pollId}/participants/{participantId}. */

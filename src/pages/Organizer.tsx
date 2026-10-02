@@ -6,10 +6,12 @@ import ResultPanel from "../components/ResultPanel";
 import EmailModal from "../components/EmailModal";
 import Icon from "../components/Icon";
 import InviteQR from "../components/InviteQR";
+import EditPollModal from "../components/EditPollModal";
 import ScheduleFill from "../components/ScheduleFill";
 import {
   closePoll,
   finalizePoll,
+  updatePoll,
   reopenPoll,
   subscribeEmails,
   subscribeParticipants,
@@ -121,6 +123,7 @@ function Organizer() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   // Start times ticked in the "all times everyone can make it" list.
   const [picks, setPicks] = useState<number[]>([]);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -256,6 +259,7 @@ function Organizer() {
       })),
       durationMin,
       sessionsPerWeek,
+      required: meta.requiredIds,
     });
   }, [meta, participants, durationMin, sessionsPerWeek]);
 
@@ -408,6 +412,80 @@ function Organizer() {
     { ms: 0, count: 0, available: [] as string[] }
   );
 
+  const deadlinePassed =
+    !!meta.deadline &&
+    DateTime.now().setZone(meta.organizerTz).toISODate()! > meta.deadline;
+  const requiredIds = meta.requiredIds ?? [];
+  const norm = (n: string) => n.trim().toLowerCase();
+  const answered = new Set(participants.map((p) => norm(p.codename)));
+  const waitingOn = (meta.expected ?? []).filter((n) => !answered.has(norm(n)));
+
+  function toggleRequired(id: string) {
+    const next = requiredIds.includes(id)
+      ? requiredIds.filter((x) => x !== id)
+      : [...requiredIds, id];
+    updatePoll(pollId, { requiredIds: next }).catch((e) =>
+      show(`Couldn't update: ${(e as Error).message}`)
+    );
+  }
+
+  const peopleCard =
+    participants.length > 0 || waitingOn.length > 0 ? (
+      <div className="card people-card">
+        <div className="results-head">
+          <h2>People</h2>
+          {(meta.expected?.length ?? 0) > 0 && (
+            <span className="muted small">
+              {meta.expected!.length - waitingOn.length} of {meta.expected!.length} expected
+            </span>
+          )}
+        </div>
+        {canEdit && participants.length > 1 && (
+          <p className="hint">Mark who must attend. Suggested times will always include them.</p>
+        )}
+        <ul className="people">
+          {participants.map((p) => {
+            const req = requiredIds.includes(p.id);
+            return (
+              <li key={p.id}>
+                <span className="avatar" style={{ background: avatarColor(p.id) }}>
+                  {initial(p.codename)}
+                </span>
+                <span className="people-main">
+                  <span className="people-name">{p.codename}</span>
+                  <span className="people-sub">{tzInfo(p.tz).city}</span>
+                </span>
+                {canEdit ? (
+                  <button
+                    type="button"
+                    className={`req-toggle${req ? " on" : ""}`}
+                    aria-pressed={req}
+                    onClick={() => toggleRequired(p.id)}
+                  >
+                    {req ? "Must attend" : "Optional"}
+                  </button>
+                ) : (
+                  req && <span className="badge badge-brand">Must attend</span>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+        {waitingOn.length > 0 && (
+          <div className="waiting-on">
+            <span className="field-label">Still waiting on</span>
+            <div className="chips chips-sm">
+              {waitingOn.map((n) => (
+                <span key={n} className="chip chip-static">
+                  {n}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    ) : null;
+
   const lockedLabel = lockedSessions
     .map((s) => formatRange(s.startMs, s.endMs, meta.organizerTz))
     .join(" · ");
@@ -427,6 +505,15 @@ function Organizer() {
             {datesLabel}
             {datesLabel ? " · " : ""}
             {hoursLabel} · Your timezone: {zone.city} ({zone.abbr})
+            {meta.deadline && (
+              <>
+                {" · "}
+                <span className={deadlinePassed ? "deadline passed" : "deadline"}>
+                  {deadlinePassed ? "Deadline passed " : "Respond by "}
+                  {DateTime.fromISO(meta.deadline).toFormat("ccc, LLL d")}
+                </span>
+              </>
+            )}
           </p>
         </div>
         <div className="head-actions">
@@ -471,6 +558,16 @@ function Organizer() {
               </button>
               {menuOpen && (
                 <div className="menu">
+                  <button
+                    type="button"
+                    className="menu-item"
+                    onClick={() => {
+                      setMenuOpen(false);
+                      setEditOpen(true);
+                    }}
+                  >
+                    Edit poll (name, deadline, days, hours)
+                  </button>
                   <button
                     type="button"
                     className={`menu-item${open ? " danger" : ""}`}
@@ -644,6 +741,7 @@ function Organizer() {
           <div className="org-layout">
             {result ? (
               <section className="org-results">
+                {peopleCard}
                 <div className="card">
                   <div className="results-head">
                     <h2>Best times</h2>
@@ -791,6 +889,7 @@ function Organizer() {
               </section>
             ) : (
               <section className="org-results">
+                {peopleCard}
                 <div className="card empty-mini">
                   <img src={waitArt} alt="" />
                   <h2>Waiting for responses</h2>
@@ -828,6 +927,15 @@ function Organizer() {
         </>
       )}
 
+      {editOpen && (
+        <EditPollModal
+          pollId={pollId}
+          meta={meta}
+          responses={participants.length}
+          onClose={() => setEditOpen(false)}
+          onSaved={show}
+        />
+      )}
       {showEmail && lockedSessions.length > 0 && (
         <EmailModal
           meta={meta}

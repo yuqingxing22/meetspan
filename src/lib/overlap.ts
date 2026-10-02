@@ -26,6 +26,8 @@ export interface ComputeInput {
   participants: EngineParticipant[];
   durationMin: number;
   sessionsPerWeek: number;
+  /** Participant ids who must be free in every suggested time. */
+  required?: string[];
 }
 
 export interface Session {
@@ -44,7 +46,14 @@ export interface Session {
 export type ResultKind = "ok" | "none";
 
 export interface Suggestion {
-  kind: "if_needed" | "shorten" | "split" | "exclude" | "better_days" | "insufficient";
+  kind:
+    | "if_needed"
+    | "required"
+    | "shorten"
+    | "split"
+    | "exclude"
+    | "better_days"
+    | "insufficient";
   title: string;
   detail: string;
   sessions?: Session[];
@@ -199,6 +208,9 @@ export function computeSchedule(input: ComputeInput): ComputeResult {
   const index = buildSlotIndex(input);
   const allIds = participants.map((p) => p.id);
   const tzById = new Map(participants.map((p) => [p.id, p.tz]));
+  // Only required ids that actually responded count.
+  const required = (input.required ?? []).filter((id) => allIds.includes(id));
+  const hasRequired = (s: Session) => required.every((id) => s.freeIds.includes(id));
   const penalty: Penalty = (s) =>
     windowPenalty(s.startMs, s.endMs, s.freeIds.map((id) => tzById.get(id)));
 
@@ -239,7 +251,7 @@ export function computeSchedule(input: ComputeInput): ComputeResult {
           "There aren't enough separate windows where all participants overlap. Consider fewer sessions per week, a shorter duration, or excluding someone (see below).",
       });
       // Also surface fallbacks so the organizer has options.
-      appendExcludeAndShorten(input, index, allIds, total, k, F, suggestions, penalty);
+      appendExcludeAndShorten(input, index, allIds, total, k, F, suggestions, penalty, required);
     }
     return {
       kind: "ok",
@@ -289,6 +301,24 @@ export function computeSchedule(input: ComputeInput): ComputeResult {
     }
   }
 
+  // (0b) Required people: the best full-length times that include all of
+  // them, letting optional people miss.
+  if (required.length && required.length < total) {
+    const withRequired = windowsOfSize(input, index, allIds, k, required.length).filter(hasRequired);
+    if (withRequired.length) {
+      const picked = selectSessions(withRequired, F, penalty);
+      const best = Math.min(...picked.map((w) => w.count));
+      suggestions.push({
+        kind: "required",
+        title: "Works for everyone required",
+        detail: `All ${required.length} required ${
+          required.length === 1 ? "person is" : "people are"
+        } free; ${best} of ${total} overall.`,
+        sessions: picked,
+      });
+    }
+  }
+
   // (a) Shorten: largest duration where everyone still overlaps.
   const largest = largestFullOverlapSize(input, index, allIds, total, k - 1);
   if (largest) {
@@ -318,10 +348,10 @@ export function computeSchedule(input: ComputeInput): ComputeResult {
   }
 
   // (c) Exclude: full-length window if one person steps out.
-  appendExclude(input, index, allIds, total, k, F, suggestions, penalty);
+  appendExclude(input, index, allIds, total, k, F, suggestions, penalty, required);
 
   // (d) Better days: where is overlap strongest for this duration?
-  const anyWindows = windowsOfSize(input, index, allIds, k, 1);
+  const anyWindows = windowsOfSize(input, index, allIds, k, 1).filter(hasRequired);
   if (anyWindows.length) {
     const bestPerBlock = new Map<number, Session>();
     for (const w of anyWindows) {
@@ -362,7 +392,8 @@ function appendExclude(
   k: number,
   F: number,
   suggestions: Suggestion[],
-  penalty: Penalty = noPenalty
+  penalty: Penalty = noPenalty,
+  required: string[] = []
 ): void {
   if (total < 2) return;
   const near = windowsOfSize(input, index, allIds, k, total - 1).filter(
@@ -374,6 +405,7 @@ function appendExclude(
   for (const w of near) {
     if (w.missing.length !== 1) continue;
     const id = w.missing[0];
+    if (required.includes(id)) continue;
     if (!byExcluded.has(id)) byExcluded.set(id, []);
     byExcluded.get(id)!.push(w);
   }
@@ -402,7 +434,8 @@ function appendExcludeAndShorten(
   k: number,
   F: number,
   suggestions: Suggestion[],
-  penalty: Penalty = noPenalty
+  penalty: Penalty = noPenalty,
+  required: string[] = []
 ): void {
-  appendExclude(input, index, allIds, total, k, F, suggestions, penalty);
+  appendExclude(input, index, allIds, total, k, F, suggestions, penalty, required);
 }

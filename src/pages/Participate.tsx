@@ -196,6 +196,8 @@ function Participate() {
       : "";
   const respondedCount = others.length + (meIn ? 1 : 0);
   const finalSessions = finalizedSessions(meta, participants);
+  const deadlinePassed =
+    !!meta.deadline && DateTime.now().setZone(tz).toISODate()! > meta.deadline;
   const finalTitle = meta.finalized?.meetingName || meta.title || "Meeting";
 
   let status: { text: string; tone: string } = { text: "Mark your free times below", tone: "idle" };
@@ -220,6 +222,15 @@ function Participate() {
           {datesLabel}
           {datesLabel ? " · " : ""}
           {respondedCount} {respondedCount === 1 ? "person has" : "people have"} responded
+          {meta.deadline && (
+            <>
+              {" · "}
+              <span className={deadlinePassed ? "deadline passed" : "deadline"}>
+                {deadlinePassed ? "Deadline was " : "Please respond by "}
+                {DateTime.fromISO(meta.deadline).toFormat("cccc, LLL d")}
+              </span>
+            </>
+          )}
         </p>
       </div>
 

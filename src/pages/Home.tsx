@@ -63,6 +63,7 @@ export default function Home() {
   const uid = auth !== "loading" && auth !== "error" ? auth : null;
 
   const [title, setTitle] = useState("");
+  const [deadline, setDeadline] = useState("");
   const [organizerName, setOrganizerName] = useState("");
   const [tz, setTz] = useState(detectTz());
   const [pickMode, setPickMode] = useState<PickMode>("dates");
@@ -160,6 +161,7 @@ export default function Home() {
         dates: resolvedDates,
         weekdays: pickMode === "weekly" ? weekdays : [],
         slots,
+        ...(deadline ? { deadline } : {}),
       };
       await createPoll(pollId, meta);
       saveAdminToken(pollId, token);
@@ -393,6 +395,15 @@ export default function Home() {
                 <TimezonePicker value={tz} onChange={setTz} label="Your timezone" />
               </div>
             </div>
+            <label className="field field-narrow">
+              <span className="field-label">Respond by (optional)</span>
+              <input
+                type="date"
+                value={deadline}
+                min={DateTime.now().toISODate()!}
+                onChange={(e) => setDeadline(e.target.value)}
+              />
+            </label>
           </section>
 
           <section className="card">

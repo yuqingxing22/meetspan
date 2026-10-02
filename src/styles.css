@@ -508,6 +508,9 @@ textarea {
   resize: vertical;
   min-height: 90px;
 }
+.field-narrow {
+  max-width: 260px;
+}
 .input-lg {
   height: 52px !important;
   font-size: 18px !important;
@@ -2099,6 +2102,54 @@ div.field.tz-field {
   font-size: 13px;
   color: #c9cbd3;
 }
+/* People card: required toggles + who hasn't replied */
+.people-card {
+  padding: 18px;
+}
+.req-toggle {
+  flex: none;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  border: 1px solid var(--border-input);
+  background: var(--surface);
+  color: var(--text-dim);
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+.req-toggle.on {
+  border-color: var(--brand);
+  background: var(--brand);
+  color: #fff;
+}
+.waiting-on {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px solid var(--border-card);
+}
+.req-star {
+  color: var(--brand);
+  margin-right: 2px;
+}
+.deadline {
+  font-weight: 500;
+  color: var(--brand-ink);
+}
+.deadline.passed {
+  color: var(--danger);
+}
+.edit-weekdays {
+  margin-bottom: 8px;
+}
+.edit-hours {
+  margin-top: 12px;
+}
+.modal-actions {
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
 /* Guest page: the organizer's locked-in time */
 .final-card {
   align-items: flex-start;

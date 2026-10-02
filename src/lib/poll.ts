@@ -131,6 +131,19 @@ export async function reopenPoll(pollId: string): Promise<void> {
   await updateDoc(pollRef(pollId), { status: "open" });
 }
 
+/** Update organizer-editable poll settings (required people, deadline, dates…). */
+export async function updatePoll(
+  pollId: string,
+  patch: Partial<
+    Pick<
+      PollMeta,
+      "title" | "requiredIds" | "deadline" | "expected" | "dates" | "weekdays" | "dailyWindow" | "slots"
+    >
+  >
+): Promise<void> {
+  await updateDoc(pollRef(pollId), patch);
+}
+
 export async function finalizePoll(
   pollId: string,
   finalized: Finalized
