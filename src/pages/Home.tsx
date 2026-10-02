@@ -369,30 +369,33 @@ export default function Home() {
           <p className="hint">
             {t("Keep this one to yourself. It's how you see results and lock in the time. It's also saved under “Your polls” in this browser.")}
           </p>
-          {mailNote}
-          <span
-            className="tip-wrap"
-            data-tip={t("Save this link somewhere safe: it's the only key to manage your poll, and we can't recover it for you.")}
-          >
-            <button
-              type="button"
-              className={`btn ${copied === "organizer" ? "btn-success" : ""}`}
-              onClick={() => {
-                copyText(organizerLink);
-                markCopied("organizer");
-              }}
+          <div className="linkbox">
+            <code>{`${base}#/o/${created.pollId}?k=••••••••`}</code>
+            <span
+              className="tip-wrap tip-end"
+              data-tip={t("Save this link somewhere safe: it's the only key to manage your poll, and we can't recover it for you.")}
             >
-              {copied === "organizer" ? (
-                <>
-                  <Icon name="check" /> {t("Copied")}
-                </>
-              ) : (
-                <>
-                  <Icon name="copy" /> {t("Copy private link")}
-                </>
-              )}
-            </button>
-          </span>
+              <button
+                type="button"
+                className={`btn btn-sm ${copied === "organizer" ? "btn-success" : ""}`}
+                onClick={() => {
+                  copyText(organizerLink);
+                  markCopied("organizer");
+                }}
+              >
+                {copied === "organizer" ? (
+                  <>
+                    <Icon name="check" /> {t("Copied")}
+                  </>
+                ) : (
+                  <>
+                    <Icon name="copy" /> {t("Copy private link")}
+                  </>
+                )}
+              </button>
+            </span>
+          </div>
+          {mailNote}
         </section>
 
         <div className="created-actions">

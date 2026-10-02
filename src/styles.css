@@ -1493,6 +1493,10 @@ div.field.tz-field {
 .card-head-row .hint {
   margin-bottom: 0;
 }
+/* The private-link note sits under its link box. */
+.linkbox + .notice {
+  margin: 12px 0 0;
+}
 .share-wrap {
   position: relative;
   flex: none;
@@ -1532,8 +1536,8 @@ div.field.tz-field {
 }
 .invite-body {
   display: flex;
-  gap: 16px;
-  align-items: flex-start;
+  gap: 20px;
+  align-items: center;
   flex-wrap: wrap;
 }
 .invite-main {
@@ -1553,12 +1557,35 @@ div.field.tz-field {
 .preview-link:hover {
   text-decoration: underline;
 }
+/* The QR sits in a soft tile beside the link, its download link underneath. */
 .qr-compact {
   flex: none;
   display: flex;
   flex-direction: column;
   align-items: center;
+  gap: 6px;
+  padding: 10px 10px 8px;
+  border-radius: var(--radius);
+  background: var(--surface-2);
+}
+.qr-compact canvas {
+  border: 0;
+}
+.qr-download {
+  display: inline-flex;
+  align-items: center;
   gap: 4px;
+  padding: 2px 4px;
+  border: 0;
+  background: none;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+.qr-download:hover {
+  color: var(--brand);
 }
 .notice-ok {
   display: flex;
@@ -1602,6 +1629,10 @@ div.field.tz-field {
   transform: translateY(4px);
   pointer-events: none;
   transition: opacity 0.12s ease, transform 0.12s ease;
+}
+.tip-end::after {
+  left: auto;
+  right: 0;
 }
 .tip-wrap:hover::after,
 .tip-wrap:focus-within::after {

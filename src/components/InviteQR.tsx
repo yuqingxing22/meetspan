@@ -30,7 +30,7 @@ export default function InviteQR({ url, title, compact }: { url: string; title?:
         <div className="qr-code" ref={wrap}>
           <QRCodeCanvas
             value={url}
-            size={112}
+            size={104}
             marginSize={2}
             fgColor="#14151A"
             bgColor="#FFFFFF"
@@ -38,8 +38,8 @@ export default function InviteQR({ url, title, compact }: { url: string; title?:
             title={t("QR code for the invite link")}
           />
         </div>
-        <button type="button" className="btn btn-sm btn-ghost" onClick={download}>
-          <Icon name="download" /> {t("QR code")}
+        <button type="button" className="qr-download" onClick={download}>
+          <Icon name="download" size={14} /> {t("Download QR code")}
         </button>
       </div>
     );

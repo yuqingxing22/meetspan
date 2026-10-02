@@ -137,6 +137,7 @@ export const ZH: Record<string, string> = {
   "QR code for the invite link": "邀请链接的二维码",
   "Scan to open the invite on a phone. Handy for a slide, a printout or someone in the room.": "用手机扫码打开邀请。适合放在幻灯片、打印件上，或给在场的人扫。",
   "Download PNG": "下载 PNG",
+  "Download QR code": "下载二维码",
   "{n} of {total} free": "{total} 人中 {n} 人有空",
   "{n} sessions": "{n} 次",
   "must attend": "必须参加",
