@@ -11,6 +11,7 @@ import Privacy from "./pages/Privacy";
 import Faq from "./pages/Faq";
 import Support from "./pages/Support";
 import About from "./pages/About";
+import Terms from "./pages/Terms";
 import "./styles.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
@@ -28,6 +29,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           <Route path="faq" element={<Faq />} />
           <Route path="support" element={<Support />} />
           <Route path="about" element={<About />} />
+          <Route path="terms" element={<Terms />} />
           <Route path="*" element={<Home />} />
         </Route>
       </Routes>

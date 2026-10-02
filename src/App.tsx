@@ -76,6 +76,7 @@ export default function App() {
             <h2>{t("Company")}</h2>
             <Link to="/about">{t("About MeetSpan")}</Link>
             <Link to="/privacy">{t("Privacy policy")}</Link>
+            <Link to="/terms">{t("Terms of use")}</Link>
           </nav>
         </div>
         <p className="footer-feedback">

@@ -20,6 +20,7 @@ export const ZH: Record<string, string> = {
   "How was your experience? Give feedback about our website:": "使用体验如何？欢迎就我们的网站给我们反馈：",
   "© {year} MeetSpan. All rights reserved.": "© {year} MeetSpan。保留所有权利。",
   "Privacy policy": "隐私政策",
+  "Terms of use": "使用条款",
   "Back to MeetSpan": "回到 MeetSpan",
   "You": "你",
   "Click or drag across the grid to mark when you're free. Faint blue shows when others are free.": "点击或拖动网格，标出你有空的时间。浅蓝色表示其他人有空。",
