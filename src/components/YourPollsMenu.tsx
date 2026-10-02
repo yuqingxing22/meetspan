@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { DateTime } from "luxon";
 import Icon from "./Icon";
-import { MYPOLLS_EVENT, listMyPolls, removeMyPoll, type MyPoll } from "../lib/adminStore";
+import { MYPOLLS_EVENT, listMyPolls, type MyPoll } from "../lib/adminStore";
 import { listPollsByOrganizer } from "../lib/poll";
 import { isFirebaseConfigured } from "../firebase";
 import { useAuthState } from "../lib/useAuthState";
@@ -74,7 +74,6 @@ export default function YourPollsMenu() {
     };
   }, [open]);
 
-  const cloudIds = useMemo(() => new Set(cloudPolls.map((p) => p.pollId)), [cloudPolls]);
   // Local entries carry the admin token; cloud-only ones are opened by uid.
   const polls = useMemo(() => {
     const byId = new Map<string, MyPoll>();
@@ -116,25 +115,6 @@ export default function YourPollsMenu() {
                   {DateTime.fromMillis(p.createdAt).toFormat("LLL d, yyyy")}
                 </span>
               </button>
-              {!cloudIds.has(p.pollId) && (
-                <button
-                  type="button"
-                  className="icon-btn icon-btn-quiet"
-                  aria-label={t("Remove {name} from this list", { name: p.title || t("Untitled poll") })}
-                  title={t("Remove from this list (doesn't delete the poll)")}
-                  onClick={() => {
-                    const name = p.title || t("Untitled poll");
-                    if (
-                      window.confirm(
-                        t("Hide “{name}” from this list? The poll itself is not deleted and its links keep working. To delete it, open the poll and choose ⋯ → Delete poll.", { name })
-                      )
-                    )
-                      removeMyPoll(p.pollId);
-                  }}
-                >
-                  <Icon name="x" size={14} />
-                </button>
-              )}
             </div>
           ))}
           <p className="menu-foot">
