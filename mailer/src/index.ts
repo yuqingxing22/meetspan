@@ -1,7 +1,7 @@
 import { accessToken, getDoc, listDocs, setStringField, userEmail, verifyIdToken, type IdTokenClaims } from "./google";
-import { expectedKey, isEmail, waitingOn } from "./logic";
+import { expectedKey, isEmail, sha256Hex, waitingOn } from "./logic";
 import { cleanupInactivePolls } from "./cleanup";
-import { allRespondedEmail, inviteEmail, welcomeEmail, type Lang, type Mail } from "./templates";
+import { allRespondedEmail, inviteEmail, organizerLinkEmail, welcomeEmail, type Lang, type Mail } from "./templates";
 
 export interface Env {
   STATE: KVNamespace;
@@ -16,8 +16,17 @@ export interface Env {
   CLEANUP_ENABLED?: string;
 }
 
-const MAX_INVITES_PER_CALL = 10;
-const MAX_INVITES_PER_DAY = 30;
+/**
+ * Invite limits. Brevo's free plan allows 300 emails a day in total, so invites are
+ * capped hard: per request, per person per day, per poll, and across everyone per day.
+ */
+const MAX_INVITES_PER_CALL = 5;
+const MAX_INVITES_PER_USER_PER_DAY = 10;
+const MAX_INVITES_PER_POLL = 20;
+const MAX_INVITES_PER_DAY_TOTAL = 100;
+
+/** A person can ask for their own organizer link by email this many times a day. */
+const MAX_ORGANIZER_LINKS_PER_DAY = 10;
 
 function cors(req: Request, env: Env): Record<string, string> {
   const origin = req.headers.get("origin") ?? "";
@@ -77,7 +86,7 @@ async function welcome(req: Request, env: Env, claims: IdTokenClaims, body: { la
   return json(req, env, 200, { sent: true });
 }
 
-/** Organizer emails the poll link to people they name. Capped to stop abuse. */
+/** Organizer emails the poll link to people they name, within the caps above. */
 async function invite(
   req: Request,
   env: Env,
@@ -95,12 +104,17 @@ async function invite(
   if (!poll || poll.organizerUid !== claims.sub) return json(req, env, 403, { error: "not the organizer" });
 
   const day = new Date().toISOString().slice(0, 10);
-  const quotaKey = `invites:${claims.sub}:${day}`;
-  const used = Number((await env.STATE.get(quotaKey)) ?? 0);
-  if (used + emails.length > MAX_INVITES_PER_DAY) {
-    return json(req, env, 429, { error: "daily invite limit reached", remaining: Math.max(0, MAX_INVITES_PER_DAY - used) });
+  const userKey = `invites:${claims.sub}:${day}`;
+  const pollKey = `invites-poll:${pollId}`;
+  const totalKey = `invites-total:${day}`;
+  const [userUsed, pollUsed, totalUsed] = (
+    await Promise.all([env.STATE.get(userKey), env.STATE.get(pollKey), env.STATE.get(totalKey)])
+  ).map((v) => Number(v ?? 0));
+  if (totalUsed + emails.length > MAX_INVITES_PER_DAY_TOTAL) return json(req, env, 429, { error: "invites paused today" });
+  if (userUsed + emails.length > MAX_INVITES_PER_USER_PER_DAY) {
+    return json(req, env, 429, { error: "daily invite limit reached", remaining: Math.max(0, MAX_INVITES_PER_USER_PER_DAY - userUsed) });
   }
-  await env.STATE.put(quotaKey, String(used + emails.length), { expirationTtl: 172800 });
+  if (pollUsed + emails.length > MAX_INVITES_PER_POLL) return json(req, env, 429, { error: "poll invite limit reached" });
 
   const mail = inviteEmail(asLang(body.lang ?? poll.lang), {
     organizerName: String(poll.organizerName ?? ""),
@@ -117,7 +131,55 @@ async function invite(
       console.error("invite failed", e);
     }
   }
+  // Only sent mails count against the caps.
+  if (sent > 0) {
+    await Promise.all([
+      env.STATE.put(userKey, String(userUsed + sent), { expirationTtl: 172800 }),
+      env.STATE.put(pollKey, String(pollUsed + sent)),
+      env.STATE.put(totalKey, String(totalUsed + sent), { expirationTtl: 172800 }),
+    ]);
+  }
   return json(req, env, 200, { sent, requested: emails.length });
+}
+
+/**
+ * Emails the organizer their own private organizer link. It only ever goes to the
+ * Google account's verified email, never to an address the caller supplies, and
+ * only when the caller owns the poll and holds its secret token.
+ */
+async function organizerLink(
+  req: Request,
+  env: Env,
+  claims: IdTokenClaims,
+  body: { pollId?: string; token?: string; lang?: string }
+) {
+  if (!isGoogle(claims)) return json(req, env, 403, { error: "google account required" });
+  const pollId = String(body.pollId ?? "");
+  const secret = String(body.token ?? "");
+  if (!pollId || !secret) return json(req, env, 400, { error: "pollId and token required" });
+
+  const token = await accessToken(env.FIREBASE_SERVICE_ACCOUNT);
+  const poll = await getDoc(env.FIREBASE_PROJECT_ID, token, `polls/${pollId}`);
+  if (!poll || poll.organizerUid !== claims.sub) return json(req, env, 403, { error: "not the organizer" });
+  if ((await sha256Hex(secret)) !== poll.adminTokenHash) return json(req, env, 403, { error: "wrong organizer token" });
+
+  const day = new Date().toISOString().slice(0, 10);
+  const quotaKey = `olink:${claims.sub}:${day}`;
+  const used = Number((await env.STATE.get(quotaKey)) ?? 0);
+  if (used >= MAX_ORGANIZER_LINKS_PER_DAY) return json(req, env, 429, { error: "daily limit reached" });
+  await env.STATE.put(quotaKey, String(used + 1), { expirationTtl: 172800 });
+
+  const site = env.SITE_URL;
+  await sendMail(
+    env,
+    claims.email!,
+    organizerLinkEmail(asLang(body.lang ?? poll.lang), {
+      title: String(poll.title ?? "") || "Untitled poll",
+      organizerUrl: `${site}/#/o/${encodeURIComponent(pollId)}?k=${encodeURIComponent(secret)}`,
+      inviteUrl: `${site}/#/p/${encodeURIComponent(pollId)}`,
+    })
+  );
+  return json(req, env, 200, { sent: true, to: claims.email });
 }
 
 /** Called after a participant saves: tell the organizer once everyone expected has replied. */
@@ -179,6 +241,7 @@ export default {
       const body = (await req.json().catch(() => ({}))) as Record<string, never>;
       if (path === "/welcome") return await welcome(req, env, claims, body);
       if (path === "/invite") return await invite(req, env, claims, body);
+      if (path === "/organizer-link") return await organizerLink(req, env, claims, body);
       if (path === "/notify") return await notify(req, env, body);
       return json(req, env, 404, { error: "not found" });
     } catch (e) {

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { DateTime } from "luxon";
 import TimezonePicker from "../components/TimezonePicker";
@@ -15,11 +15,12 @@ import {
 import { hashToken, newAdminToken, newPollId } from "../lib/ids";
 import { createPoll } from "../lib/poll";
 import { addMyPoll, saveAdminToken } from "../lib/adminStore";
-import { isFirebaseConfigured } from "../firebase";
+import type { User } from "firebase/auth";
+import { isFirebaseConfigured, subscribeUser } from "../firebase";
 import { useAuthState } from "../lib/useAuthState";
 import { copyText, useToast } from "../lib/useToast";
 import InviteByEmail from "../components/InviteByEmail";
-import { mailerEnabled } from "../lib/mailer";
+import { emailOrganizerLink, mailerEnabled } from "../lib/mailer";
 import type { Granularity, PollMeta } from "../lib/types";
 import heroArt from "../assets/illustrations/time-management.svg";
 import shareArt from "../assets/illustrations/share-link.svg";
@@ -82,7 +83,10 @@ export default function Home() {
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState<"" | "invite" | "organizer">("");
   const [showQR, setShowQR] = useState(false);
+  const [user, setUser] = useState<User | null>(null);
+  const [emailing, setEmailing] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
+  useEffect(() => subscribeUser(setUser), []);
 
   const [created, setCreated] = useState<{
     pollId: string;
@@ -192,6 +196,21 @@ export default function Home() {
     const emailBody =
       `${t("Keep this private — it's your key to manage the poll and pick the final time:")}\n${organizerLink}\n\n` +
       `${t("Participant invite link (this is the one to share):")}\n${participantLink}`;
+    // Signed in with Google: MeetSpan emails the link from noreply@ to that account.
+    // Otherwise fall back to the visitor's own mail app (they have no known address).
+    const canEmailMe = mailerEnabled && !!user && !user.isAnonymous;
+    async function emailMe() {
+      if (!created) return;
+      setEmailing(true);
+      try {
+        const to = await emailOrganizerLink(created.pollId, created.token);
+        show(t("Sent to {email}", { email: to }));
+      } catch {
+        show(t("Couldn't send the email. Copy the private link instead."));
+      } finally {
+        setEmailing(false);
+      }
+    }
     const inviteSubject = `${t("When are you free?")}${title ? ` ${title}` : ""}`;
     const inviteBody = `${t("Mark when you're free (it shows in your own timezone, no sign-up needed):")}\n${participantLink}`;
     const canShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
@@ -304,12 +323,18 @@ export default function Home() {
                 </>
               )}
             </button>
-            <a
-              className="btn"
-              href={`mailto:?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`}
-            >
-              <Icon name="mail" /> {t("Email it to me")}
-            </a>
+            {canEmailMe ? (
+              <button type="button" className="btn" disabled={emailing} onClick={emailMe}>
+                <Icon name="mail" /> {emailing ? t("Sending…") : t("Email it to me")}
+              </button>
+            ) : (
+              <a
+                className="btn"
+                href={`mailto:?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`}
+              >
+                <Icon name="mail" /> {t("Email it to me")}
+              </a>
+            )}
             <a
               className="btn"
               href={`https://mail.google.com/mail/?view=cm&fs=1&su=${encodeURIComponent(

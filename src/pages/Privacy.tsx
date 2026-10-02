@@ -31,7 +31,7 @@ const EN: Section[] = [
   {
     h: "Emails we send",
     p: [
-      "We send a one-time welcome email the first time you connect a Google account, an email to a poll’s organizer when everyone they expected has replied, and invitation emails when an organizer asks us to send their poll link to someone. We don’t send marketing email.",
+      "We send a one-time welcome email the first time you connect a Google account; an email to a poll’s organizer when everyone they expected has replied; a message with your private organizer link to your own Google email address, if you choose “Email it to me”; and invitation emails when an organizer asks us to send their poll link to people they name (only a few at a time). We don’t send marketing email.",
       "These emails come from noreply@meetspan.app. You can reply to them and the reply reaches us.",
     ],
   },
@@ -79,7 +79,7 @@ const ZH_SECTIONS: Section[] = [
   {
     h: "我们会发送的邮件",
     p: [
-      "我们会在你第一次连接 Google 账号时发送一封欢迎邮件；当排期的组织者预计的人都回复后，给组织者发一封提醒；组织者要求我们把排期链接发给某人时，发送邀请邮件。我们不发营销邮件。",
+      "我们会在你第一次连接 Google 账号时发送一封欢迎邮件；当排期的组织者预计的人都回复后，给组织者发一封提醒；如果你选择“发邮件给自己”，把你的私密组织者链接发到你自己的 Google 邮箱；组织者要求我们把排期链接发给他们指定的人时，发送邀请邮件（一次只发几封）。我们不发营销邮件。",
       "这些邮件的发件地址是 noreply@meetspan.app。你可以直接回复，回复会到达我们这里。",
     ],
   },

@@ -74,3 +74,11 @@ export function isInactive(
   if (times.length === 0) return false; // no timestamps at all: never guess, keep it
   return Math.max(...times) < cutoffMs;
 }
+
+/** SHA-256 hex digest, same as the web app uses to store the organizer token hash. */
+export async function sha256Hex(text: string): Promise<string> {
+  const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(digest))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+}

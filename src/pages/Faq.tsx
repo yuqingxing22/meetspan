@@ -49,7 +49,7 @@ const EN: Item[] = [
   },
   {
     q: "Does MeetSpan send emails?",
-    a: ["Only a few, all from noreply@meetspan.app: a one-time welcome when you first connect a Google account, a note to the organizer when everyone they expected has replied, and an invitation when an organizer chooses “Send invites” for you. We don’t send marketing email. If you reply to one of these emails, your reply reaches us. If you got an invitation you didn’t expect, you can ignore it or write to support@meetspan.app."],
+    a: ["Only a few, all from noreply@meetspan.app: a one-time welcome when you first connect a Google account, a note to the organizer when everyone they expected has replied, your private organizer link if you choose “Email it to me”, and an invitation when an organizer chooses “Send invites” for you (a few at a time, with daily limits). We don’t send marketing email. If you reply to one of these emails, your reply reaches us. If you got an invitation you didn’t expect, you can ignore it or write to support@meetspan.app."],
   },
   {
     q: "Can I close a poll?",
@@ -108,7 +108,7 @@ const ZH: Item[] = [
   },
   {
     q: "MeetSpan 会发邮件吗？",
-    a: ["只会发少数几种，发件地址都是 noreply@meetspan.app：第一次连接 Google 账号时的一封欢迎邮件、组织者预计的人都回复之后给组织者的提醒，以及组织者选择“发送邀请”时发给你的邀请。我们不发营销邮件。你回复这些邮件，我们能收到。如果你收到了没有预期的邀请，可以直接忽略，也可以写信到 support@meetspan.app。"],
+    a: ["只会发少数几种，发件地址都是 noreply@meetspan.app：第一次连接 Google 账号时的一封欢迎邮件、组织者预计的人都回复之后给组织者的提醒、你选择“发邮件给自己”时发出的私密组织者链接，以及组织者选择“发送邀请”时发给你的邀请（一次只发几封，每天有数量上限）。我们不发营销邮件。你回复这些邮件，我们能收到。如果你收到了没有预期的邀请，可以直接忽略，也可以写信到 support@meetspan.app。"],
   },
   {
     q: "可以关闭排期吗？",

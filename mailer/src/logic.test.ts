@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { escapeHtml, expectedKey, fromFsFields, isEmail, isInactive, norm, retentionCutoff, waitingOn } from "./logic";
-import { allRespondedEmail, inviteEmail, welcomeEmail } from "./templates";
+import { escapeHtml, expectedKey, fromFsFields, isEmail, isInactive, norm, retentionCutoff, sha256Hex, waitingOn } from "./logic";
+import { allRespondedEmail, inviteEmail, organizerLinkEmail, welcomeEmail } from "./templates";
 
 describe("waitingOn", () => {
   it("matches names the same way the organizer dashboard does", () => {
@@ -51,6 +51,8 @@ describe("templates", () => {
     const mails = [
       inviteEmail("en", { organizerName: evil, title: evil, url: "https://meetspan.app/#/p/x", deadline: evil }),
       inviteEmail("zh", { organizerName: evil, title: evil, url: "https://meetspan.app/#/p/x" }),
+      organizerLinkEmail("en", { title: evil, organizerUrl: "https://meetspan.app/#/o/x?k=y", inviteUrl: "https://meetspan.app/#/p/x" }),
+      organizerLinkEmail("zh", { title: evil, organizerUrl: "https://meetspan.app/#/o/x?k=y", inviteUrl: "https://meetspan.app/#/p/x" }),
       allRespondedEmail("en", { title: evil, count: 2, url: "https://meetspan.app/#/o/x" }),
       welcomeEmail("en", "https://meetspan.app", evil),
     ];
@@ -99,5 +101,24 @@ describe("email header", () => {
     const m = welcomeEmail("en", "https://meetspan.app", "Mei");
     expect(m.html).toContain("https://meetspan.app/email-logo.png");
     expect(m.html).toContain("MeetSpan</td>");
+  });
+});
+
+describe("organizer link email", () => {
+  it("contains both links in html and text, in both languages", () => {
+    for (const lang of ["en", "zh"] as const) {
+      const m = organizerLinkEmail(lang, { title: "Sync", organizerUrl: "https://meetspan.app/#/o/abc?k=sec", inviteUrl: "https://meetspan.app/#/p/abc" });
+      expect(m.subject).toContain("Sync");
+      for (const body of [m.html, m.text]) {
+        expect(body).toContain("https://meetspan.app/#/o/abc?k=sec");
+        expect(body).toContain("https://meetspan.app/#/p/abc");
+      }
+    }
+  });
+});
+
+describe("sha256Hex", () => {
+  it("matches the known digest of 'abc'", async () => {
+    expect(await sha256Hex("abc")).toBe("ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad");
   });
 });

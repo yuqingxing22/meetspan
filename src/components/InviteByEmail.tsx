@@ -6,8 +6,10 @@ import { mailerEnabled, sendInvites } from "../lib/mailer";
 import { parseEmails } from "../lib/inviteEmails";
 import { t } from "../lib/i18n";
 
-const MAX_AT_ONCE = 10;
+const MAX_AT_ONCE = 5;
 function friendly(msg: string): string {
+  if (/invites paused/i.test(msg)) return t("Invites are paused for today. Please try again tomorrow.");
+  if (/poll invite limit/i.test(msg)) return t("This poll has reached its invite limit.");
   if (/daily invite limit/i.test(msg)) return t("You've reached today's invite limit. Try again tomorrow.");
   if (/not the organizer/i.test(msg)) return t("Only the organizer's account can send invites for this poll.");
   if (/google account required/i.test(msg)) return t("Sign in with Google to send invites by email.");

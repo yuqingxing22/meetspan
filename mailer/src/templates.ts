@@ -108,6 +108,35 @@ export function inviteEmail(
   };
 }
 
+export function organizerLinkEmail(
+  lang: Lang,
+  a: { title: string; organizerUrl: string; inviteUrl: string }
+): Mail {
+  const link = (u: string) => `<a href="${h(u)}" style="color:${BRAND};word-break:break-all;">${h(u)}</a>`;
+  if (lang === "zh") {
+    const p = [
+      `这是“${h(a.title)}”的私密组织者链接。用它可以查看大家的回复，并敲定最终时间。`,
+      "请只留给自己：任何拿到这个链接的人都能管理这个排期。",
+      `要发给大家的是这个邀请链接：<br>${link(a.inviteUrl)}`,
+    ];
+    return {
+      subject: `你的私密组织者链接：${a.title}`,
+      html: layout({ lang, preheader: "用它查看回复并敲定时间。请勿转发。", heading: "你的组织者链接", paragraphs: p, cta: { label: "打开组织者页面", url: a.organizerUrl }, footnote: "你收到这封邮件，是因为你在 MeetSpan 上要求把自己创建的排期的链接发到你的邮箱。" }),
+      text: `这是“${a.title}”的私密组织者链接，请只留给自己：\n${a.organizerUrl}\n\n要发给大家的邀请链接：\n${a.inviteUrl}`,
+    };
+  }
+  const p = [
+    `Here’s your private organizer link for “${h(a.title)}”. Use it to see everyone’s replies and lock in the final time.`,
+    "Keep it to yourself: anyone with this link can manage the poll.",
+    `The link to share with your group is this invite link:<br>${link(a.inviteUrl)}`,
+  ];
+  return {
+    subject: `Your private organizer link: ${a.title}`,
+    html: layout({ lang, preheader: "Use it to see replies and lock in a time. Don’t forward it.", heading: "Your organizer link", paragraphs: p, cta: { label: "Open organizer page", url: a.organizerUrl }, footnote: "You’re receiving this because you asked MeetSpan to email you the link for a poll you created." }),
+    text: `Your private organizer link for “${a.title}”. Keep it to yourself:\n${a.organizerUrl}\n\nThe invite link to share with your group:\n${a.inviteUrl}`,
+  };
+}
+
 export function allRespondedEmail(
   lang: Lang,
   a: { title: string; count: number; url: string }

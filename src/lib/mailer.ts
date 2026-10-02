@@ -40,6 +40,18 @@ export async function notifyResponse(pollId: string): Promise<void> {
   }
 }
 
+/**
+ * Email the organizer their own private organizer link. The server sends it only to
+ * the signed-in Google account's email. Returns the address it was sent to.
+ */
+export async function emailOrganizerLink(pollId: string, token: string): Promise<string> {
+  const res = await call("/organizer-link", { pollId, token });
+  if (!res) throw new Error("Email sending isn't set up yet.");
+  const data = (await res.json().catch(() => ({}))) as { to?: string; error?: string };
+  if (!res.ok || !data.to) throw new Error(data.error ?? `Could not send (${res.status})`);
+  return data.to;
+}
+
 /** Organizer emails the poll link to the given addresses. Returns how many were sent. */
 export async function sendInvites(pollId: string, emails: string[]): Promise<number> {
   const res = await call("/invite", { pollId, emails });
