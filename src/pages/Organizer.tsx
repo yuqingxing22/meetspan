@@ -8,6 +8,7 @@ import Icon from "../components/Icon";
 import InviteQR from "../components/InviteQR";
 import EditPollModal from "../components/EditPollModal";
 import ScheduleFill from "../components/ScheduleFill";
+import CalendarImport from "../components/CalendarImport";
 import {
   closePoll,
   finalizePoll,
@@ -621,16 +622,31 @@ function Organizer() {
               <span className="muted small" role="status">{saveLabel}</span>
             </div>
             {canEdit && (
-              <ScheduleFill
-                slots={meta.slots}
-                selected={mySelected}
-                maybe={myMaybe}
-                onFill={(next, nextMaybe) => {
-                  setMySelected(next);
-                  setMyMaybe(nextMaybe);
-                  setAvailDirty(true);
-                }}
-              />
+              <div className="fill-box">
+                <ScheduleFill
+                  slots={meta.slots}
+                  selected={mySelected}
+                  maybe={myMaybe}
+                  onFill={(next, nextMaybe) => {
+                    setMySelected(next);
+                    setMyMaybe(nextMaybe);
+                    setAvailDirty(true);
+                  }}
+                />
+                <CalendarImport
+                  slots={meta.slots}
+                  granularityMin={meta.granularityMin}
+                  tz={meta.organizerTz}
+                  weekly={meta.dateMode === "weekly"}
+                  selected={mySelected}
+                  maybe={myMaybe}
+                  onFill={(next, nextMaybe) => {
+                    setMySelected(next);
+                    setMyMaybe(nextMaybe);
+                    setAvailDirty(true);
+                  }}
+                />
+              </div>
             )}
             <AvailabilityBoard
               slots={meta.slots}

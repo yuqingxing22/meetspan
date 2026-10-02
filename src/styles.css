@@ -2491,6 +2491,29 @@ div.field.tz-field {
   font-size: 13px;
   color: var(--text-dim);
 }
+/* "Fill from my schedule" + "Import from Google Calendar" share one box */
+.fill-box {
+  margin-bottom: 14px;
+  border-radius: var(--radius-sm);
+  background: var(--brand-softer);
+  border: 1px solid var(--brand-line);
+}
+.fill-box:empty {
+  display: none;
+}
+.fill-box > .fill-bar {
+  margin: 0;
+  background: none;
+  border: 0;
+  border-radius: 0;
+}
+.fill-box > .fill-bar + .fill-bar {
+  border-top: 1px solid var(--brand-line);
+}
+.fill-bar > .fill-note {
+  flex: 1 1 260px;
+  min-width: 0;
+}
 .link-inline {
   padding: 0;
   font-size: inherit;

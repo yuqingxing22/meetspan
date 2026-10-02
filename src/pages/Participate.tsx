@@ -4,6 +4,7 @@ import { DateTime } from "luxon";
 import AvailabilityBoard from "../components/AvailabilityBoard";
 import TimezonePicker from "../components/TimezonePicker";
 import ScheduleFill from "../components/ScheduleFill";
+import CalendarImport from "../components/CalendarImport";
 import Icon from "../components/Icon";
 import { detectTz, formatRange, formatSlot, tzInfo } from "../lib/slots";
 import {
@@ -344,16 +345,31 @@ function Participate() {
       <div className="poll-layout">
         <section className="card poll-main">
           {!closed && (
-            <ScheduleFill
-              slots={meta.slots}
-              selected={selected}
-              maybe={maybe}
-              onFill={(next, nextMaybe) => {
-                setSelected(next);
-                setMaybe(nextMaybe);
-                setDirty(true);
-              }}
-            />
+            <div className="fill-box">
+              <ScheduleFill
+                slots={meta.slots}
+                selected={selected}
+                maybe={maybe}
+                onFill={(next, nextMaybe) => {
+                  setSelected(next);
+                  setMaybe(nextMaybe);
+                  setDirty(true);
+                }}
+              />
+              <CalendarImport
+                slots={meta.slots}
+                granularityMin={meta.granularityMin}
+                tz={meta.organizerTz}
+                weekly={meta.dateMode === "weekly"}
+                selected={selected}
+                maybe={maybe}
+                onFill={(next, nextMaybe) => {
+                  setSelected(next);
+                  setMaybe(nextMaybe);
+                  setDirty(true);
+                }}
+              />
+            </div>
           )}
           <AvailabilityBoard
             slots={meta.slots}
