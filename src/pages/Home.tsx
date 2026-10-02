@@ -18,6 +18,8 @@ import { addMyPoll, saveAdminToken } from "../lib/adminStore";
 import { isFirebaseConfigured } from "../firebase";
 import { useAuthState } from "../lib/useAuthState";
 import { copyText, useToast } from "../lib/useToast";
+import InviteByEmail from "../components/InviteByEmail";
+import { mailerEnabled } from "../lib/mailer";
 import type { Granularity, PollMeta } from "../lib/types";
 import heroArt from "../assets/illustrations/time-management.svg";
 import shareArt from "../assets/illustrations/share-link.svg";
@@ -80,6 +82,7 @@ export default function Home() {
   const [busy, setBusy] = useState(false);
   const [copied, setCopied] = useState<"" | "invite" | "organizer">("");
   const [showQR, setShowQR] = useState(false);
+  const [showInvite, setShowInvite] = useState(false);
 
   const [created, setCreated] = useState<{
     pollId: string;
@@ -248,6 +251,16 @@ export default function Home() {
             >
               <Icon name="mail" /> {t("Email")}
             </a>
+            {mailerEnabled && (
+              <button
+                type="button"
+                className={`btn${showInvite ? " btn-on" : ""}`}
+                aria-pressed={showInvite}
+                onClick={() => setShowInvite((v) => !v)}
+              >
+                <Icon name="mail" /> {t("Send invites")}
+              </button>
+            )}
             <button
               type="button"
               className={`btn${showQR ? " btn-on" : ""}`}
@@ -260,6 +273,7 @@ export default function Home() {
               {t("Preview as a guest")} <Icon name="arrowRight" />
             </Link>
           </div>
+          {showInvite && <InviteByEmail pollId={created.pollId} />}
           {showQR && <InviteQR url={participantLink} title={title.trim()} />}
         </section>
 

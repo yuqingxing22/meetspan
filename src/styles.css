@@ -2874,3 +2874,22 @@ div.field.tz-field {
 .prose .page-title {
   margin-bottom: 16px;
 }
+
+/* ---------- Send invites by email ---------- */
+.invite-email {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+  min-width: 260px;
+}
+.invite-email textarea {
+  width: 100%;
+  resize: vertical;
+}
+.invite-ok {
+  color: var(--success, #15803d);
+}
+.invite-err {
+  color: var(--danger, #b42318);
+}
