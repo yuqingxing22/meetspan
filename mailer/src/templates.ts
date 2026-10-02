@@ -39,7 +39,7 @@ function layout(opts: {
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#f4f5f7;"><tr><td align="center" style="padding:32px 16px;">
 <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="max-width:560px;background:#ffffff;border-radius:12px;border:1px solid #e6e8ee;">
 <tr><td style="padding:28px 32px 8px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
-<div style="font-size:18px;font-weight:700;color:${BRAND};letter-spacing:-0.2px;">MeetSpan</div>
+<table role="presentation" cellspacing="0" cellpadding="0"><tr><td style="padding-right:10px;"><img src="https://meetspan.app/email-logo.png" width="32" height="32" alt="" style="display:block;border:0;border-radius:8px;"></td><td style="font-size:18px;font-weight:700;color:${BRAND};letter-spacing:-0.2px;">MeetSpan</td></tr></table>
 </td></tr>
 <tr><td style="padding:8px 32px 8px;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
 <h1 style="margin:16px 0 16px;font-size:24px;line-height:32px;color:${INK};">${h(heading)}</h1>

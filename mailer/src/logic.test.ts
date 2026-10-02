@@ -54,7 +54,10 @@ describe("templates", () => {
       allRespondedEmail("en", { title: evil, count: 2, url: "https://meetspan.app/#/o/x" }),
       welcomeEmail("en", "https://meetspan.app", evil),
     ];
-    for (const m of mails) expect(m.html).not.toContain("<img");
+    for (const m of mails) {
+      expect(m.html).not.toContain("<img src=x");
+      expect(m.html).toContain("&lt;img");
+    }
   });
   it("renders both languages with a subject and a link", () => {
     for (const lang of ["en", "zh"] as const) {
@@ -88,5 +91,13 @@ describe("retention", () => {
   it("ignores junk values and the exact cutoff counts as recent", () => {
     expect(isInactive(cutoff, { createdAt: cutoff }, [])).toBe(false);
     expect(isInactive(cutoff, { createdAt: cutoff - 1 }, ["bad", null])).toBe(true);
+  });
+});
+
+describe("email header", () => {
+  it("shows the MeetSpan logo from the website", () => {
+    const m = welcomeEmail("en", "https://meetspan.app", "Mei");
+    expect(m.html).toContain("https://meetspan.app/email-logo.png");
+    expect(m.html).toContain("MeetSpan</td>");
   });
 });
