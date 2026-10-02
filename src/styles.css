@@ -652,7 +652,7 @@ div.field.tz-field {
 }
 .tz-opt {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
   padding: 8px 10px;
@@ -664,6 +664,9 @@ div.field.tz-field {
 .tz-opt.active {
   background: var(--brand-soft);
 }
+.tz-city {
+  min-width: 0;
+}
 .tz-opt.sel .tz-city {
   font-weight: 700;
   color: var(--brand-ink);
@@ -672,11 +675,26 @@ div.field.tz-field {
   color: var(--text-dim);
   font-weight: 500;
 }
+.tz-right {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 1px;
+}
+.tz-now {
+  font-variant-numeric: tabular-nums;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--text-dim);
+  white-space: nowrap;
+}
 .tz-off {
   flex: none;
   font-variant-numeric: tabular-nums;
   font-size: 12px;
   color: var(--text-faint);
+  white-space: nowrap;
 }
 .tz-empty {
   padding: 10px;

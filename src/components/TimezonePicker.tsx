@@ -1,8 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { DateTime } from "luxon";
 import {
   COMMON_TZS,
   allTzNames,
+  canonicalTz,
   groupTimeZones,
+  searchTimeZones,
   tzInfo,
   type TzGroup,
   type TzInfo,
@@ -21,9 +24,10 @@ type Row =
   | { kind: "option"; key: string; info: TzInfo };
 
 /**
- * Searchable timezone picker. Type to filter across all IANA zones, grouped by
- * region (地域分类) and offset-sorted within each group (时区排序). Every zone
- * shows its code in parentheses, e.g. "Los Angeles (PDT)".
+ * Searchable timezone picker. With no query it lists common zones, then every
+ * IANA zone grouped by region (地域分类) and offset-sorted (时区排序). Typing
+ * ranks matches best first. Every zone shows its code in parentheses, e.g.
+ * "Los Angeles (PDT)", and its current local time.
  */
 export default function TimezonePicker({ value, onChange, label }: Props) {
   const [open, setOpen] = useState(false);
@@ -37,29 +41,28 @@ export default function TimezonePicker({ value, onChange, label }: Props) {
   // even if the runtime's list happens to omit it (e.g. an alias).
   const groups = useMemo<TzGroup[]>(() => {
     const names = allTzNames();
-    if (value && !names.includes(value)) names.push(value);
+    if (value && !names.some((n) => canonicalTz(n) === canonicalTz(value))) names.push(value);
     return groupTimeZones(names);
   }, [value]);
 
   const selected = useMemo(() => tzInfo(value), [value]);
 
-  // Flatten (optionally filtered) groups into renderable rows. A "Common"
-  // group is pinned on top until the user starts typing.
+  // No query: a "Common" group on top, then every region. With a query: one
+  // flat list, best match first.
   const rows = useMemo<Row[]>(() => {
-    const q = query.trim().toLowerCase();
-    const terms = q ? q.split(/\s+/) : [];
-    const hit = (info: TzInfo) => terms.every((t) => info.search.includes(t));
     const out: Row[] = [];
-    if (!q) {
-      out.push({ kind: "header", key: "h:common", label: "Common" });
-      for (const tz of COMMON_TZS)
-        out.push({ kind: "option", key: `common:${tz}`, info: tzInfo(tz) });
+    if (query.trim()) {
+      const all = groups.flatMap((g) => g.zones);
+      for (const info of searchTimeZones(all, query))
+        out.push({ kind: "option", key: `hit:${info.tz}`, info });
+      return out;
     }
+    out.push({ kind: "header", key: "h:common", label: "Common" });
+    for (const tz of COMMON_TZS)
+      out.push({ kind: "option", key: `common:${tz}`, info: tzInfo(tz) });
     for (const g of groups) {
-      const zones = q ? g.zones.filter(hit) : g.zones;
-      if (!zones.length) continue;
       out.push({ kind: "header", key: `h:${g.region}`, label: g.label });
-      for (const info of zones)
+      for (const info of g.zones)
         out.push({ kind: "option", key: `${g.region}:${info.tz}`, info });
     }
     return out;
@@ -171,11 +174,11 @@ export default function TimezonePicker({ value, onChange, label }: Props) {
                 <li
                   key={row.key}
                   role="option"
-                  aria-selected={row.info.tz === value}
+                  aria-selected={row.info.key === selected.key}
                   className={
                     "tz-opt" +
                     (i === optionIdxs[active] ? " active" : "") +
-                    (row.info.tz === value ? " sel" : "")
+                    (row.info.key === selected.key ? " sel" : "")
                   }
                   onMouseDown={(e) => {
                     e.preventDefault();
@@ -187,7 +190,10 @@ export default function TimezonePicker({ value, onChange, label }: Props) {
                     {row.info.city}{" "}
                     <span className="tz-abbr">({row.info.abbr})</span>
                   </span>
-                  <span className="tz-off">{row.info.offsetLabel}</span>
+                  <span className="tz-right">
+                    <span className="tz-now">{nowIn(row.info.tz)}</span>
+                    <span className="tz-off">{row.info.offsetLabel}</span>
+                  </span>
                 </li>
               )
             )}
@@ -199,4 +205,15 @@ export default function TimezonePicker({ value, onChange, label }: Props) {
       </div>
     </div>
   );
+}
+
+/** Current local time in `tz`, e.g. "3:20 PM", with "+1" / "−1" if it's another day there. */
+function nowIn(tz: string): string {
+  const here = DateTime.now();
+  const dt = here.setZone(tz);
+  if (!dt.isValid) return "";
+  const days = Math.round(
+    DateTime.fromISO(dt.toISODate()!).diff(DateTime.fromISO(here.toISODate()!), "days").days
+  );
+  return dt.toFormat("h:mm a") + (days > 0 ? ` +${days}` : days < 0 ? ` −${-days}` : "");
 }

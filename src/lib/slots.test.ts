@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DateTime } from "luxon";
-import { buildSlots, buildGridModel, tzInfo, groupTimeZones } from "./slots";
+import { buildSlots, buildGridModel, tzInfo, groupTimeZones, searchTimeZones } from "./slots";
 
 const S30 = 30 * 60_000;
 
@@ -104,7 +104,7 @@ describe("tzInfo aliases", () => {
   it("shows a friendlier display label for collapsed zones", () => {
     expect(tzInfo("Asia/Shanghai").city).toContain("Beijing");
     // Zones without an alias keep their derived city.
-    expect(tzInfo("Europe/Oslo").city).toBe("Oslo");
+    expect(tzInfo("Europe/Riga").city).toBe("Riga");
   });
 
   it("keeps every zone grouped under a real region", () => {
@@ -113,5 +113,73 @@ describe("tzInfo aliases", () => {
     expect(regions).toContain("Asia");
     expect(regions).toContain("Europe");
     expect(regions).toContain("Other"); // UTC has no "/"
+  });
+});
+
+describe("timezone search", () => {
+  // A fixed summer instant, so DST-dependent offsets are stable.
+  const ref = DateTime.fromISO("2026-07-15T12:00:00Z");
+  // Chrome's list uses some legacy ids (Asia/Calcutta, Asia/Saigon, Europe/Kiev).
+  const ZONES = [
+    "Asia/Calcutta", "Asia/Saigon", "Asia/Katmandu", "Asia/Rangoon", "Europe/Kiev",
+    "America/Indiana/Knox", "Indian/Maldives", "Asia/Shanghai", "America/Chicago",
+    "America/New_York", "America/Creston", "Europe/Bucharest", "America/Denver",
+    "America/Phoenix", "America/Los_Angeles", "Pacific/Honolulu", "America/Anchorage",
+    "Europe/London", "Europe/Paris", "Europe/Istanbul", "Europe/Dublin", "Asia/Tokyo",
+    "Asia/Seoul", "Asia/Hong_Kong", "Australia/Sydney", "Australia/Melbourne",
+    "Pacific/Port_Moresby", "Pacific/Guadalcanal", "Pacific/Auckland", "Atlantic/Azores",
+    "Pacific/Pago_Pago", "UTC", "America/Vancouver", "America/Sao_Paulo",
+  ].map((tz) => tzInfo(tz, ref));
+  const top = (q: string) => searchTimeZones(ZONES, q)[0]?.key;
+  const all = (q: string) => searchTimeZones(ZONES, q).map((z) => z.key);
+  const set = (q: string) => all(q).sort();
+
+  it("finds countries listed under legacy ids", () => {
+    expect(top("india")).toBe("Asia/Kolkata");
+    expect(top("mumbai")).toBe("Asia/Kolkata");
+    expect(top("印度")).toBe("Asia/Kolkata");
+    expect(top("vietnam")).toBe("Asia/Ho_Chi_Minh");
+    expect(top("nepal")).toBe("Asia/Kathmandu");
+    expect(top("myanmar")).toBe("Asia/Yangon");
+    expect(top("ukraine")).toBe("Europe/Kyiv");
+    expect(tzInfo("Asia/Calcutta").city).toContain("India");
+  });
+
+  it("knows US states and doesn't send Phoenix to Denver", () => {
+    expect(top("hawaii")).toBe("Pacific/Honolulu");
+    expect(top("alaska")).toBe("America/Anchorage");
+    expect(top("arizona")).toBe("America/Phoenix");
+    expect(all("phoenix")).toEqual(["America/Phoenix"]);
+  });
+
+  it("matches offsets exactly, not as a prefix", () => {
+    expect(set("utc+1")).toEqual(["Europe/Dublin", "Europe/London"]);
+    expect(set("gmt-10")).toEqual(["Pacific/Honolulu"]);
+    expect(set("utc+5")).toEqual(["Asia/Kathmandu", "Asia/Kolkata", "Indian/Maldives"]);
+    expect(set("utc+5:45")).toEqual(["Asia/Kathmandu"]);
+    expect(set("utc+10")).toEqual(["Australia/Melbourne", "Australia/Sydney", "Pacific/Port_Moresby"]);
+  });
+
+  it("ranks the best match first", () => {
+    expect(top("est")).toBe("America/New_York");
+    expect(top("ist")).toBe("Asia/Kolkata");
+    expect(top("cst")).toBe("America/Chicago");
+    expect(all("cst")).toContain("Asia/Shanghai");
+    expect(top("pdt")).toBe("America/Los_Angeles");
+    expect(top("utc")).toBe("UTC");
+    expect(top("la")).toBe("America/Los_Angeles");
+    expect(top("cet")).toBe("Europe/Paris");
+    expect(top("jst")).toBe("Asia/Tokyo");
+    expect(top("hkt")).toBe("Asia/Hong_Kong");
+    expect(top("new york")).toBe("America/New_York");
+    expect(top("sao paulo")).toBe("America/Sao_Paulo");
+  });
+
+  it("knows common Chinese city names", () => {
+    expect(top("温哥华")).toBe("America/Vancouver");
+    expect(top("西雅图")).toBe("America/Los_Angeles");
+    expect(top("波士顿")).toBe("America/New_York");
+    expect(top("墨尔本")).toBe("Australia/Melbourne");
+    expect(top("北京")).toBe("Asia/Shanghai");
   });
 });
