@@ -91,6 +91,7 @@ const ZH_FORMATS: Record<string, string> = {
   "ccc d": "d日 ccc",
   "LLL d": "M月d日",
   "LLL d, yyyy": "yyyy年M月d日",
+  "ccc, LLL d, yyyy": "yyyy年M月d日 ccc",
   "LLLL yyyy": "yyyy年M月",
   LLL: "M月",
   yyyy: "yyyy年",

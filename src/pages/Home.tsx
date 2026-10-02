@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import { DateTime } from "luxon";
 import TimezonePicker from "../components/TimezonePicker";
 import Calendar from "../components/Calendar";
+import DateField from "../components/DateField";
 import Icon from "../components/Icon";
 import InviteQR from "../components/InviteQR";
 import TitleInput from "../components/TitleInput";
@@ -433,15 +434,10 @@ export default function Home() {
                 <TimezonePicker value={tz} onChange={setTz} label={t("Your timezone")} />
               </div>
             </div>
-            <label className="field field-narrow">
-              <span className="field-label">{t("Respond by (optional)")}</span>
-              <input
-                type="date"
-                value={deadline}
-                min={DateTime.now().toISODate()!}
-                onChange={(e) => setDeadline(e.target.value)}
-              />
-            </label>
+            <div className="field field-narrow">
+              <label className="field-label" htmlFor="poll-deadline">{t("Respond by (optional)")}</label>
+              <DateField id="poll-deadline" value={deadline} onChange={setDeadline} />
+            </div>
           </section>
 
           <section className="card">

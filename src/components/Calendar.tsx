@@ -8,6 +8,8 @@ interface Props {
   selectedDates: Set<string>;
   /** `shift` is true when the day was Shift-clicked (range selection). */
   onDayClick: (iso: string, shift: boolean) => void;
+  /** ISO date whose month to show first (default: this month). */
+  initialMonth?: string;
 }
 
 const DOW = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]; // translated at render
@@ -19,10 +21,13 @@ const MAX_YEARS_AHEAD = 5;
  * switches to a month picker for jumping months or years ahead. Past days and
  * months are disabled.
  */
-export default function Calendar({ selectedDates, onDayClick }: Props) {
+export default function Calendar({ selectedDates, onDayClick, initialMonth }: Props) {
   const today = DateTime.now().startOf("day");
   const thisMonth = today.startOf("month");
-  const [view, setView] = useState<DateTime>(thisMonth);
+  const [view, setView] = useState<DateTime>(() => {
+    const start = initialMonth ? DateTime.fromISO(initialMonth).startOf("month") : thisMonth;
+    return start.isValid && start > thisMonth ? start : thisMonth;
+  });
   // Month-picker mode shows the 12 months of `pickYear`.
   const [picking, setPicking] = useState(false);
   const [pickYear, setPickYear] = useState(today.year);

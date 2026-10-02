@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { DateTime } from "luxon";
 import Calendar from "./Calendar";
+import DateField from "./DateField";
 import Icon from "./Icon";
 import { buildSlots, enumerateDateRange } from "../lib/slots";
 import { updatePoll } from "../lib/poll";
@@ -119,15 +120,10 @@ export default function EditPollModal({ pollId, meta, responses, onClose, onSave
         </label>
 
         <div className="row">
-          <label className="field">
-            <span className="field-label">{t("Respond by (optional)")}</span>
-            <input
-              type="date"
-              value={deadline}
-              min={DateTime.now().toISODate()!}
-              onChange={(e) => setDeadline(e.target.value)}
-            />
-          </label>
+          <div className="field">
+            <label className="field-label" htmlFor="poll-deadline">{t("Respond by (optional)")}</label>
+            <DateField id="poll-deadline" value={deadline} onChange={setDeadline} />
+          </div>
           <label className="field">
             <span className="field-label">{t("Who should respond? (optional)")}</span>
             <textarea

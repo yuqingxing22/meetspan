@@ -78,6 +78,8 @@ export const ZH: Record<string, string> = {
   "Choose month and year": "选择年份和月份",
   "Back to days": "返回日期",
   "Back to this month": "回到本月",
+  "Pick a date": "选择日期",
+  "Clear date": "清除日期",
   "Days": "日期",
   "Tap once for free, twice for “if needed”": "点一下为有空，点两下为“勉强可以”",
   "Tap the times you're free": "点选你有空的时间",
