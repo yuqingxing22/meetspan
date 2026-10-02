@@ -59,8 +59,30 @@ export default function App() {
       </main>
 
       <footer className="footer">
-        <span className="footer-brand">© {new Date().getFullYear()} MeetSpan</span>
-        <span>{t("No sign-up · Share-link only · Your times stay in your timezone")}</span>
+        <div className="footer-grid">
+          <div className="footer-brandcol">
+            <Link to="/" className="footer-logo">
+              <img src={markUrl} alt="" width={24} height={24} />
+              MeetSpan
+            </Link>
+            <p>{t("No sign-up · Share-link only · Your times stay in your timezone")}</p>
+          </div>
+          <nav className="footer-col" aria-label={t("Help")}>
+            <h2>{t("Help")}</h2>
+            <Link to="/faq">{t("FAQ")}</Link>
+            <Link to="/support">{t("Support")}</Link>
+          </nav>
+          <nav className="footer-col" aria-label={t("Company")}>
+            <h2>{t("Company")}</h2>
+            <Link to="/about">{t("About MeetSpan")}</Link>
+            <Link to="/privacy">{t("Privacy policy")}</Link>
+          </nav>
+        </div>
+        <p className="footer-feedback">
+          {t("How was your experience? Give feedback about our website:")}{" "}
+          <a href="mailto:hello@meetspan.app?subject=MeetSpan%20feedback">hello@meetspan.app</a>
+        </p>
+        <p className="footer-copy">{t("© {year} MeetSpan. All rights reserved.", { year: String(new Date().getFullYear()) })}</p>
       </footer>
     </div>
   );
