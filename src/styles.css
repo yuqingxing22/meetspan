@@ -684,6 +684,37 @@ div.field.tz-field {
   font-size: 14px;
 }
 
+/* Recent meeting names under the title input (reuses the .tz-list dropdown). */
+.title-opt {
+  align-items: center;
+  padding: 6px 6px 6px 10px;
+}
+.title-opt-text {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.title-opt-remove {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-xs);
+  background: transparent;
+  color: var(--text-faint);
+  cursor: pointer;
+}
+.title-opt-remove:hover,
+.title-opt-remove:focus-visible {
+  background: var(--surface);
+  color: var(--text);
+}
+
 /* ---------- Buttons ---------- */
 .btn {
   display: inline-flex;

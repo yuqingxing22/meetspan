@@ -5,6 +5,7 @@ import TimezonePicker from "../components/TimezonePicker";
 import Calendar from "../components/Calendar";
 import Icon from "../components/Icon";
 import InviteQR from "../components/InviteQR";
+import TitleInput from "../components/TitleInput";
 import {
   buildSlots,
   detectTz,
@@ -15,6 +16,7 @@ import {
 import { hashToken, newAdminToken, newPollId } from "../lib/ids";
 import { createPoll } from "../lib/poll";
 import { addMyPoll, saveAdminToken } from "../lib/adminStore";
+import { loadOrganizerName, rememberTitle, saveOrganizerName } from "../lib/titleHistory";
 import type { User } from "firebase/auth";
 import { isFirebaseConfigured, subscribeUser } from "../firebase";
 import { useAuthState } from "../lib/useAuthState";
@@ -68,7 +70,7 @@ export default function Home() {
 
   const [title, setTitle] = useState("");
   const [deadline, setDeadline] = useState("");
-  const [organizerName, setOrganizerName] = useState("");
+  const [organizerName, setOrganizerName] = useState(loadOrganizerName);
   const [tz, setTz] = useState(detectTz());
   const [pickMode, setPickMode] = useState<PickMode>("dates");
   const [dates, setDates] = useState<string[]>([]);
@@ -173,6 +175,8 @@ export default function Home() {
       await createPoll(pollId, meta);
       saveAdminToken(pollId, token);
       addMyPoll({ pollId, token, title: meta.title, createdAt: meta.createdAt });
+      rememberTitle(meta.title);
+      saveOrganizerName(meta.organizerName);
       setCreated({ pollId, token });
       window.scrollTo({ top: 0 });
     } catch (e) {
@@ -407,16 +411,11 @@ export default function Home() {
         <div className="create-main">
           <section className="card">
             <StepHead n={1} title={t("The basics")} />
-            <label className="field">
-              <span className="field-label">{t("What's the meeting?")}</span>
-              <input
-                type="text"
-                className="input-lg"
-                value={title}
-                placeholder={t("e.g. Weekly research sync")}
-                onChange={(e) => setTitle(e.target.value)}
-              />
-            </label>
+            {/* A div, not a label: clicks in the suggestion list must not refocus the input. */}
+            <div className="field">
+              <label className="field-label" htmlFor="poll-title">{t("What's the meeting?")}</label>
+              <TitleInput id="poll-title" value={title} onChange={setTitle} placeholder={t("e.g. Weekly research sync")} />
+            </div>
             <div className="row">
               <label className="field">
                 <span className="field-label">{t("Your name")}</span>
