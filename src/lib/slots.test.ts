@@ -114,6 +114,21 @@ describe("tzInfo aliases", () => {
     expect(regions).toContain("Europe");
     expect(regions).toContain("Other"); // UTC has no "/"
   });
+
+  it("files islands under the continent people look under", () => {
+    expect(tzInfo("Atlantic/Reykjavik").region).toBe("Europe");
+    expect(tzInfo("Atlantic/Faeroe").region).toBe("Europe"); // legacy id
+    expect(tzInfo("Pacific/Honolulu").region).toBe("America");
+    expect(tzInfo("Indian/Mauritius").region).toBe("Africa");
+    expect(tzInfo("Indian/Maldives").region).toBe("Asia");
+    expect(tzInfo("Australia/Sydney").region).toBe("Oceania");
+    expect(tzInfo("Pacific/Auckland").region).toBe("Oceania");
+    expect(tzInfo("Antarctica/Troll").region).toBe("Other");
+    const order = groupTimeZones(["UTC", "Pacific/Fiji", "Asia/Tokyo", "Europe/Paris", "America/Lima", "Africa/Cairo"]).map((g) => g.region);
+    expect(order).toEqual(["America", "Europe", "Africa", "Asia", "Oceania", "Other"]);
+    const other = groupTimeZones(["Antarctica/Palmer", "UTC", "Antarctica/Troll"]).find((g) => g.region === "Other")!;
+    expect(other.zones[0].key).toBe("UTC");
+  });
 });
 
 describe("timezone search", () => {

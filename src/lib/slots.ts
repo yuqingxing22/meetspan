@@ -169,7 +169,7 @@ export function detectTz(): string {
 export interface TzInfo {
   tz: string; // IANA id as given (may be a legacy alias), e.g. "Asia/Calcutta"
   key: string; // current IANA name, for de-duping and labels, e.g. "Asia/Kolkata"
-  region: string; // continent prefix, e.g. "America"
+  region: string; // continent group, e.g. "America" ("Oceania" for Pacific islands)
   city: string; // human city, e.g. "Los Angeles" (Chinese when the UI is)
   abbr: string; // current zone code, e.g. "PDT" or "GMT+8"
   offsetMin: number; // current UTC offset in minutes (for sorting)
@@ -180,33 +180,59 @@ export interface TzInfo {
   search: string; // normalized haystack for fuzzy matching
 }
 
-/** Region grouping for the picker: sensible order, then anything else. */
-const REGION_ORDER = [
-  "America",
-  "Europe",
-  "Africa",
-  "Asia",
-  "Australia",
-  "Pacific",
-  "Atlantic",
-  "Indian",
-  "Antarctica",
-  "Arctic",
-  "Other",
-];
+/** Region grouping for the picker, by continent. */
+const REGION_ORDER = ["America", "Europe", "Africa", "Asia", "Oceania", "Other"];
 const REGION_LABELS: Record<string, string> = {
   America: "Americas",
   Europe: "Europe",
   Africa: "Africa",
   Asia: "Asia",
-  Australia: "Australia",
-  Pacific: "Pacific",
-  Atlantic: "Atlantic",
-  Indian: "Indian Ocean",
-  Antarctica: "Antarctica",
-  Arctic: "Arctic",
+  Oceania: "Oceania",
   Other: "Other",
 };
+
+/**
+ * IANA files islands under oceans ("Atlantic/Reykjavik", "Pacific/Honolulu",
+ * "Indian/Mauritius"). Put them on the continent people look under instead.
+ */
+const REGION_OVERRIDES: Record<string, string> = {
+  "Atlantic/Azores": "Europe",
+  "Atlantic/Canary": "Europe",
+  "Atlantic/Faroe": "Europe",
+  "Atlantic/Madeira": "Europe",
+  "Atlantic/Reykjavik": "Europe",
+  "Arctic/Longyearbyen": "Europe",
+  "Atlantic/Bermuda": "America",
+  "Atlantic/South_Georgia": "America",
+  "Atlantic/Stanley": "America",
+  "Pacific/Honolulu": "America",
+  "Pacific/Easter": "America",
+  "Pacific/Galapagos": "America",
+  "Atlantic/Cape_Verde": "Africa",
+  "Atlantic/St_Helena": "Africa",
+  "Indian/Antananarivo": "Africa",
+  "Indian/Comoro": "Africa",
+  "Indian/Kerguelen": "Africa",
+  "Indian/Mahe": "Africa",
+  "Indian/Mauritius": "Africa",
+  "Indian/Mayotte": "Africa",
+  "Indian/Reunion": "Africa",
+  "Indian/Chagos": "Asia",
+  "Indian/Christmas": "Asia",
+  "Indian/Cocos": "Asia",
+  "Indian/Maldives": "Asia",
+};
+
+/** Continent group for a current IANA name. */
+function regionOf(key: string): string {
+  const override = REGION_OVERRIDES[key];
+  if (override) return override;
+  const prefix = key.includes("/") ? key.slice(0, key.indexOf("/")) : "";
+  if (prefix === "Australia" || prefix === "Pacific") return "Oceania";
+  if (prefix === "Atlantic" || prefix === "Arctic") return "Europe";
+  if (prefix === "Indian") return "Africa";
+  return REGION_ORDER.includes(prefix) ? prefix : "Other";
+}
 
 /** "UTC±HH:MM" from an offset in minutes (uses a real minus sign). */
 function formatOffset(min: number): string {
@@ -357,8 +383,7 @@ export function tzInfo(tz: string, ref?: DateTime): TzInfo {
   const offsetMin = dt.isValid ? dt.offset : 0;
   const abbr = dt.isValid ? dt.toFormat("ZZZZ") : "";
   const slash = key.indexOf("/");
-  let region = slash === -1 ? "Other" : key.slice(0, slash);
-  if (region === "Etc") region = "Other";
+  const region = regionOf(key);
   const derivedCity = (slash === -1 ? key : key.slice(slash + 1))
     .replace(/_/g, " ")
     .replace(/\//g, " · ");
@@ -476,7 +501,7 @@ export interface TzGroup {
 
 /**
  * Group zones by region (地域分类) and sort each group by UTC offset (时区排序).
- * Regions follow REGION_ORDER, then any unknowns alphabetically.
+ * Regions follow REGION_ORDER.
  */
 export function groupTimeZones(names: string[]): TzGroup[] {
   const ref = DateTime.now();
@@ -487,20 +512,20 @@ export function groupTimeZones(names: string[]): TzGroup[] {
     if (arr) arr.push(info);
     else byRegion.set(info.region, [info]);
   }
-  const regions = Array.from(byRegion.keys()).sort((a, b) => {
-    const ia = REGION_ORDER.indexOf(a);
-    const ib = REGION_ORDER.indexOf(b);
-    if (ia !== -1 && ib !== -1) return ia - ib;
-    if (ia !== -1) return -1;
-    if (ib !== -1) return 1;
-    return a < b ? -1 : 1;
-  });
+  const regions = Array.from(byRegion.keys()).sort(
+    (a, b) => REGION_ORDER.indexOf(a) - REGION_ORDER.indexOf(b)
+  );
   return regions.map((region) => ({
     region,
     label: REGION_LABELS[region] ?? region,
     zones: byRegion
       .get(region)!
-      .sort((a, b) => a.offsetMin - b.offsetMin || a.city.localeCompare(b.city)),
+      .sort(
+        (a, b) =>
+          Number(b.key === "UTC") - Number(a.key === "UTC") || // UTC leads "Other"
+          a.offsetMin - b.offsetMin ||
+          a.city.localeCompare(b.city)
+      ),
   }));
 }
 

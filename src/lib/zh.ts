@@ -425,6 +425,7 @@ export const ZH: Record<string, string> = {
   "Asia": "亚洲",
   "Australia": "澳大利亚",
   "Pacific": "太平洋",
+  "Oceania": "大洋洲",
   "Atlantic": "大西洋",
   "Indian Ocean": "印度洋",
   "Antarctica": "南极洲",
