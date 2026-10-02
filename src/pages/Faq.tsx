@@ -13,7 +13,7 @@ const EN: Item[] = [
   },
   {
     q: "Do I need an account?",
-    a: ["No. You can create a poll and reply to one without signing up. Signing in with Google is optional: it lets you find your polls on other devices, save your usual weekly times, and import your free/busy times from Google Calendar."],
+    a: ["No. You can create a poll and reply to one without signing up. You can even save your usual weekly times on the My schedule page without one (they stay in this browser). Signing in with Google is optional: it lets you find your polls and your usual times on other devices."],
   },
   {
     q: "How do I create a poll and invite people?",
@@ -72,7 +72,7 @@ const ZH: Item[] = [
   },
   {
     q: "需要注册账号吗？",
-    a: ["不需要。创建排期和回复排期都不用注册。用 Google 登录是可选的：登录后可以在其他设备上找回自己的排期、保存常用的每周时间，也可以从 Google 日历导入忙闲时间。"],
+    a: ["不需要。创建排期和回复排期都不用注册。在“我的常用时间”页面保存每周常用时间也不需要账号（它们保存在当前浏览器里）。用 Google 登录是可选的：登录后可以在其他设备上找回自己的排期和常用时间。"],
   },
   {
     q: "怎么创建排期并邀请大家？",

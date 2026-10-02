@@ -18,6 +18,8 @@ interface Props {
   maybe?: Set<number>;
   /** Which mark painting applies when `maybe` is used. */
   brush?: "yes" | "maybe";
+  /** Slots taken on the viewer's calendar, shaded grey when not marked free. */
+  busy?: Set<number>;
 }
 
 /**
@@ -33,6 +35,7 @@ export default function AvailabilityGrid({
   ghost,
   maybe,
   brush = "yes",
+  busy,
 }: Props) {
   const model = buildGridModel(slots, tz, { weekdayOnly });
   const dragging = useRef(false);
@@ -137,6 +140,7 @@ export default function AvailabilityGrid({
             selected={selected}
             ghost={ghost}
             maybe={maybe}
+            busy={busy}
           />
         ))}
         <div className="grid-time-end">
@@ -158,6 +162,7 @@ function RowFragment({
   selected,
   ghost,
   maybe,
+  busy,
 }: {
   rowKey: number;
   rowLabel: string;
@@ -169,6 +174,7 @@ function RowFragment({
   selected: Set<number>;
   ghost?: Map<number, number>;
   maybe?: Set<number>;
+  busy?: Set<number>;
 }) {
   return (
     <>
@@ -193,6 +199,8 @@ function RowFragment({
                 ? " sel"
                 : maybe?.has(ms)
                 ? " maybe"
+                : busy?.has(ms)
+                ? " busy"
                 : ghost
                 ? ` g${ghost.get(ms) ?? 0}`
                 : ""

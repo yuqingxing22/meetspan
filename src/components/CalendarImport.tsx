@@ -13,6 +13,10 @@ interface Props {
   selected: Set<number>;
   maybe?: Set<number>;
   onFill: (next: Set<number>, nextMaybe: Set<number>) => void;
+  /** Extra sentence shown after an import (e.g. a reminder on My schedule). */
+  afterNote?: string;
+  /** Receives the slots that clash with the calendar (empty again on Undo). */
+  onBusy?: (busy: Set<number>) => void;
 }
 
 /**
@@ -20,7 +24,7 @@ interface Props {
  * viewer's calendar as free. Replaces the current marks (with Undo), like
  * "Fill from my schedule". Only free/busy is read.
  */
-export default function CalendarImport({ slots, granularityMin, tz, weekly, selected, maybe, onFill }: Props) {
+export default function CalendarImport({ slots, granularityMin, tz, weekly, selected, maybe, onFill, afterNote, onBusy }: Props) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [undo, setUndo] = useState<{
@@ -39,6 +43,7 @@ export default function CalendarImport({ slots, granularityMin, tz, weekly, sele
       const r = await importFromGoogleCalendar(slots, granularityMin, tz, weekly);
       setUndo({ prev: new Set(selected), prevMaybe: new Set(maybe), filled: r.free.size, weekOf: r.weekOf });
       onFill(r.free, new Set());
+      onBusy?.(new Set(slots.filter((ms) => !r.free.has(ms))));
     } catch (e) {
       const code = (e as { code?: string }).code;
       // Closing the popup isn't an error worth showing.
@@ -67,11 +72,13 @@ export default function CalendarImport({ slots, granularityMin, tz, weekly, sele
           )}{" "}
           {undo.weekOf &&
             t("Based on the week of {date}.", { date: DateTime.fromISO(undo.weekOf).toFormat("LLL d") })}{" "}
+          {afterNote && `${afterNote} `}
           <button
             type="button"
             className="link-btn link-inline"
             onClick={() => {
               onFill(undo.prev, undo.prevMaybe);
+              onBusy?.(new Set());
               setUndo(null);
             }}
           >

@@ -4,8 +4,9 @@ import { isFirebaseConfigured, subscribeUser } from "../firebase";
 import { loadSchedule, type WeeklySchedule } from "./schedule";
 
 export interface MySchedule {
-  /** Signed in with Google (anonymous visitors can't keep a schedule). */
+  /** Signed in with Google (the schedule then follows them to other devices). */
   signedIn: boolean;
+  /** Anyone with a session, anonymous or Google: the key their schedule is saved under. */
   uid: string | null;
   user: User | null;
   /** undefined while loading; null when the user hasn't set one up yet. */
@@ -13,7 +14,7 @@ export interface MySchedule {
   setSchedule: (s: WeeklySchedule) => void;
 }
 
-/** The signed-in user's saved weekly schedule, if any. */
+/** The visitor's saved weekly schedule, if any. Anonymous visitors keep one too (per browser). */
 export function useMySchedule(): MySchedule {
   const [user, setUser] = useState<User | null>(null);
   const [schedule, setSchedule] = useState<WeeklySchedule | null | undefined>(undefined);
@@ -21,7 +22,7 @@ export function useMySchedule(): MySchedule {
   useEffect(() => (isFirebaseConfigured ? subscribeUser(setUser) : undefined), []);
 
   const signedIn = !!user && !user.isAnonymous;
-  const uid = signedIn ? user!.uid : null;
+  const uid = user?.uid ?? null;
 
   useEffect(() => {
     if (!uid) {

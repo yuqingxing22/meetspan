@@ -4,6 +4,7 @@ import AvailabilityGrid from "../components/AvailabilityGrid";
 import DayList from "../components/DayList";
 import TimezonePicker from "../components/TimezonePicker";
 import Icon from "../components/Icon";
+import CalendarImport from "../components/CalendarImport";
 import { blockKey, blockOf, referenceWeekSlots, saveSchedule } from "../lib/schedule";
 import { detectTz } from "../lib/slots";
 import { useMySchedule } from "../lib/useMySchedule";
@@ -30,6 +31,8 @@ export default function MySchedule() {
   const [tz, setTz] = useState(detectTz());
   const [blocks, setBlocks] = useState<Set<string>>(new Set());
   const [fullDay, setFullDay] = useState(false);
+  // Slots taken on Google Calendar at the last import (this visit only).
+  const [calBusy, setCalBusy] = useState<Set<number>>(new Set());
   const [dirty, setDirty] = useState(false);
   const [saveState, setSaveState] = useState<SaveState>("idle");
   const [signingIn, setSigningIn] = useState(false);
@@ -95,35 +98,6 @@ export default function MySchedule() {
     return <p className="muted">{t("Firebase isn't configured yet (see README).")}</p>;
   }
 
-  if (!signedIn) {
-    return (
-      <div className="narrow">
-        <div className="card state-card schedule-signin">
-          <h1 className="page-title">{t("My schedule")}</h1>
-          <p className="page-sub">
-            {t("Save the times you're usually free each week. Then, in any poll, one click fills them in, converted to that poll's timezone.")}
-          </p>
-          <button
-            type="button"
-            className="btn btn-primary btn-lg"
-            disabled={signingIn}
-            onClick={() => {
-              setSigningIn(true);
-              signInWithGoogle()
-                .catch(() => {})
-                .finally(() => setSigningIn(false));
-            }}
-          >
-            <Icon name="user" /> {t("Sign in with Google to start")}
-          </button>
-          <p className="hint schedule-note">
-            {t("Your schedule is private. Others only see the times you put into a poll.")}
-          </p>
-        </div>
-      </div>
-    );
-  }
-
   if (schedule === undefined) return <p className="muted">{t("Loading…")}</p>;
 
   const statusText =
@@ -152,6 +126,28 @@ export default function MySchedule() {
         )}
       </div>
 
+      {!signedIn && (
+        <div className="fill-bar schedule-device-note">
+          <Icon name="user" className="icon-brand" />
+          <span>
+            {t("Saved on this device. Sign in with Google to keep your schedule on all your devices.")}{" "}
+            <button
+              type="button"
+              className="link-btn link-inline"
+              disabled={signingIn}
+              onClick={() => {
+                setSigningIn(true);
+                signInWithGoogle()
+                  .catch(() => {})
+                  .finally(() => setSigningIn(false));
+              }}
+            >
+              {t("Sign in with Google")}
+            </button>
+          </span>
+        </div>
+      )}
+
       <section className="card">
         <div className="schedule-tools">
           <div className="schedule-tz">
@@ -159,6 +155,7 @@ export default function MySchedule() {
               value={tz}
               onChange={(z) => {
                 setTz(z);
+                setCalBusy(new Set());
                 setDirty(true);
               }}
               label={t("My timezone")}
@@ -191,16 +188,38 @@ export default function MySchedule() {
           </div>
         </div>
 
+        {/* Reads one upcoming week; the note says which, so one-off events can be cleaned up. */}
+        <div className="fill-box schedule-import">
+          <CalendarImport
+            slots={slots}
+            granularityMin={30}
+            tz={tz}
+            weekly
+            selected={selected}
+            onFill={(next) => paint(next)}
+            onBusy={setCalBusy}
+            afterNote={t("Unmark anything that's only free that week.")}
+          />
+        </div>
+
         <div className="results-head schedule-grid-head">
           <p className="board-hint board-hint-inline">
             {t("Click or drag to mark when you're usually free.")}
           </p>
+          {calBusy.size > 0 && (
+            <span className="legend">
+              <span className="swatch swatch-me" />
+              <span>{t("Free")}</span>
+              <span className="swatch swatch-busy" />
+              <span>{t("Busy on calendar")}</span>
+            </span>
+          )}
           <button type="button" className="link-btn" onClick={() => setFullDay((f) => !f)}>
             {fullDay ? t("Show {a} – {b} only", { a: hourText(DAY_START), b: hourText(DAY_END) }) : t("Show all 24 hours")}
           </button>
         </div>
         <div className="only-wide">
-          <AvailabilityGrid slots={slots} tz={tz} weekdayOnly selected={selected} onChange={paint} />
+          <AvailabilityGrid slots={slots} tz={tz} weekdayOnly selected={selected} onChange={paint} busy={calBusy} />
         </div>
         <div className="only-narrow">
           <DayList
@@ -211,6 +230,7 @@ export default function MySchedule() {
             onChange={paint}
             othersFree={new Map()}
             othersTotal={0}
+            busy={calBusy}
           />
         </div>
         <p className="hint schedule-note">

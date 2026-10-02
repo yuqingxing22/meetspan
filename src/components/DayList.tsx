@@ -15,6 +15,8 @@ interface Props {
   /** How many *other* people are free at each slot. */
   othersFree: Map<number, number>;
   othersTotal: number;
+  /** Slots taken on the viewer's calendar. */
+  busy?: Set<number>;
 }
 
 /**
@@ -31,6 +33,7 @@ export default function DayList({
   othersFree,
   othersTotal,
   maybe,
+  busy,
 }: Props) {
   const model = buildGridModel(slots, tz, { weekdayOnly });
   const [day, setDay] = useState(0);
@@ -98,12 +101,13 @@ export default function DayList({
           if (ms === undefined) return null;
           const mine = selected.has(ms);
           const ifNeeded = !mine && !!maybe?.has(ms);
+          const taken = !mine && !ifNeeded && !!busy?.has(ms);
           const n = othersFree.get(ms) ?? 0;
           return (
             <button
               type="button"
               key={r.key}
-              className={`slot-row${mine ? " on" : ifNeeded ? " maybe" : ""}`}
+              className={`slot-row${mine ? " on" : ifNeeded ? " maybe" : taken ? " busy" : ""}`}
               aria-pressed={mine ? true : ifNeeded ? "mixed" : false}
               onClick={() => toggle(ms)}
             >
@@ -113,6 +117,7 @@ export default function DayList({
               <span className="slot-time">
                 {fmt(r.key)} – {fmt(r.key + step)}
                 {ifNeeded && <span className="slot-tag">{t("If needed")}</span>}
+                {taken && <span className="slot-tag slot-tag-busy">{t("Busy on calendar")}</span>}
               </span>
               {othersTotal > 0 && (
                 <span className="slot-others">

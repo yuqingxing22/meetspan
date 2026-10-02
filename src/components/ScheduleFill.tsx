@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import Icon from "./Icon";
 import { applySchedule } from "../lib/schedule";
 import { useMySchedule } from "../lib/useMySchedule";
-import { isFirebaseConfigured, signInWithGoogle } from "../firebase";
+import { isFirebaseConfigured } from "../firebase";
 import { t } from "../lib/i18n";
 
 interface Props {
@@ -16,46 +16,20 @@ interface Props {
 }
 
 /**
- * "Fill from my schedule": one click paints a poll from the signed-in user's
- * saved weekly availability. It replaces the current selection (with Undo);
+ * "Fill from my schedule": one click paints a poll from the visitor's
+ * saved weekly availability (anonymous or Google). It replaces the current selection (with Undo);
  * nothing is filled automatically, so a week with exceptions isn't submitted
  * by accident.
  */
 export default function ScheduleFill({ slots, selected, maybe, onFill }: Props) {
-  const { signedIn, schedule } = useMySchedule();
+  const { schedule } = useMySchedule();
   const [undo, setUndo] = useState<{
     prev: Set<number>;
     prevMaybe: Set<number>;
     filled: number;
   } | null>(null);
-  const [signingIn, setSigningIn] = useState(false);
 
   if (!isFirebaseConfigured) return null;
-
-  if (!signedIn) {
-    return (
-      <div className="fill-bar">
-        <Icon name="calendar" className="icon-brand" />
-        <span>
-          {t("Same times every week?")}{" "}
-          <button
-            type="button"
-            className="link-btn link-inline"
-            disabled={signingIn}
-            onClick={() => {
-              setSigningIn(true);
-              signInWithGoogle()
-                .catch(() => {})
-                .finally(() => setSigningIn(false));
-            }}
-          >
-            {t("Sign in with Google")}
-          </button>{" "}
-          {t("to save your usual schedule and fill any poll in one click.")}
-        </span>
-      </div>
-    );
-  }
 
   if (schedule === undefined) return null;
 
