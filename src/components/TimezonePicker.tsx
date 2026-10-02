@@ -4,12 +4,14 @@ import {
   COMMON_TZS,
   allTzNames,
   canonicalTz,
+  detectTz,
   groupTimeZones,
   searchTimeZones,
   tzInfo,
   type TzGroup,
   type TzInfo,
 } from "../lib/slots";
+import { listRecentTzs, rememberTz } from "../lib/recentZones";
 import Icon from "./Icon";
 import { t } from "../lib/i18n";
 
@@ -24,9 +26,10 @@ type Row =
   | { kind: "option"; key: string; info: TzInfo };
 
 /**
- * Searchable timezone picker. With no query it lists common zones, then every
- * IANA zone grouped by region (地域分类) and offset-sorted (时区排序). Typing
- * ranks matches best first. Every zone shows its code in parentheses, e.g.
+ * Searchable timezone picker. With no query it lists this device's zone, the
+ * zones picked here before, a short common list, then every IANA zone grouped
+ * by continent (地域分类) and offset-sorted (时区排序). Typing ranks matches
+ * best first. Every zone shows its code in parentheses, e.g.
  * "Los Angeles (PDT)", and its current local time.
  */
 export default function TimezonePicker({ value, onChange, label }: Props) {
@@ -47,8 +50,11 @@ export default function TimezonePicker({ value, onChange, label }: Props) {
 
   const selected = useMemo(() => tzInfo(value), [value]);
 
-  // No query: a "Common" group on top, then every region. With a query: one
-  // flat list, best match first.
+  // Re-read when the list opens, so a zone picked in another picker shows up.
+  const recent = useMemo(() => (open ? listRecentTzs() : []), [open]);
+
+  // No query: this device, recent picks, common zones, then every region.
+  // With a query: one flat list, best match first.
   const rows = useMemo<Row[]>(() => {
     const out: Row[] = [];
     if (query.trim()) {
@@ -56,6 +62,15 @@ export default function TimezonePicker({ value, onChange, label }: Props) {
       for (const info of searchTimeZones(all, query))
         out.push({ kind: "option", key: `hit:${info.tz}`, info });
       return out;
+    }
+    const device = detectTz();
+    out.push({ kind: "header", key: "h:device", label: "This device" });
+    out.push({ kind: "option", key: `device:${device}`, info: tzInfo(device) });
+    const recentZones = recent.filter((tz) => canonicalTz(tz) !== canonicalTz(device));
+    if (recentZones.length) {
+      out.push({ kind: "header", key: "h:recent", label: "Recently used" });
+      for (const tz of recentZones)
+        out.push({ kind: "option", key: `recent:${tz}`, info: tzInfo(tz) });
     }
     out.push({ kind: "header", key: "h:common", label: "Common" });
     for (const tz of COMMON_TZS)
@@ -66,7 +81,7 @@ export default function TimezonePicker({ value, onChange, label }: Props) {
         out.push({ kind: "option", key: `${g.region}:${info.tz}`, info });
     }
     return out;
-  }, [groups, query]);
+  }, [groups, query, recent]);
 
   // Row indices that are selectable options (for keyboard navigation).
   const optionIdxs = useMemo(
@@ -105,6 +120,7 @@ export default function TimezonePicker({ value, onChange, label }: Props) {
   }, [open]);
 
   function choose(tz: string) {
+    rememberTz(tz);
     onChange(tz);
     setQuery("");
     setActive(0);

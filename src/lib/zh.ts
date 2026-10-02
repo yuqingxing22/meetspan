@@ -419,6 +419,8 @@ export const ZH: Record<string, string> = {
   "Study group / seminar": "学习小组 / 研讨会",
   "Interview / client call": "面试 / 客户通话",
   "Common": "常用",
+  "This device": "当前设备",
+  "Recently used": "最近使用",
   "Americas": "美洲",
   "Europe": "欧洲",
   "Africa": "非洲",

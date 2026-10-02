@@ -475,7 +475,8 @@ export function searchTimeZones(zones: TzInfo[], query: string): TzInfo[] {
  * curated shortlist as fallback.
  */
 export function allTzNames(): string[] {
-  let names: string[] = COMMON_TZS;
+  // Old runtimes can't list zones: fall back to the ones we have labels for.
+  let names: string[] = Object.keys(TZ_EXTRAS);
   try {
     const supported = (
       Intl as unknown as { supportedValuesOf?: (k: string) => string[] }
@@ -529,27 +530,22 @@ export function groupTimeZones(names: string[]): TzGroup[] {
   }));
 }
 
-/** A curated shortlist of common IANA zones for the timezone picker. */
+/**
+ * The picker's "Common" group: one zone per busy region, so it fits without
+ * much scrolling. Everything else is a quick search away.
+ */
 export const COMMON_TZS: string[] = [
-  "Pacific/Honolulu",
-  "America/Anchorage",
   "America/Los_Angeles",
-  "America/Denver",
   "America/Chicago",
   "America/New_York",
   "America/Sao_Paulo",
   "Europe/London",
   "Europe/Paris",
-  "Europe/Berlin",
-  "Europe/Athens",
-  "Africa/Johannesburg",
   "Asia/Dubai",
   "Asia/Kolkata",
-  "Asia/Bangkok",
   "Asia/Shanghai",
   "Asia/Singapore",
   "Asia/Tokyo",
   "Australia/Sydney",
-  "Pacific/Auckland",
   "UTC",
 ];
