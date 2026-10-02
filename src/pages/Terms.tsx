@@ -14,7 +14,7 @@ const EN: Section[] = [
     h: "Using MeetSpan",
     p: [
       "These terms apply when you use MeetSpan (meetspan.app). By using the service you agree to them. If you don’t agree, please don’t use it.",
-      "MeetSpan helps groups find a meeting time across timezones. You can use it without an account. Some features, such as sending invites by email, need you to sign in with Google.",
+      "MeetSpan helps groups find a meeting time across timezones. You can use it without an account. Some features, such as getting your organizer link by email or syncing your polls across devices, need you to sign in with Google.",
     ],
   },
   {
@@ -27,8 +27,8 @@ const EN: Section[] = [
   {
     h: "Acceptable use",
     p: [
-      "Please don’t use MeetSpan to harass anyone, send spam or unwanted messages (including through the invite-by-email feature), break the law, or interfere with the service, for example by overloading it, probing it for weaknesses or trying to access other people’s data.",
-      "Only send invites to people who would reasonably expect to hear from you about a meeting. We may limit or block sending, and remove polls, that break these rules.",
+      "Please don’t use MeetSpan to harass anyone, send spam or unwanted messages, break the law, or interfere with the service, for example by overloading it, probing it for weaknesses or trying to access other people’s data.",
+      "We may remove polls that break these rules.",
     ],
   },
   {
@@ -61,7 +61,7 @@ const ZH_SECTIONS: Section[] = [
     h: "使用 MeetSpan",
     p: [
       "你使用 MeetSpan（meetspan.app）时，这些条款即适用。使用本服务即表示你同意这些条款；如果不同意，请不要使用。",
-      "MeetSpan 帮助团队找到跨时区的开会时间。不注册账号也可以使用；部分功能（比如通过邮件发送邀请）需要你用 Google 登录。",
+      "MeetSpan 帮助团队找到跨时区的开会时间。不注册账号也可以使用；部分功能（比如通过邮件收到组织者链接、在不同设备上同步排期）需要你用 Google 登录。",
     ],
   },
   {
@@ -74,8 +74,8 @@ const ZH_SECTIONS: Section[] = [
   {
     h: "使用规范",
     p: [
-      "请不要用 MeetSpan 骚扰他人、发送垃圾邮件或不受欢迎的消息（包括通过邮件邀请功能）、从事违法活动，或干扰服务的运行，比如使其过载、探测漏洞，或试图访问他人的数据。",
-      "邀请邮件只发给那些会合理地预期收到你关于会议的来信的人。对违反这些规则的行为，我们可能限制或禁止发信，并删除相关排期。",
+      "请不要用 MeetSpan 骚扰他人、发送垃圾邮件或不受欢迎的消息、从事违法活动，或干扰服务的运行，比如使其过载、探测漏洞，或试图访问他人的数据。",
+      "对违反这些规则的排期，我们可能将其删除。",
     ],
   },
   {

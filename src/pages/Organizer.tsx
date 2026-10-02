@@ -37,7 +37,6 @@ import { sessionAt } from "../lib/finalized";
 import { windowComfort } from "../lib/comfort";
 import { avatarColor, initial } from "../lib/avatar";
 import { isFirebaseConfigured } from "../firebase";
-import InviteByEmail from "../components/InviteByEmail";
 import { deletePoll, mailerEnabled } from "../lib/mailer";
 import { useAuthState } from "../lib/useAuthState";
 import { copyText, useToast } from "../lib/useToast";
@@ -134,7 +133,6 @@ function Organizer() {
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleted, setDeleted] = useState(false);
-  const [emailOpen, setEmailOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   // Start times ticked in the "all times everyone can make it" list.
   const [picks, setPicks] = useState<number[]>([]);
@@ -142,7 +140,6 @@ function Organizer() {
   const [optionSessions, setOptionSessions] = useState<Session[] | null>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const qrRef = useRef<HTMLDivElement>(null);
-  const emailRef = useRef<HTMLDivElement>(null);
 
   // The organizer's own availability — stored as a participant so it counts in
   // the overlap and the computed schedule, just like everyone else.
@@ -202,16 +199,15 @@ function Organizer() {
 
   // Close the ⋯ menu / QR popover on an outside click.
   useEffect(() => {
-    if (!menuOpen && !qrOpen && !emailOpen) return;
+    if (!menuOpen && !qrOpen) return;
     function onDoc(e: MouseEvent) {
       const t = e.target as Node;
       if (menuRef.current && !menuRef.current.contains(t)) setMenuOpen(false);
       if (qrRef.current && !qrRef.current.contains(t)) setQrOpen(false);
-      if (emailRef.current && !emailRef.current.contains(t)) setEmailOpen(false);
     }
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
-  }, [menuOpen, qrOpen, emailOpen]);
+  }, [menuOpen, qrOpen]);
 
   async function saveMyAvailability() {
     if (!meta || !uid) return;
@@ -575,25 +571,6 @@ function Organizer() {
               </div>
             )}
           </div>
-          {isAdmin && mailerEnabled && (
-            <div className="menu-root" ref={emailRef}>
-              <button
-                type="button"
-                className="icon-btn icon-btn-lg"
-                aria-label={t("Send invites by email")}
-                title={t("Send invites by email")}
-                aria-expanded={emailOpen}
-                onClick={() => setEmailOpen((o) => !o)}
-              >
-                <Icon name="mail" size={18} />
-              </button>
-              {emailOpen && (
-                <div className="menu menu-wide menu-pad">
-                  <InviteByEmail pollId={pollId} />
-                </div>
-              )}
-            </div>
-          )}
           {isAdmin && (
             <div className="menu-root" ref={menuRef}>
               <button
