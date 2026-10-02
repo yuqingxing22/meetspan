@@ -2,6 +2,7 @@ import { useState } from "react";
 import { DateTime } from "luxon";
 import Icon from "./Icon";
 import { buildGridModel } from "../lib/slots";
+import { t } from "../lib/i18n";
 
 interface Props {
   slots: number[];
@@ -63,7 +64,7 @@ export default function DayList({
 
   return (
     <div className="daylist">
-      <div className="day-tabs" role="tablist" aria-label="Days">
+      <div className="day-tabs" role="tablist" aria-label={t("Days")}>
         {model.columns.map((c, i) => {
           const [dow, date] = c.label.split("\n");
           const has = model.rows.some((r) => {
@@ -88,8 +89,8 @@ export default function DayList({
       </div>
 
       <div className="daylist-head">
-        <span>{maybe ? "Tap once for free, twice for “if needed”" : "Tap the times you're free"}</span>
-        {othersTotal > 0 && <span>Others free</span>}
+        <span>{maybe ? t("Tap once for free, twice for “if needed”") : t("Tap the times you're free")}</span>
+        {othersTotal > 0 && <span>{t("Others free")}</span>}
       </div>
       <div className="daylist-rows">
         {model.rows.map((r) => {
@@ -111,7 +112,7 @@ export default function DayList({
               </span>
               <span className="slot-time">
                 {fmt(r.key)} – {fmt(r.key + step)}
-                {ifNeeded && <span className="slot-tag">If needed</span>}
+                {ifNeeded && <span className="slot-tag">{t("If needed")}</span>}
               </span>
               {othersTotal > 0 && (
                 <span className="slot-others">
@@ -129,7 +130,7 @@ export default function DayList({
       </div>
       {!isLast && (
         <button type="button" className="btn btn-block" onClick={() => setDay(day + 1)}>
-          Next day <Icon name="arrowRight" />
+          {t("Next day")} <Icon name="arrowRight" />
         </button>
       )}
     </div>

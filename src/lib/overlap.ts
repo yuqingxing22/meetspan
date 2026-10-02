@@ -1,4 +1,5 @@
 import { windowPenalty } from "./comfort";
+import { t } from "./i18n";
 
 /**
  * Pure scheduling engine. Given the poll's absolute slots and each
@@ -231,8 +232,8 @@ export function computeSchedule(input: ComputeInput): ComputeResult {
       suggestions: [
         {
           kind: "insufficient",
-          title: "No responses yet",
-          detail: "Wait for participants to submit their availability first.",
+          title: t("No responses yet"),
+          detail: t("Wait for participants to submit their availability first."),
         },
       ],
       stats,
@@ -246,9 +247,10 @@ export function computeSchedule(input: ComputeInput): ComputeResult {
     if (chosen.length < F) {
       suggestions.push({
         kind: "better_days",
-        title: `Only ${chosen.length} of ${F} sessions fit with everyone free`,
-        detail:
-          "There aren't enough separate windows where all participants overlap. Consider fewer sessions per week, a shorter duration, or excluding someone (see below).",
+        title: t("Only {n} of {total} sessions fit with everyone free", { n: chosen.length, total: F }),
+        detail: t(
+          "There aren't enough separate windows where all participants overlap. Consider fewer sessions per week, a shorter duration, or excluding someone (see below)."
+        ),
       });
       // Also surface fallbacks so the organizer has options.
       appendExcludeAndShorten(input, index, allIds, total, k, F, suggestions, penalty, required);
@@ -291,10 +293,13 @@ export function computeSchedule(input: ComputeInput): ComputeResult {
         .map((p) => p.id);
       suggestions.push({
         kind: "if_needed",
-        title: "Everyone fits with “if needed” times",
-        detail: `No ${durationMin}-min window has everyone fully free, but it works if ${
-          stretched.length === 1 ? "one person uses" : `${stretched.length} people use`
-        } times they marked “if needed”.`,
+        title: t("Everyone fits with “if needed” times"),
+        detail: t(
+          stretched.length === 1
+            ? "No {d}-min window has everyone fully free, but it works if one person uses times they marked “if needed”."
+            : "No {d}-min window has everyone fully free, but it works if {n} people use times they marked “if needed”.",
+          { d: durationMin, n: stretched.length }
+        ),
         sessions: picked,
         stretched,
       });
@@ -310,10 +315,13 @@ export function computeSchedule(input: ComputeInput): ComputeResult {
       const best = Math.min(...picked.map((w) => w.count));
       suggestions.push({
         kind: "required",
-        title: "Works for everyone required",
-        detail: `All ${required.length} required ${
-          required.length === 1 ? "person is" : "people are"
-        } free; ${best} of ${total} overall.`,
+        title: t("Works for everyone required"),
+        detail: t(
+          required.length === 1
+            ? "The required person is free; {best} of {total} overall."
+            : "All {n} required people are free; {best} of {total} overall.",
+          { n: required.length, best, total }
+        ),
         sessions: picked,
       });
     }
@@ -325,8 +333,12 @@ export function computeSchedule(input: ComputeInput): ComputeResult {
     const mins = largest.size * granularityMin;
     suggestions.push({
       kind: "shorten",
-      title: `Shorten to ${mins} min — everyone can make it`,
-      detail: `No ${durationMin}-min window works for all ${total}, but a ${mins}-min window does.`,
+      title: t("Shorten to {m} min — everyone can make it", { m: mins }),
+      detail: t("No {d}-min window works for all {total}, but a {m}-min window does.", {
+        d: durationMin,
+        total,
+        m: mins,
+      }),
       sessions: selectSessions(largest.windows, F, penalty),
     });
 
@@ -339,8 +351,11 @@ export function computeSchedule(input: ComputeInput): ComputeResult {
       if (split.length >= 2 && coveredSlots >= k) {
         suggestions.push({
           kind: "split",
-          title: `Split into ${split.length} shorter sessions across days`,
-          detail: `Instead of one ${durationMin}-min meeting, run ${split.length} sessions of ${mins} min on different days — everyone is free for each.`,
+          title: t("Split into {n} shorter sessions across days", { n: split.length }),
+          detail: t(
+            "Instead of one {d}-min meeting, run {n} sessions of {m} min on different days — everyone is free for each.",
+            { d: durationMin, n: split.length, m: mins }
+          ),
           sessions: split,
         });
       }
@@ -363,10 +378,11 @@ export function computeSchedule(input: ComputeInput): ComputeResult {
       .slice(0, 3);
     suggestions.push({
       kind: "better_days",
-      title: "Best partial overlaps",
-      detail: `The strongest ${durationMin}-min windows cover ${top
-        .map((s) => `${s.count}/${total}`)
-        .join(", ")} participants.`,
+      title: t("Best partial overlaps"),
+      detail: t("The strongest {d}-min windows cover {counts} participants.", {
+        d: durationMin,
+        counts: top.map((s) => `${s.count}/${total}`).join(", "),
+      }),
       sessions: top,
     });
   }
@@ -374,9 +390,10 @@ export function computeSchedule(input: ComputeInput): ComputeResult {
   if (suggestions.length === 0) {
     suggestions.push({
       kind: "insufficient",
-      title: "Not enough shared availability",
-      detail:
-        "No window fits even a shortened meeting. Ask participants to add more available slots, or widen the candidate dates/hours.",
+      title: t("Not enough shared availability"),
+      detail: t(
+        "No window fits even a shortened meeting. Ask participants to add more available slots, or widen the candidate dates/hours."
+      ),
     });
   }
 
@@ -417,8 +434,8 @@ function appendExclude(
   if (best && best.sessions.length) {
     suggestions.push({
       kind: "exclude",
-      title: "Works if one person steps out",
-      detail: `Excluding one participant opens up the full-length window.`,
+      title: t("Works if one person steps out"),
+      detail: t("Excluding one participant opens up the full-length window."),
       sessions: best.sessions,
       excluded: [best.id],
     });

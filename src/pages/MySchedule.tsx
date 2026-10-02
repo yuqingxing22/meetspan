@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { DateTime } from "luxon";
 import AvailabilityGrid from "../components/AvailabilityGrid";
 import DayList from "../components/DayList";
 import TimezonePicker from "../components/TimezonePicker";
@@ -7,8 +8,12 @@ import { blockKey, blockOf, referenceWeekSlots, saveSchedule } from "../lib/sche
 import { detectTz } from "../lib/slots";
 import { useMySchedule } from "../lib/useMySchedule";
 import { isFirebaseConfigured, signInWithGoogle } from "../firebase";
+import { t } from "../lib/i18n";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
+
+/** 7 → "7 AM" (or "7:00" in Chinese). */
+const hourText = (h: number) => DateTime.fromObject({ hour: h % 24 }).toFormat("h a");
 
 /** Hours shown by default; the rest of the day is one click away. */
 const DAY_START = 7;
@@ -87,17 +92,16 @@ export default function MySchedule() {
   }
 
   if (!isFirebaseConfigured) {
-    return <p className="muted">Firebase isn't configured yet (see README).</p>;
+    return <p className="muted">{t("Firebase isn't configured yet (see README).")}</p>;
   }
 
   if (!signedIn) {
     return (
       <div className="narrow">
         <div className="card state-card schedule-signin">
-          <h1 className="page-title">My schedule</h1>
+          <h1 className="page-title">{t("My schedule")}</h1>
           <p className="page-sub">
-            Save the times you're usually free each week. Then, in any poll,
-            one click fills them in, converted to that poll's timezone.
+            {t("Save the times you're usually free each week. Then, in any poll, one click fills them in, converted to that poll's timezone.")}
           </p>
           <button
             type="button"
@@ -110,36 +114,34 @@ export default function MySchedule() {
                 .finally(() => setSigningIn(false));
             }}
           >
-            <Icon name="user" /> Sign in with Google to start
+            <Icon name="user" /> {t("Sign in with Google to start")}
           </button>
           <p className="hint schedule-note">
-            Your schedule is private. Others only see the times you put into a
-            poll.
+            {t("Your schedule is private. Others only see the times you put into a poll.")}
           </p>
         </div>
       </div>
     );
   }
 
-  if (schedule === undefined) return <p className="muted">Loading…</p>;
+  if (schedule === undefined) return <p className="muted">{t("Loading…")}</p>;
 
   const statusText =
     saveState === "error"
-      ? "Couldn't save"
+      ? t("Couldn't save")
       : dirty || saveState === "saving"
-      ? "Saving…"
+      ? t("Saving…")
       : saveState === "saved"
-      ? "Saved"
+      ? t("Saved")
       : "";
 
   return (
     <div>
       <div className="page-head page-head-row">
         <div>
-          <h1 className="page-title">My schedule</h1>
+          <h1 className="page-title">{t("My schedule")}</h1>
           <p className="page-sub">
-            The times you're usually free each week. In any poll, "Fill from my
-            schedule" marks these for you, converted to that poll's timezone.
+            {t("The times you're usually free each week. In any poll, “Fill from my schedule” marks these for you, converted to that poll's timezone.")}
           </p>
         </div>
         {statusText && (
@@ -159,11 +161,11 @@ export default function MySchedule() {
                 setTz(z);
                 setDirty(true);
               }}
-              label="My timezone"
+              label={t("My timezone")}
             />
           </div>
           <div className="schedule-presets">
-            <span className="field-label">Quick start</span>
+            <span className="field-label">{t("Quick start")}</span>
             <div className="chips">
               {PRESETS.map((p) => (
                 <button
@@ -177,12 +179,12 @@ export default function MySchedule() {
                     change(next);
                   }}
                 >
-                  <Icon name="plus" size={14} /> {p.label}
+                  <Icon name="plus" size={14} /> {t(p.label)}
                 </button>
               ))}
               {blocks.size > 0 && (
                 <button type="button" className="chip" onClick={() => change(new Set())}>
-                  <Icon name="x" size={14} /> Clear all
+                  <Icon name="x" size={14} /> {t("Clear all")}
                 </button>
               )}
             </div>
@@ -191,10 +193,10 @@ export default function MySchedule() {
 
         <div className="results-head schedule-grid-head">
           <p className="board-hint board-hint-inline">
-            Click or drag to mark when you're usually free.
+            {t("Click or drag to mark when you're usually free.")}
           </p>
           <button type="button" className="link-btn" onClick={() => setFullDay((f) => !f)}>
-            {fullDay ? `Show ${DAY_START} AM – ${DAY_END - 12} PM only` : "Show all 24 hours"}
+            {fullDay ? t("Show {a} – {b} only", { a: hourText(DAY_START), b: hourText(DAY_END) }) : t("Show all 24 hours")}
           </button>
         </div>
         <div className="only-wide">
@@ -212,9 +214,8 @@ export default function MySchedule() {
           />
         </div>
         <p className="hint schedule-note">
-          <Icon name="info" className="icon-brand" /> Private to you. Nothing is
-          filled in automatically: in each poll you choose when to use it, and
-          you can still adjust that week.
+          <Icon name="info" className="icon-brand" />{" "}
+          {t("Private to you. Nothing is filled in automatically: in each poll you choose when to use it, and you can still adjust that week.")}
         </p>
       </section>
     </div>

@@ -1,3 +1,4 @@
+import "./lib/i18n"; // first: localizes date formatting before anything renders
 import React from "react";
 import ReactDOM from "react-dom/client";
 import { HashRouter, Routes, Route } from "react-router-dom";

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { DateTime } from "luxon";
 import Icon from "./Icon";
+import { t } from "../lib/i18n";
 
 interface Props {
   /** ISO dates (yyyy-mm-dd) to render as selected/highlighted. */
@@ -9,7 +10,7 @@ interface Props {
   onDayClick: (iso: string, shift: boolean) => void;
 }
 
-const DOW = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"];
+const DOW = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]; // translated at render
 
 /** Lightweight month calendar with prev/next nav. Past days are disabled. */
 export default function Calendar({ selectedDates, onDayClick }: Props) {
@@ -33,7 +34,7 @@ export default function Calendar({ selectedDates, onDayClick }: Props) {
           className="icon-btn"
           onClick={() => canGoPrev && setView(view.minus({ months: 1 }))}
           disabled={!canGoPrev}
-          aria-label="Previous month"
+          aria-label={t("Previous month")}
         >
           <Icon name="chevronLeft" />
         </button>
@@ -42,7 +43,7 @@ export default function Calendar({ selectedDates, onDayClick }: Props) {
           type="button"
           className="icon-btn"
           onClick={() => setView(view.plus({ months: 1 }))}
-          aria-label="Next month"
+          aria-label={t("Next month")}
         >
           <Icon name="chevronRight" />
         </button>
@@ -51,7 +52,7 @@ export default function Calendar({ selectedDates, onDayClick }: Props) {
       <div className="cal-grid">
         {DOW.map((d) => (
           <div key={d} className="cal-dow">
-            {d}
+            {t(d)}
           </div>
         ))}
         {cells.map((dt, i) => {

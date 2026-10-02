@@ -1,4 +1,5 @@
 import { DateTime } from "luxon";
+import { t } from "./i18n";
 
 /**
  * How reasonable a meeting time is for someone, judged in *their* timezone.
@@ -34,8 +35,8 @@ export function windowComfort(startMs: number, endMs: number, tz: string): Comfo
 export function comfortLabel(startMs: number, tz: string, comfort: Comfort): string {
   if (comfort === "day") return "";
   const h = DateTime.fromMillis(startMs, { zone: tz }).hour;
-  if (comfort === "night") return h >= 5 && h < 7 ? "very early" : "late night";
-  return h < 12 ? "early morning" : "evening";
+  if (comfort === "night") return h >= 5 && h < 7 ? t("very early") : t("late night");
+  return h < 12 ? t("early morning") : t("evening");
 }
 
 /**

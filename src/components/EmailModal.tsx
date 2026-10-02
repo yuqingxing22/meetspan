@@ -5,6 +5,7 @@ import { copyText, useToast } from "../lib/useToast";
 import { MEETING_TYPES } from "../lib/types";
 import type { Session } from "../lib/overlap";
 import type { MeetingType, Participant, PollMeta } from "../lib/types";
+import { getLang, t as tr, type Lang } from "../lib/i18n";
 
 interface Props {
   meta: PollMeta;
@@ -24,14 +25,14 @@ interface Props {
 function defaultMailTip(): string {
   const ua = typeof navigator !== "undefined" ? navigator.userAgent : "";
   if (/Macintosh|Mac OS X/i.test(ua))
-    return "on a Mac, set one in Mail → Settings → General → “Default email reader.”";
+    return tr("on a Mac, set one in Mail → Settings → General → “Default email reader.”");
   if (/Windows/i.test(ua))
-    return "on Windows, set one in Settings → Apps → Default apps → Email.";
+    return tr("on Windows, set one in Settings → Apps → Default apps → Email.");
   if (/iPhone|iPad|iPod/i.test(ua))
-    return "on iPhone/iPad, set a default in Settings → Apps → Mail → Default Mail App.";
+    return tr("on iPhone/iPad, set a default in Settings → Apps → Mail → Default Mail App.");
   if (/Android/i.test(ua))
-    return "on Android, pick a default in Settings → Apps → Default apps.";
-  return "set a default email app in your system settings.";
+    return tr("on Android, pick a default in Settings → Apps → Default apps.");
+  return tr("set a default email app in your system settings.");
 }
 
 export default function EmailModal({
@@ -47,6 +48,7 @@ export default function EmailModal({
 }: Props) {
   const { show, node } = useToast();
   const [type, setType] = useState<MeetingType>(initialType);
+  const [emailLang, setEmailLang] = useState<Lang>(getLang());
   const mailTip = defaultMailTip();
 
   const email = useMemo(
@@ -59,8 +61,9 @@ export default function EmailModal({
         type,
         sessions,
         participants,
+        lang: emailLang,
       }),
-    [meta, meetingName, durationMin, sessionsPerWeek, type, sessions, participants]
+    [meta, meetingName, durationMin, sessionsPerWeek, type, sessions, participants, emailLang]
   );
 
   // Recipients collected from participants who shared an email (organizer-only).
@@ -89,48 +92,70 @@ export default function EmailModal({
       .replace(/^-+|-+$/g, "")
       .toLowerCase();
     downloadICS(`${base || "meeting"}.ics`, ics);
-    show("Calendar file downloaded");
+    show(tr("Calendar file downloaded"));
   }
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
-          <h2>Draft email</h2>
+          <h2>{tr("Draft email")}</h2>
           <button className="btn btn-ghost btn-sm" onClick={onClose}>
-            ✕ Close
+            ✕ {tr("Close")}
           </button>
         </div>
 
+        <div className="email-lang">
+          <span className="field-label">{tr("Email language")}</span>
+          <div className="seg seg-sm" role="group" aria-label={tr("Email language")}>
+            <button
+              type="button"
+              className={emailLang === "en" ? "active" : ""}
+              aria-pressed={emailLang === "en"}
+              onClick={() => setEmailLang("en")}
+            >
+              English
+            </button>
+            <button
+              type="button"
+              className={emailLang === "zh" ? "active" : ""}
+              aria-pressed={emailLang === "zh"}
+              onClick={() => setEmailLang("zh")}
+            >
+              中文
+            </button>
+          </div>
+        </div>
+
         <label className="field">
-          <span className="field-label">Template (by meeting type)</span>
+          <span className="field-label">{tr("Template (by meeting type)")}</span>
           <select
             value={type}
             onChange={(e) => setType(e.target.value as MeetingType)}
           >
             {MEETING_TYPES.map((t) => (
               <option key={t.value} value={t.value}>
-                {t.label}
+                {tr(t.label)}
               </option>
             ))}
           </select>
         </label>
 
-        <div className="field-label">Subject</div>
+        <div className="field-label">{tr("Subject")}</div>
         <div className="linkbox" style={{ marginBottom: 12 }}>
           <code style={{ whiteSpace: "normal" }}>{email.subject}</code>
           <button
             className="btn btn-sm"
             onClick={() => {
               copyText(email.subject);
-              show("Subject copied");
+              show(tr("Subject copied"));
             }}
           >
-            Copy
+            {tr("Copy")}
           </button>
         </div>
 
-        <div className="field-label">Body</div>
+        <div className="field-label">{tr("Body")}</div>
         <div className="email-preview">{email.body}</div>
 
         <div className="spacer" />
@@ -138,18 +163,17 @@ export default function EmailModal({
           className="btn btn-primary btn-block"
           onClick={() => {
             copyText(`${email.subject}\n\n${email.body}`);
-            show("Email copied — paste it into any email");
+            show(tr("Email copied — paste it into any email"));
           }}
         >
-          Copy email to clipboard
+          {tr("Copy email to clipboard")}
         </button>
         <p className="hint" style={{ marginTop: 8, marginBottom: 0 }}>
-          Works on any device — paste into Gmail, Outlook, Apple Mail, or
-          whatever you use.
+          {tr("Works on any device — paste into Gmail, Outlook, Apple Mail, or whatever you use.")}
         </p>
 
         <div className="field-label" style={{ marginTop: 18 }}>
-          Or open a ready-made draft in
+          {tr("Or open a ready-made draft in")}
         </div>
         <div className="compose-links">
           <a
@@ -173,40 +197,40 @@ export default function EmailModal({
             href={mailtoLink(email, to)}
             onClick={() =>
               show(
-                "Opening your email app… if nothing happens, no default email app is set — copy the email or use Gmail/Outlook instead."
+                tr("Opening your email app… if nothing happens, no default email app is set — copy the email or use Gmail/Outlook instead.")
               )
             }
           >
-            Mail app
+            {tr("Mail app")}
           </a>
         </div>
         {emails.length > 0 ? (
           <p className="hint" style={{ marginTop: 8, marginBottom: 0 }}>
-            Recipients prefilled from {emails.length} shared email
-            {emails.length === 1 ? "" : "s"}: {emails.join(", ")}
+            {tr(emails.length === 1 ? "Recipients prefilled from 1 shared email: {list}" : "Recipients prefilled from {n} shared emails: {list}", {
+              n: emails.length,
+              list: emails.join(", "),
+            })}
           </p>
         ) : (
           <p className="hint" style={{ marginTop: 8, marginBottom: 0 }}>
-            No participant emails collected, so the “To” field is left blank —
-            add recipients yourself.
+            {tr("No participant emails collected, so the “To” field is left blank — add recipients yourself.")}
           </p>
         )}
         <p className="hint" style={{ marginTop: 10, marginBottom: 0 }}>
-          Gmail and Outlook open in your browser and work on any computer.
-          “Mail app” opens your device’s default email program — {mailTip} If
-          nothing opens, just copy the email above.
+          {tr("Gmail and Outlook open in your browser and work on any computer. “Mail app” opens your device’s default email program — {tip} If nothing opens, just copy the email above.", { tip: mailTip })}
         </p>
 
         <div className="divider" />
-        <div className="field-label">Add to everyone’s calendar</div>
+        <div className="field-label">{tr("Add to everyone’s calendar")}</div>
         <button className="btn btn-block" onClick={saveIcs}>
-          ⤓ Download calendar file (.ics)
+          ⤓ {tr("Download calendar file (.ics)")}
         </button>
         <p className="hint" style={{ marginTop: 8, marginBottom: 0 }}>
-          Opens in Apple Calendar, Google Calendar, Outlook and more. Attach it
-          to the email so guests add the {sessions.length === 1 ? "time" : "times"}{" "}
-          in one click — it shows in each person’s own timezone
-          {meta.dateMode === "weekly" ? " and repeats weekly" : ""}.
+          {tr(
+            meta.dateMode === "weekly"
+              ? "Opens in Apple Calendar, Google Calendar, Outlook and more. Attach it to the email so guests add it in one click — it shows in each person’s own timezone and repeats weekly."
+              : "Opens in Apple Calendar, Google Calendar, Outlook and more. Attach it to the email so guests add it in one click — it shows in each person’s own timezone."
+          )}
         </p>
         {node}
       </div>

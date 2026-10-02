@@ -21,6 +21,7 @@ import { copyText, useToast } from "../lib/useToast";
 import type { Granularity, PollMeta } from "../lib/types";
 import heroArt from "../assets/illustrations/time-management.svg";
 import shareArt from "../assets/illustrations/share-link.svg";
+import { t } from "../lib/i18n";
 
 type PickMode = "dates" | "weekly";
 
@@ -47,7 +48,7 @@ const PRESETS = [
 const GRANULARITY_MIN: Granularity = 30;
 
 function hourLabel(h: number): string {
-  if (h === 24) return "12:00 AM (next day)";
+  if (h === 24) return t("12:00 AM (next day)");
   return DateTime.fromObject({ hour: h % 24 }).toFormat("h:mm a");
 }
 
@@ -115,22 +116,20 @@ export default function Home() {
   const canCreate =
     isFirebaseConfigured && Boolean(uid) && !badRange && resolvedDates.length > 0 && !busy;
 
-  let createLabel = "Create poll & get link";
-  if (busy) createLabel = "Creating…";
+  let createLabel = t("Create poll & get link");
+  if (busy) createLabel = t("Creating…");
   else if (dayCount === 0)
-    createLabel = pickMode === "dates" ? "Pick at least one day to continue" : "Pick at least one weekday";
-  else if (badRange) createLabel = "Fix the hours to continue";
-  else if (isFirebaseConfigured && auth === "loading") createLabel = "Connecting…";
+    createLabel = pickMode === "dates" ? t("Pick at least one day to continue") : t("Pick at least one weekday");
+  else if (badRange) createLabel = t("Fix the hours to continue");
+  else if (isFirebaseConfigured && auth === "loading") createLabel = t("Connecting…");
 
   const zone = tzInfo(tz);
-  const dayWord =
-    pickMode === "dates"
-      ? dayCount === 1 ? "day" : "days"
-      : dayCount === 1 ? "weekday" : "weekdays";
   const daysText =
     dayCount === 0
-      ? "No days picked yet"
-      : `${dayCount} ${dayWord}${pickMode === "weekly" ? ", every week" : ""}`;
+      ? t("No days picked yet")
+      : pickMode === "dates"
+      ? t(dayCount === 1 ? "1 day" : "{n} days", { n: dayCount })
+      : t(dayCount === 1 ? "1 weekday, every week" : "{n} weekdays, every week", { n: dayCount });
   const hoursText = `${shortHour(startHour)} – ${shortHour(endHour)}`;
 
   const previewCols = resolvedDates.slice(0, 7).map((iso) => {
@@ -169,7 +168,7 @@ export default function Home() {
       setCreated({ pollId, token });
       window.scrollTo({ top: 0 });
     } catch (e) {
-      show(`Could not create poll: ${(e as Error).message}`);
+      show(t("Could not create poll: {msg}", { msg: (e as Error).message }));
     } finally {
       setBusy(false);
     }
@@ -184,13 +183,13 @@ export default function Home() {
     const base = window.location.href.split("#")[0];
     const participantLink = `${base}#/p/${created.pollId}`;
     const organizerLink = `${base}#/o/${created.pollId}?k=${created.token}`;
-    const pollName = title.trim() || "Untitled poll";
-    const emailSubject = `MeetSpan organizer link${title ? ` — ${title}` : ""}`;
+    const pollName = title.trim() || t("Untitled poll");
+    const emailSubject = `${t("MeetSpan organizer link")}${title ? ` — ${title}` : ""}`;
     const emailBody =
-      `Keep this private — it's your key to manage the poll and pick the final time:\n${organizerLink}\n\n` +
-      `Participant invite link (this is the one to share):\n${participantLink}`;
-    const inviteSubject = `When are you free?${title ? ` ${title}` : ""}`;
-    const inviteBody = `Mark when you're free (it shows in your own timezone, no sign-up needed):\n${participantLink}`;
+      `${t("Keep this private — it's your key to manage the poll and pick the final time:")}\n${organizerLink}\n\n` +
+      `${t("Participant invite link (this is the one to share):")}\n${participantLink}`;
+    const inviteSubject = `${t("When are you free?")}${title ? ` ${title}` : ""}`;
+    const inviteBody = `${t("Mark when you're free (it shows in your own timezone, no sign-up needed):")}\n${participantLink}`;
     const canShare = typeof navigator !== "undefined" && typeof navigator.share === "function";
 
     return (
@@ -201,7 +200,7 @@ export default function Home() {
             <span className="check-badge">
               <Icon name="check" size={18} strokeWidth={2.6} />
             </span>
-            Your poll is live
+            {t("Your poll is live")}
           </h1>
           <p className="page-sub">
             {pollName} · {daysText} · {hoursText}
@@ -209,8 +208,8 @@ export default function Home() {
         </div>
 
         <section className="card">
-          <h2>Invite your group</h2>
-          <p className="hint">Anyone with this link can add their times.</p>
+          <h2>{t("Invite your group")}</h2>
+          <p className="hint">{t("Anyone with this link can add their times.")}</p>
           <div className="linkbox">
             <code>{participantLink}</code>
             <button
@@ -223,10 +222,10 @@ export default function Home() {
             >
               {copied === "invite" ? (
                 <>
-                  <Icon name="check" /> Copied
+                  <Icon name="check" /> {t("Copied")}
                 </>
               ) : (
-                "Copy link"
+                t("Copy link")
               )}
             </button>
           </div>
@@ -239,14 +238,14 @@ export default function Home() {
                   navigator.share({ title: pollName, text: inviteBody, url: participantLink }).catch(() => {})
                 }
               >
-                <Icon name="share" /> Share…
+                <Icon name="share" /> {t("Share…")}
               </button>
             )}
             <a
               className="btn"
               href={`mailto:?subject=${encodeURIComponent(inviteSubject)}&body=${encodeURIComponent(inviteBody)}`}
             >
-              <Icon name="mail" /> Email
+              <Icon name="mail" /> {t("Email")}
             </a>
             <button
               type="button"
@@ -254,10 +253,10 @@ export default function Home() {
               aria-pressed={showQR}
               onClick={() => setShowQR((v) => !v)}
             >
-              <Icon name="qr" /> QR code
+              <Icon name="qr" /> {t("QR code")}
             </button>
             <Link className="btn btn-link" to={`/p/${created.pollId}`}>
-              Preview as a guest <Icon name="arrowRight" />
+              {t("Preview as a guest")} <Icon name="arrowRight" />
             </Link>
           </div>
           {showQR && <InviteQR url={participantLink} title={title.trim()} />}
@@ -266,12 +265,10 @@ export default function Home() {
         <section className="card">
           <h2 className="with-icon">
             <Icon name="key" size={18} className="icon-warm" />
-            Your private organizer link
+            {t("Your private organizer link")}
           </h2>
           <p className="hint">
-            Keep this one to yourself. It's how you see results and lock in the
-            time. It's saved under <b>Your polls</b> in this browser; email it to
-            yourself as a backup (we can't recover it for you).
+            {t("Keep this one to yourself. It's how you see results and lock in the time. It's saved under “Your polls” in this browser; email it to yourself as a backup (we can't recover it for you).")}
           </p>
           <div className="btn-row">
             <button
@@ -284,11 +281,11 @@ export default function Home() {
             >
               {copied === "organizer" ? (
                 <>
-                  <Icon name="check" /> Copied
+                  <Icon name="check" /> {t("Copied")}
                 </>
               ) : (
                 <>
-                  <Icon name="copy" /> Copy private link
+                  <Icon name="copy" /> {t("Copy private link")}
                 </>
               )}
             </button>
@@ -296,7 +293,7 @@ export default function Home() {
               className="btn"
               href={`mailto:?subject=${encodeURIComponent(emailSubject)}&body=${encodeURIComponent(emailBody)}`}
             >
-              <Icon name="mail" /> Email it to me
+              <Icon name="mail" /> {t("Email it to me")}
             </a>
             <a
               className="btn"
@@ -323,7 +320,7 @@ export default function Home() {
               setLastPick(null);
             }}
           >
-            Create another poll
+            {t("Create another poll")}
           </button>
           <div className="btn-row created-next">
             <button
@@ -331,14 +328,14 @@ export default function Home() {
               className="btn btn-link"
               onClick={() => nav(`/o/${created.pollId}?k=${created.token}`)}
             >
-              Skip to the dashboard
+              {t("Skip to the dashboard")}
             </button>
             <button
               type="button"
               className="btn btn-dark btn-lg"
               onClick={() => nav(`/o/${created.pollId}?k=${created.token}&view=times`)}
             >
-              Next: add my own times <Icon name="arrowRight" size={18} />
+              {t("Next: add my own times")} <Icon name="arrowRight" size={18} />
             </button>
           </div>
         </div>
@@ -351,11 +348,10 @@ export default function Home() {
     <div>
       <div className="hero">
         <div className="hero-text">
-          <span className="eyebrow-pill">No sign-up · Free · Every timezone</span>
-          <h1 className="hero-title">Find a time that works for everyone</h1>
+          <span className="eyebrow-pill">{t("No sign-up · Free · Every timezone")}</span>
+          <h1 className="hero-title">{t("Find a time that works for everyone")}</h1>
           <p className="hero-sub">
-            Pick some days, share one link, and each person marks when they're
-            free in their own timezone. MeetSpan finds the overlap.
+            {t("Pick some days, share one link, and each person marks when they're free in their own timezone. MeetSpan finds the overlap.")}
           </p>
         </div>
         <img src={heroArt} alt="" className="hero-art" />
@@ -363,28 +359,27 @@ export default function Home() {
 
       {isFirebaseConfigured && auth === "error" && (
         <div className="notice notice-warn">
-          Couldn't sign in. Enable <b>Anonymous</b> sign-in in your Firebase
-          console (Authentication → Sign-in method → Anonymous), then reload.
+          {t("Couldn't sign in. Enable Anonymous sign-in in your Firebase console (Authentication → Sign-in method → Anonymous), then reload.")}
         </div>
       )}
 
       <div className="create-layout">
         <div className="create-main">
           <section className="card">
-            <StepHead n={1} title="The basics" />
+            <StepHead n={1} title={t("The basics")} />
             <label className="field">
-              <span className="field-label">What's the meeting?</span>
+              <span className="field-label">{t("What's the meeting?")}</span>
               <input
                 type="text"
                 className="input-lg"
                 value={title}
-                placeholder="e.g. Weekly research sync"
+                placeholder={t("e.g. Weekly research sync")}
                 onChange={(e) => setTitle(e.target.value)}
               />
             </label>
             <div className="row">
               <label className="field">
-                <span className="field-label">Your name</span>
+                <span className="field-label">{t("Your name")}</span>
                 <input
                   type="text"
                   value={organizerName}
@@ -392,11 +387,11 @@ export default function Home() {
                 />
               </label>
               <div>
-                <TimezonePicker value={tz} onChange={setTz} label="Your timezone" />
+                <TimezonePicker value={tz} onChange={setTz} label={t("Your timezone")} />
               </div>
             </div>
             <label className="field field-narrow">
-              <span className="field-label">Respond by (optional)</span>
+              <span className="field-label">{t("Respond by (optional)")}</span>
               <input
                 type="date"
                 value={deadline}
@@ -408,15 +403,15 @@ export default function Home() {
 
           <section className="card">
             <div className="step-head-row">
-              <StepHead n={2} title="Which days?" />
-              <div className="seg" role="group" aria-label="How to pick days">
+              <StepHead n={2} title={t("Which days?")} />
+              <div className="seg" role="group" aria-label={t("How to pick days")}>
                 <button
                   type="button"
                   className={pickMode === "dates" ? "active" : ""}
                   aria-pressed={pickMode === "dates"}
                   onClick={() => setPickMode("dates")}
                 >
-                  Specific dates
+                  {t("Specific dates")}
                 </button>
                 <button
                   type="button"
@@ -424,7 +419,7 @@ export default function Home() {
                   aria-pressed={pickMode === "weekly"}
                   onClick={() => setPickMode("weekly")}
                 >
-                  Repeats weekly
+                  {t("Repeats weekly")}
                 </button>
               </div>
             </div>
@@ -435,7 +430,7 @@ export default function Home() {
                   <Calendar selectedDates={new Set(dates)} onDayClick={pickDay} />
                   <div className="daypick-side">
                     <div className="daypick-side-head">
-                      <span className="field-label">Selected · {dates.length}</span>
+                      <span className="field-label">{t("Selected · {n}", { n: dates.length })}</span>
                       {dates.length > 0 && (
                         <button
                           type="button"
@@ -445,15 +440,15 @@ export default function Home() {
                             setLastPick(null);
                           }}
                         >
-                          Clear
+                          {t("Clear")}
                         </button>
                       )}
                     </div>
                     {dates.length === 0 ? (
                       <div className="empty-box">
-                        Click days on the calendar.
+                        {t("Click days on the calendar.")}
                         <br />
-                        They'll show up here.
+                        {t("They'll show up here.")}
                       </div>
                     ) : (
                       <div className="chips">
@@ -462,7 +457,7 @@ export default function Home() {
                             type="button"
                             key={d}
                             className="chip on"
-                            aria-label={`Remove ${fmtDate(d)}`}
+                            aria-label={t("Remove {name}", { name: fmtDate(d) })}
                             onClick={() => setDates((x) => x.filter((y) => y !== d))}
                           >
                             {fmtDate(d)} <Icon name="x" size={14} />
@@ -472,18 +467,14 @@ export default function Home() {
                     )}
                     <div className="tip hide-narrow">
                       <Icon name="info" className="icon-brand" />
-                      <span>
-                        Hold <b>Shift</b> and click a second day to select the
-                        whole range in between.
-                      </span>
+                      <span>{t("Hold Shift and click a second day to select the whole range in between.")}</span>
                     </div>
                   </div>
                 </div>
               ) : (
                 <>
                   <p className="hint">
-                    For a recurring meeting. Pick the days it can happen; guests
-                    see weekday names, not dates.
+                    {t("For a recurring meeting. Pick the days it can happen; guests see weekday names, not dates.")}
                   </p>
                   <div className="weekday-tiles">
                     {WEEKDAYS.map((w) => {
@@ -496,7 +487,7 @@ export default function Home() {
                           aria-pressed={on}
                           onClick={() => toggleWeekday(w.wd)}
                         >
-                          <span>{w.label}</span>
+                          <span>{t(w.label)}</span>
                           <span className="tile-dot" />
                         </button>
                       );
@@ -504,25 +495,26 @@ export default function Home() {
                   </div>
                   <div className="row week-extra">
                     <label className="field">
-                      <span className="field-label">First week</span>
+                      <span className="field-label">{t("First week")}</span>
                       <select
                         value={weekStart}
                         onChange={(e) => setWeekStart(Number(e.target.value))}
                       >
-                        <option value={0}>Starting this week</option>
+                        <option value={0}>{t("Starting this week")}</option>
                         {[1, 2, 3].map((n) => (
                           <option key={n} value={n}>
-                            Week of {thisMonday.plus({ weeks: n }).toFormat("LLL d")}
-                            {n === 1 ? " (next week)" : ""}
+                            {t(n === 1 ? "Week of {date} (next week)" : "Week of {date}", {
+                              date: thisMonday.plus({ weeks: n }).toFormat("LLL d"),
+                            })}
                           </option>
                         ))}
                       </select>
                     </label>
                     <div className="first-dates">
-                      <span className="field-label">First meetings could fall on</span>
+                      <span className="field-label">{t("First meetings could fall on")}</span>
                       {resolvedDates.length === 0 ? (
                         <div className="empty-box empty-box-sm">
-                          Pick at least one weekday above.
+                          {t("Pick at least one weekday above.")}
                         </div>
                       ) : (
                         <div className="chips">
@@ -531,7 +523,7 @@ export default function Home() {
                               {fmtDate(d)}
                             </span>
                           ))}
-                          <span className="muted small">then every week</span>
+                          <span className="muted small">{t("then every week")}</span>
                         </div>
                       )}
                     </div>
@@ -542,7 +534,7 @@ export default function Home() {
           </section>
 
           <section className="card">
-            <StepHead n={3} title="What hours?" />
+            <StepHead n={3} title={t("What hours?")} />
             <div className="preset-grid">
               {PRESETS.map((p) => {
                 const on = preset === p.id;
@@ -558,7 +550,7 @@ export default function Home() {
                       setEndHour(p.end);
                     }}
                   >
-                    <span className="preset-label">{p.label}</span>
+                    <span className="preset-label">{t(p.label)}</span>
                     <span className="preset-sub">
                       {shortHour(p.start)} – {shortHour(p.end)}
                     </span>
@@ -571,14 +563,14 @@ export default function Home() {
                 aria-pressed={preset === "custom"}
                 onClick={() => setPreset("custom")}
               >
-                <span className="preset-label">Custom</span>
-                <span className="preset-sub">Set your own</span>
+                <span className="preset-label">{t("Custom")}</span>
+                <span className="preset-sub">{t("Set your own")}</span>
               </button>
             </div>
             {preset === "custom" && (
               <div className="row custom-hours">
                 <label className="field">
-                  <span className="field-label">From</span>
+                  <span className="field-label">{t("From")}</span>
                   <select value={startHour} onChange={(e) => setStartHour(Number(e.target.value))}>
                     {Array.from({ length: 24 }, (_, h) => (
                       <option key={h} value={h}>
@@ -588,7 +580,7 @@ export default function Home() {
                   </select>
                 </label>
                 <label className="field">
-                  <span className="field-label">To</span>
+                  <span className="field-label">{t("To")}</span>
                   <select value={endHour} onChange={(e) => setEndHour(Number(e.target.value))}>
                     {Array.from({ length: 24 }, (_, i) => i + 1).map((h) => (
                       <option key={h} value={h}>
@@ -600,13 +592,12 @@ export default function Home() {
               </div>
             )}
             {badRange && (
-              <p className="error-text">The end time needs to be after the start time.</p>
+              <p className="error-text">{t("The end time needs to be after the start time.")}</p>
             )}
             <div className="tip tip-plain">
               <Icon name="globe" className="icon-brand" />
               <span>
-                In your timezone. Guests automatically see these hours converted
-                to theirs, in 30-minute blocks.
+                {t("In your timezone. Guests automatically see these hours converted to theirs, in 30-minute blocks.")}
               </span>
             </div>
           </section>
@@ -614,8 +605,8 @@ export default function Home() {
 
         <aside className="create-aside">
           <div className="card preview-card">
-            <div className="eyebrow">Preview</div>
-            <div className="preview-title">{title.trim() || "Untitled poll"}</div>
+            <div className="eyebrow">{t("Preview")}</div>
+            <div className="preview-title">{title.trim() || t("Untitled poll")}</div>
             <ul className="meta-list">
               <li>
                 <Icon name="calendar" /> {daysText}
@@ -629,7 +620,7 @@ export default function Home() {
             </ul>
             <div className="mini-grid-box">
               {previewCols.length === 0 ? (
-                <div className="mini-grid-empty">Your grid appears here once you pick days</div>
+                <div className="mini-grid-empty">{t("Your grid appears here once you pick days")}</div>
               ) : (
                 <>
                   <div className="mini-grid">
@@ -642,7 +633,7 @@ export default function Home() {
                       </div>
                     ))}
                   </div>
-                  {moreCount > 0 && <div className="mini-more">+{moreCount} more days</div>}
+                  {moreCount > 0 && <div className="mini-more">{t("+{n} more days", { n: moreCount })}</div>}
                 </>
               )}
             </div>
@@ -656,8 +647,7 @@ export default function Home() {
               {canCreate && <Icon name="arrowRight" size={18} />}
             </button>
             <p className="preview-note">
-              You'll get a share link plus a private link to manage the poll. No
-              account needed.
+              {t("You'll get a share link plus a private link to manage the poll. No account needed.")}
             </p>
           </div>
         </aside>

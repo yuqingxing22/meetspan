@@ -23,6 +23,7 @@ import { isFirebaseConfigured } from "../firebase";
 import { useAuthState } from "../lib/useAuthState";
 import { useMySchedule } from "../lib/useMySchedule";
 import type { Participant, PollMeta } from "../lib/types";
+import { t } from "../lib/i18n";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
@@ -129,7 +130,7 @@ function Participate() {
   const nameOf = (id: string) => participants.find((p) => p.id === id)?.codename ?? "someone";
   const others = participants.filter((p) => p.id !== pid);
   const meIn = selected.size > 0 || maybe.size > 0 || participants.some((p) => p.id === pid);
-  const meName = codename.trim() || "You";
+  const meName = codename.trim() || t("You");
 
   // Everyone, with the viewer's live selection standing in for their saved copy.
   const everyone = useMemo(() => {
@@ -142,7 +143,7 @@ function Participate() {
       isMe: false,
     }));
     if (meIn)
-      list.push({ id: pid || "me", name: `${meName} (you)`, tz, slots: selected, maybe, isMe: true });
+      list.push({ id: pid || "me", name: t("{name} (you)", { name: meName }), tz, slots: selected, maybe, isMe: true });
     return list;
   }, [others, meIn, pid, meName, tz, selected, maybe]);
 
@@ -153,25 +154,24 @@ function Participate() {
   }, [meta, everyone]);
 
   if (!isFirebaseConfigured) {
-    return <p className="muted">Firebase isn't configured yet (see README).</p>;
+    return <p className="muted">{t("Firebase isn't configured yet (see README).")}</p>;
   }
   if (auth === "error")
     return (
       <div className="card state-card">
-        <h2>Couldn't sign in</h2>
+        <h2>{t("Couldn't sign in")}</h2>
         <p className="hint">
-          This poll needs Anonymous sign-in, which the site owner hasn't enabled
-          yet. Please try again later.
+          {t("This poll needs Anonymous sign-in, which the site owner hasn't enabled yet. Please try again later.")}
         </p>
       </div>
     );
-  if (auth === "loading") return <p className="muted">Signing you in…</p>;
-  if (meta === undefined) return <p className="muted">Loading…</p>;
+  if (auth === "loading") return <p className="muted">{t("Signing you in…")}</p>;
+  if (meta === undefined) return <p className="muted">{t("Loading…")}</p>;
   if (meta === null)
     return (
       <div className="card state-card">
-        <h2>Poll not found</h2>
-        <p className="hint">This invite link may be wrong or the poll was removed.</p>
+        <h2>{t("Poll not found")}</h2>
+        <p className="hint">{t("This invite link may be wrong or the poll was removed.")}</p>
       </div>
     );
 
@@ -184,9 +184,9 @@ function Participate() {
 
   const datesLabel =
     meta.dateMode === "weekly"
-      ? `${meta.weekdays
-          .map((w) => DateTime.fromObject({ weekday: w as 1 }).toFormat("ccc"))
-          .join(", ")}, every week`
+      ? t("{days}, every week", {
+          days: meta.weekdays.map((w) => DateTime.fromObject({ weekday: w as 1 }).toFormat("ccc")).join(", "),
+        })
       : meta.dates.length > 1
       ? `${DateTime.fromISO(meta.dates[0]).toFormat("ccc, LLL d")} – ${DateTime.fromISO(
           meta.dates[meta.dates.length - 1]
@@ -198,13 +198,13 @@ function Participate() {
   const finalSessions = finalizedSessions(meta, participants);
   const deadlinePassed =
     !!meta.deadline && DateTime.now().setZone(tz).toISODate()! > meta.deadline;
-  const finalTitle = meta.finalized?.meetingName || meta.title || "Meeting";
+  const finalTitle = meta.finalized?.meetingName || meta.title || t("Meeting");
 
-  let status: { text: string; tone: string } = { text: "Mark your free times below", tone: "idle" };
-  if (saveState === "error") status = { text: "Couldn't save", tone: "warn" };
-  else if (dirty && !codename.trim()) status = { text: "Add your name to save", tone: "warn" };
-  else if (saveState === "saving" || dirty) status = { text: "Saving…", tone: "busy" };
-  else if (saveState === "saved") status = { text: "Saved automatically", tone: "ok" };
+  let status: { text: string; tone: string } = { text: t("Mark your free times below"), tone: "idle" };
+  if (saveState === "error") status = { text: t("Couldn't save"), tone: "warn" };
+  else if (dirty && !codename.trim()) status = { text: t("Add your name to save"), tone: "warn" };
+  else if (saveState === "saving" || dirty) status = { text: t("Saving…"), tone: "busy" };
+  else if (saveState === "saved") status = { text: t("Saved automatically"), tone: "ok" };
 
   return (
     <div>
@@ -213,21 +213,20 @@ function Participate() {
           <span className="avatar avatar-sm" style={{ background: avatarColor(meta.organizerUid) }}>
             {initial(meta.organizerName || "M")}
           </span>
-          <span>
-            <b>{meta.organizerName || "Someone"}</b> invited you
-          </span>
+          <span>{t("{name} invited you", { name: meta.organizerName || t("Someone") })}</span>
         </div>
-        <h1 className="page-title">{meta.title || "When are you free?"}</h1>
+        <h1 className="page-title">{meta.title || t("When are you free?")}</h1>
         <p className="page-sub">
           {datesLabel}
           {datesLabel ? " · " : ""}
-          {respondedCount} {respondedCount === 1 ? "person has" : "people have"} responded
+          {t(respondedCount === 1 ? "1 person has responded" : "{n} people have responded", { n: respondedCount })}
           {meta.deadline && (
             <>
               {" · "}
               <span className={deadlinePassed ? "deadline passed" : "deadline"}>
-                {deadlinePassed ? "Deadline was " : "Please respond by "}
-                {DateTime.fromISO(meta.deadline).toFormat("cccc, LLL d")}
+                {t(deadlinePassed ? "Deadline was {date}" : "Please respond by {date}", {
+                  date: DateTime.fromISO(meta.deadline).toFormat("cccc, LLL d"),
+                })}
               </span>
             </>
           )}
@@ -240,15 +239,15 @@ function Participate() {
             <Icon name="check" size={18} strokeWidth={2.6} />
           </span>
           <div className="locked-text">
-            <div className="final-eyebrow">The time is set</div>
+            <div className="final-eyebrow">{t("The time is set")}</div>
             {finalSessions.map((s) => (
               <div key={s.startMs} className="locked-title">
                 {formatRange(s.startMs, s.endMs, tz)}
               </div>
             ))}
             <div className="locked-sub">
-              {finalTitle} · in your timezone
-              {meta.dateMode === "weekly" ? " · repeats every week" : ""}
+              {finalTitle} · {t("in your timezone")}
+              {meta.dateMode === "weekly" ? ` · ${t("repeats every week")}` : ""}
             </div>
           </div>
           <div className="btn-row final-actions">
@@ -260,14 +259,16 @@ function Participate() {
                   finalTitle,
                   s.startMs,
                   s.endMs,
-                  `Scheduled with MeetSpan${meta.organizerName ? ` by ${meta.organizerName}` : ""}.`,
+                  meta.organizerName
+                    ? t("Scheduled with MeetSpan by {name}.", { name: meta.organizerName })
+                    : t("Scheduled with MeetSpan."),
                   meta.dateMode === "weekly"
                 )}
                 target="_blank"
                 rel="noopener noreferrer"
               >
                 <Icon name="calendar" />
-                {finalSessions.length > 1 ? `Google Calendar · ${i + 1}` : "Add to Google Calendar"}
+                {finalSessions.length > 1 ? `Google Calendar · ${i + 1}` : t("Add to Google Calendar")}
               </a>
             ))}
             <button
@@ -297,30 +298,30 @@ function Participate() {
 
       {closed && finalSessions.length === 0 && (
         <div className="notice notice-warn">
-          This poll is closed, so your times are read-only now.
+          {t("This poll is closed, so your times are read-only now.")}
         </div>
       )}
 
       <div className="identity-bar">
         <label className="inline-field">
-          <span>Responding as</span>
+          <span>{t("Responding as")}</span>
           <input
             type="text"
             value={codename}
-            placeholder="Your name"
+            placeholder={t("Your name")}
             disabled={closed}
             onChange={(e) => edit(setCodename)(e.target.value)}
           />
         </label>
         <div className="inline-tz">
-          <TimezonePicker value={tz} onChange={edit(setTz)} label="Times shown in" />
+          <TimezonePicker value={tz} onChange={edit(setTz)} label={t("Times shown in")} />
         </div>
         <label className="inline-field">
-          <span>Email</span>
+          <span>{t("Email")}</span>
           <input
             type="email"
             value={email}
-            placeholder="Optional, for the final time"
+            placeholder={t("Optional, for the final time")}
             disabled={closed}
             onChange={(e) => edit(setEmail)(e.target.value)}
           />
@@ -331,7 +332,7 @@ function Participate() {
             {status.text}
             {saveState === "error" && (
               <button type="button" className="link-btn" onClick={() => void save()}>
-                Try again
+                {t("Try again")}
               </button>
             )}
           </div>
@@ -376,10 +377,10 @@ function Participate() {
         <aside className="poll-side">
           {focusMs !== null && (
             <div className="card side-card">
-              <div className="eyebrow">Who's free</div>
+              <div className="eyebrow">{t("Who's free")}</div>
               <div className="side-title">{formatSlot(focusMs, tz)}</div>
               <div className="side-sub">
-                {everyone.filter((p) => p.slots.has(focusMs)).length} of {everyone.length} free
+                {t("{n} of {total} free", { n: everyone.filter((p) => p.slots.has(focusMs)).length, total: everyone.length })}
               </div>
               <ul className="people">
                 {everyone.map((p) => {
@@ -397,8 +398,8 @@ function Participate() {
                         <span className="people-name">{p.name}</span>
                         <span className="people-sub">
                           {sameZone
-                            ? "Same timezone as you"
-                            : `${local.toFormat("h:mm a ccc")} in ${tzInfo(p.tz).city}`}
+                            ? t("Same timezone as you")
+                            : t("{time} in {city}", { time: local.toFormat("h:mm a ccc"), city: tzInfo(p.tz).city })}
                           {comfort !== "day" && (
                             <span className={`comfort comfort-${comfort}`}>
                               {comfort === "night" && <Icon name="moon" size={12} />}
@@ -408,7 +409,7 @@ function Participate() {
                         </span>
                       </span>
                       <span className={`badge ${free ? "badge-ok" : ifNeeded ? "badge-brand" : "badge-muted"}`}>
-                        {free ? "Free" : ifNeeded ? "If needed" : "Busy"}
+                        {free ? t("Free") : ifNeeded ? t("If needed") : t("Busy")}
                       </span>
                     </li>
                   );
@@ -418,7 +419,7 @@ function Participate() {
           )}
 
           <div className="card side-card">
-            <div className="eyebrow">Best 1-hour slot so far</div>
+            <div className="eyebrow">{t("Best 1-hour slot so far")}</div>
             {best ? (
               <>
                 <div className="side-title">{formatRange(best.startMs, best.endMs, tz)}</div>
@@ -426,18 +427,18 @@ function Participate() {
                   <span style={{ width: `${(best.freeIds.length / Math.max(everyone.length, 1)) * 100}%` }} />
                 </div>
                 <div className="side-sub">
-                  {best.freeIds.length} of {everyone.length} people free
+                  {t("{n} of {total} people free", { n: best.freeIds.length, total: everyone.length })}
                 </div>
               </>
             ) : (
-              <div className="side-sub">No overlap yet. It shows up as people mark their times.</div>
+              <div className="side-sub">{t("No overlap yet. It shows up as people mark their times.")}</div>
             )}
           </div>
 
           <div className="card side-card">
-            <div className="eyebrow">Responded · {everyone.length}</div>
+            <div className="eyebrow">{t("Responded · {n}", { n: everyone.length })}</div>
             {everyone.length === 0 ? (
-              <div className="side-sub">Nobody yet. You could be first.</div>
+              <div className="side-sub">{t("Nobody yet. You could be first.")}</div>
             ) : (
               <ul className="people">
                 {everyone.map((p) => (

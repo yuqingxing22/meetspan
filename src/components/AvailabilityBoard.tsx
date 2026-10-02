@@ -4,6 +4,7 @@ import DayList from "./DayList";
 import Heatmap, { heatLevel, type SlotStat } from "./Heatmap";
 import { formatSlot } from "../lib/slots";
 import type { Participant } from "../lib/types";
+import { t } from "../lib/i18n";
 
 interface Props {
   slots: number[];
@@ -115,7 +116,7 @@ export default function AvailabilityBoard({
     return m;
   }, [othersFree, othersTotal]);
 
-  const nameOfWithMe = (id: string) => (id === ME || id === myId ? "You" : nameOf(id));
+  const nameOfWithMe = (id: string) => (id === ME || id === myId ? t("You") : nameOf(id));
 
   // Inspect state: lifted to the parent when it shows its own side panel.
   const focus = onFocusSlot ? focusMs ?? null : ownFocus;
@@ -125,26 +126,29 @@ export default function AvailabilityBoard({
   const hint =
     view === "paint"
       ? othersTotal > 0
-        ? "Click or drag across the grid to mark when you're free. Faint blue shows when others are free."
-        : "Click or drag across the grid to mark when you're free."
+        ? t("Click or drag across the grid to mark when you're free. Faint blue shows when others are free.")
+        : t("Click or drag across the grid to mark when you're free.")
       : total > 0
-      ? `Darker means more people are free. ${total} ${
-          total === 1 ? "person" : "people"
-        } so far. Hover or tap a slot to see who.`
-      : "No responses yet. The overlap fills in as people mark their times.";
+      ? t(
+          total === 1
+            ? "Darker means more people are free. 1 person so far. Hover or tap a slot to see who."
+            : "Darker means more people are free. {n} people so far. Hover or tap a slot to see who.",
+          { n: total }
+        )
+      : t("No responses yet. The overlap fills in as people mark their times.");
 
   return (
     <div className="board">
       <div className="board-toolbar">
         {editable && !paintOnly ? (
-          <div className="seg" role="group" aria-label="View">
+          <div className="seg" role="group" aria-label={t("View")}>
             <button
               type="button"
               className={view === "paint" ? "active" : ""}
               aria-pressed={view === "paint"}
               onClick={() => setMode("paint")}
             >
-              Mark my times
+              {t("Mark my times")}
             </button>
             <button
               type="button"
@@ -152,7 +156,7 @@ export default function AvailabilityBoard({
               aria-pressed={view === "group"}
               onClick={() => setMode("group")}
             >
-              See everyone
+              {t("See everyone")}
             </button>
           </div>
         ) : paintOnly ? (
@@ -164,17 +168,17 @@ export default function AvailabilityBoard({
         {view === "paint" ? (
           <div className="legend">
             <span className="swatch swatch-me" />
-            You're free
+            {t("You're free")}
             {maybe && (
               <>
                 <span className="swatch swatch-maybe" />
-                If needed
+                {t("If needed")}
               </>
             )}
             {othersTotal > 0 && (
               <>
                 <span className="swatch swatch-ghost" />
-                Others free (faint)
+                {t("Others free (faint)")}
               </>
             )}
           </div>
@@ -186,7 +190,7 @@ export default function AvailabilityBoard({
                 <span key={l} className={`h${l}`} />
               ))}
             </span>
-            {total} free
+            {t("{n} free", { n: total })}
           </div>
         )}
       </div>
@@ -197,15 +201,15 @@ export default function AvailabilityBoard({
 
       {view === "paint" && maybe && (
         <div className="brush-row only-wide">
-          <span>Paint as</span>
-          <div className="seg seg-sm" role="group" aria-label="Paint as">
+          <span>{t("Paint as")}</span>
+          <div className="seg seg-sm" role="group" aria-label={t("Paint as")}>
             <button
               type="button"
               className={brush === "yes" ? "active" : ""}
               aria-pressed={brush === "yes"}
               onClick={() => setBrush("yes")}
             >
-              <span className="swatch swatch-me" /> Free
+              <span className="swatch swatch-me" /> {t("Free")}
             </button>
             <button
               type="button"
@@ -213,12 +217,11 @@ export default function AvailabilityBoard({
               aria-pressed={brush === "maybe"}
               onClick={() => setBrush("maybe")}
             >
-              <span className="swatch swatch-maybe" /> If needed
+              <span className="swatch swatch-maybe" /> {t("If needed")}
             </button>
           </div>
           <span className="muted small">
-            “If needed” means possible but not ideal. It's used only when no time
-            works for everyone.
+            {t("“If needed” means possible but not ideal. It's used only when no time works for everyone.")}
           </span>
         </div>
       )}
@@ -268,14 +271,14 @@ export default function AvailabilityBoard({
               {focus !== null && focusStat
                 ? `${formatSlot(focus, tz)}: ${
                     focusStat.available.length
-                      ? `${focusStat.available.map(nameOfWithMe).join(", ")} free`
-                      : "nobody free"
+                      ? t("{names} free", { names: focusStat.available.map(nameOfWithMe).join(", ") })
+                      : t("nobody free")
                   }${
                     focusStat.maybe?.length
-                      ? ` · if needed: ${focusStat.maybe.map(nameOfWithMe).join(", ")}`
+                      ? ` · ${t("if needed: {names}", { names: focusStat.maybe.map(nameOfWithMe).join(", ") })}`
                       : ""
                   }`
-                : "Hover or tap the grid to see who is free at any time."}
+                : t("Hover or tap the grid to see who is free at any time.")}
             </div>
           )}
         </>

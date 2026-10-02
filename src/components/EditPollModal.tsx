@@ -5,6 +5,7 @@ import Icon from "./Icon";
 import { buildSlots, enumerateDateRange } from "../lib/slots";
 import { updatePoll } from "../lib/poll";
 import type { PollMeta } from "../lib/types";
+import { t } from "../lib/i18n";
 
 const WEEKDAYS = [
   { wd: 1, label: "Mon" },
@@ -17,7 +18,7 @@ const WEEKDAYS = [
 ];
 
 function hourLabel(h: number): string {
-  if (h === 24) return "12:00 AM (next day)";
+  if (h === 24) return t("12:00 AM (next day)");
   return DateTime.fromObject({ hour: h % 24 }).toFormat("h:mm a");
 }
 
@@ -94,32 +95,32 @@ export default function EditPollModal({ pollId, meta, responses, onClose, onSave
         );
       }
       await updatePoll(pollId, patch);
-      onSaved("Poll updated");
+      onSaved(t("Poll updated"));
       onClose();
     } catch (e) {
-      setError(`Couldn't save: ${(e as Error).message}`);
+      setError(t("Couldn't save: {msg}", { msg: (e as Error).message }));
       setBusy(false);
     }
   }
 
   return (
     <div className="modal-backdrop" onClick={onClose}>
-      <div className="modal" role="dialog" aria-label="Edit poll" onClick={(e) => e.stopPropagation()}>
+      <div className="modal" role="dialog" aria-label={t("Edit poll")} onClick={(e) => e.stopPropagation()}>
         <div className="modal-head">
-          <h2>Edit poll</h2>
+          <h2>{t("Edit poll")}</h2>
           <button type="button" className="btn btn-ghost btn-sm" onClick={onClose}>
-            <Icon name="x" /> Close
+            <Icon name="x" /> {t("Close")}
           </button>
         </div>
 
         <label className="field">
-          <span className="field-label">Meeting name</span>
+          <span className="field-label">{t("Meeting name")}</span>
           <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} />
         </label>
 
         <div className="row">
           <label className="field">
-            <span className="field-label">Respond by (optional)</span>
+            <span className="field-label">{t("Respond by (optional)")}</span>
             <input
               type="date"
               value={deadline}
@@ -128,23 +129,22 @@ export default function EditPollModal({ pollId, meta, responses, onClose, onSave
             />
           </label>
           <label className="field">
-            <span className="field-label">Who should respond? (optional)</span>
+            <span className="field-label">{t("Who should respond? (optional)")}</span>
             <textarea
               rows={3}
               value={expected}
-              placeholder={"One name per line, e.g.\nAlex\nMei"}
+              placeholder={t("One name per line, e.g.\nAlex\nMei")}
               onChange={(e) => setExpected(e.target.value)}
             />
           </label>
         </div>
         <p className="hint">
-          With names listed, the dashboard shows who hasn't responded yet (matched
-          by the name they enter).
+          {t("With names listed, the dashboard shows who hasn't responded yet (matched by the name they enter).")}
         </p>
 
         <div className="divider" />
 
-        <div className="field-label">{weekly ? "Days of the week" : "Days"}</div>
+        <div className="field-label">{weekly ? t("Days of the week") : t("Days")}</div>
         {weekly ? (
           <div className="weekday-tiles edit-weekdays">
             {WEEKDAYS.map((w) => {
@@ -159,7 +159,7 @@ export default function EditPollModal({ pollId, meta, responses, onClose, onSave
                     setWeekdays((x) => (x.includes(w.wd) ? x.filter((y) => y !== w.wd) : [...x, w.wd]))
                   }
                 >
-                  <span>{w.label}</span>
+                  <span>{t(w.label)}</span>
                   <span className="tile-dot" />
                 </button>
               );
@@ -169,14 +169,14 @@ export default function EditPollModal({ pollId, meta, responses, onClose, onSave
           <div className="daypick">
             <Calendar selectedDates={new Set(dates)} onDayClick={pickDay} />
             <div className="daypick-side">
-              <span className="field-label">Selected · {dates.length}</span>
+              <span className="field-label">{t("Selected · {n}", { n: dates.length })}</span>
               <div className="chips">
                 {[...dates].sort().map((d) => (
                   <button
                     type="button"
                     key={d}
                     className="chip on"
-                    aria-label={`Remove ${d}`}
+                    aria-label={t("Remove {name}", { name: d })}
                     onClick={() => setDates((x) => x.filter((y) => y !== d))}
                   >
                     {DateTime.fromISO(d).toFormat("ccc, LLL d")} <Icon name="x" size={14} />
@@ -189,7 +189,7 @@ export default function EditPollModal({ pollId, meta, responses, onClose, onSave
 
         <div className="row edit-hours">
           <label className="field">
-            <span className="field-label">From</span>
+            <span className="field-label">{t("From")}</span>
             <select value={startHour} onChange={(e) => setStartHour(Number(e.target.value))}>
               {Array.from({ length: 24 }, (_, h) => (
                 <option key={h} value={h}>
@@ -199,7 +199,7 @@ export default function EditPollModal({ pollId, meta, responses, onClose, onSave
             </select>
           </label>
           <label className="field">
-            <span className="field-label">To</span>
+            <span className="field-label">{t("To")}</span>
             <select value={endHour} onChange={(e) => setEndHour(Number(e.target.value))}>
               {Array.from({ length: 24 }, (_, i) => i + 1).map((h) => (
                 <option key={h} value={h}>
@@ -209,22 +209,25 @@ export default function EditPollModal({ pollId, meta, responses, onClose, onSave
             </select>
           </label>
         </div>
-        {badRange && <p className="error-text">The end time needs to be after the start time.</p>}
+        {badRange && <p className="error-text">{t("The end time needs to be after the start time.")}</p>}
         {timesChanged && responses > 0 && (
           <div className="notice notice-warn">
-            {responses} {responses === 1 ? "person has" : "people have"} already answered. Their
-            marks stay for times you keep; times you remove are dropped, and new times start
-            empty, so you may want to ask them to check again.
+            {t(
+              responses === 1
+                ? "1 person has already answered. Their marks stay for times you keep; times you remove are dropped, and new times start empty, so you may want to ask them to check again."
+                : "{n} people have already answered. Their marks stay for times you keep; times you remove are dropped, and new times start empty, so you may want to ask them to check again.",
+              { n: responses }
+            )}
           </div>
         )}
         {error && <p className="error-text">{error}</p>}
 
         <div className="btn-row modal-actions">
           <button type="button" className="btn btn-ghost" onClick={onClose}>
-            Cancel
+            {t("Cancel")}
           </button>
           <button type="button" className="btn btn-primary" disabled={!canSave} onClick={save}>
-            {busy ? "Saving…" : "Save changes"}
+            {busy ? t("Saving…") : t("Save changes")}
           </button>
         </div>
       </div>

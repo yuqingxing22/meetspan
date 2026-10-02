@@ -7,6 +7,8 @@ import {
   type TzGroup,
   type TzInfo,
 } from "../lib/slots";
+import Icon from "./Icon";
+import { t } from "../lib/i18n";
 
 interface Props {
   value: string;
@@ -156,14 +158,14 @@ export default function TimezonePicker({ value, onChange, label }: Props) {
           onKeyDown={onKeyDown}
         />
         <span className="tz-caret" aria-hidden>
-          ▾
+          <Icon name="chevronDown" />
         </span>
         {open && (
           <ul className="tz-list" role="listbox" ref={listRef}>
             {rows.map((row, i) =>
               row.kind === "header" ? (
                 <li key={row.key} className="tz-group" role="presentation">
-                  {row.label}
+                  {t(row.label)}
                 </li>
               ) : (
                 <li
@@ -190,7 +192,7 @@ export default function TimezonePicker({ value, onChange, label }: Props) {
               )
             )}
             {rows.length === 0 && (
-              <li className="tz-empty">No matching timezone</li>
+              <li className="tz-empty">{t("No matching timezone")}</li>
             )}
           </ul>
         )}

@@ -4,6 +4,7 @@ import { formatRange } from "../lib/slots";
 import { windowComfort, type Comfort } from "../lib/comfort";
 import type { ComputeResult, Session } from "../lib/overlap";
 import type { Participant, PollMeta } from "../lib/types";
+import { joinNames, t } from "../lib/i18n";
 
 interface Props {
   result: ComputeResult;
@@ -67,8 +68,8 @@ function OptionCard({
       <div className="option-top">
         <span className={`badge badge-${tone}`}>{label}</span>
         <span className="muted small">
-          {minFree} of {total} free
-          {sessions.length > 1 ? ` · ${sessions.length} sessions` : ""}
+          {t("{n} of {total} free", { n: minFree, total })}
+          {sessions.length > 1 ? ` · ${t("{n} sessions", { n: sessions.length })}` : ""}
         </span>
       </div>
       {sessions.map((s, i) => (
@@ -94,9 +95,9 @@ function OptionCard({
               className={`chip chip-static${!ok ? " chip-miss" : c === "night" ? " chip-night" : c === "edge" ? " chip-edge" : ""}`}
             >
               {ok && c === "night" && <Icon name="moon" size={12} />}
-              {meta.requiredIds?.includes(p.id) && <span className="req-star" aria-label="must attend">★</span>}
+              {meta.requiredIds?.includes(p.id) && <span className="req-star" aria-label={t("must attend")}>★</span>}
               {p.codename} · {local.toFormat("h:mm a ccc")}
-              {stretched.includes(p.id) && <span className="chip-flag">if needed</span>}
+              {stretched.includes(p.id) && <span className="chip-flag">{t("if needed")}</span>}
             </span>
           );
         })}
@@ -105,25 +106,31 @@ function OptionCard({
         <p className="comfort-text">
           {nightNames.length > 0 && (
             <span className="comfort comfort-night">
-              <Icon name="moon" size={13} /> Late night for {nightNames.join(" and ")}
+              <Icon name="moon" size={13} /> {t("Late night for {names}", { names: joinNames(nightNames) })}
             </span>
           )}
           {edgeNames.length > 0 && (
             <span className="comfort comfort-edge">
-              Outside work hours for {edgeNames.join(" and ")}
+              {t("Outside work hours for {names}", { names: joinNames(edgeNames) })}
             </span>
           )}
         </p>
       )}
       {stretched.length > 0 && (
         <p className="option-detail">
-          {stretched.map(nameOf).join(" and ")} would use {stretched.length === 1 ? "a time" : "times"} marked “if needed”.
+          {t(
+            stretched.length === 1
+              ? "{names} would use a time marked “if needed”."
+              : "{names} would use times marked “if needed”.",
+            { names: joinNames(stretched.map(nameOf)) }
+          )}
         </p>
       )}
       {missing.length > 0 && (
         <p className="miss-text">
-          {missing.map(nameOf).join(" and ")} can't make{" "}
-          {sessions.length > 1 ? "every session" : "it"}
+          {t(sessions.length > 1 ? "{names} can't make every session" : "{names} can't make it", {
+            names: joinNames(missing.map(nameOf)),
+          })}
         </p>
       )}
       <button
@@ -133,12 +140,12 @@ function OptionCard({
       >
         {chosen ? (
           <>
-            <Icon name="check" /> Picked
+            <Icon name="check" /> {t("Picked")}
           </>
         ) : sessions.length > 1 ? (
-          "Pick these times"
+          t("Pick these times")
         ) : (
-          "Pick this time"
+          t("Pick this time")
         )}
       </button>
     </div>
@@ -164,15 +171,14 @@ export default function ResultPanel({
         <OptionCard
           {...common}
           sessions={result.sessions}
-          label="Recommended · everyone can make it"
+          label={t("Recommended · everyone can make it")}
           tone="ok"
           primary
           chosen={isChosen(result.sessions)}
         />
       ) : (
         <div className="notice notice-warn">
-          No single time fits everyone for the full meeting. Here are the closest
-          options.
+          {t("No single time fits everyone for the full meeting. Here are the closest options.")}
         </div>
       )}
 

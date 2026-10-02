@@ -6,6 +6,7 @@ import { MYPOLLS_EVENT, listMyPolls, removeMyPoll, type MyPoll } from "../lib/ad
 import { listPollsByOrganizer } from "../lib/poll";
 import { isFirebaseConfigured } from "../firebase";
 import { useAuthState } from "../lib/useAuthState";
+import { t } from "../lib/i18n";
 
 /**
  * Topbar "Your polls" dropdown. Merges polls created in this browser (which
@@ -94,12 +95,12 @@ export default function YourPollsMenu() {
         onClick={() => setOpen((o) => !o)}
       >
         <Icon name="calendar" />
-        <span className="hide-narrow">Your polls</span>
+        <span className="hide-narrow">{t("Your polls")}</span>
         <span className="count-badge">{polls.length}</span>
       </button>
       {open && (
         <div className="menu menu-wide">
-          <div className="menu-title">Your polls</div>
+          <div className="menu-title">{t("Your polls")}</div>
           {polls.map((p) => (
             <div key={p.pollId} className="mypoll">
               <button
@@ -110,7 +111,7 @@ export default function YourPollsMenu() {
                   nav(p.token ? `/o/${p.pollId}?k=${p.token}` : `/o/${p.pollId}`);
                 }}
               >
-                <span className="mypoll-title">{p.title || "Untitled poll"}</span>
+                <span className="mypoll-title">{p.title || t("Untitled poll")}</span>
                 <span className="mypoll-date">
                   {DateTime.fromMillis(p.createdAt).toFormat("LLL d, yyyy")}
                 </span>
@@ -119,8 +120,8 @@ export default function YourPollsMenu() {
                 <button
                   type="button"
                   className="icon-btn icon-btn-quiet"
-                  aria-label={`Remove ${p.title || "Untitled poll"} from this list`}
-                  title="Remove from this list (doesn't delete the poll)"
+                  aria-label={t("Remove {name} from this list", { name: p.title || t("Untitled poll") })}
+                  title={t("Remove from this list (doesn't delete the poll)")}
                   onClick={() => removeMyPoll(p.pollId)}
                 >
                   <Icon name="x" size={14} />
@@ -129,8 +130,9 @@ export default function YourPollsMenu() {
             </div>
           ))}
           <p className="menu-foot">
-            Saved in this browser{uid ? " and under your account" : ""}. Removing
-            one here doesn't delete the poll.
+            {uid
+              ? t("Saved in this browser and under your account. Removing one here doesn't delete the poll.")
+              : t("Saved in this browser. Removing one here doesn't delete the poll.")}
           </p>
         </div>
       )}

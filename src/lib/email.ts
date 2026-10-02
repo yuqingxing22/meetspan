@@ -1,4 +1,5 @@
 import { formatRange } from "./slots";
+import { getLang, withLang, type Lang } from "./i18n";
 import type { Session } from "./overlap";
 import type { MeetingType, Participant, PollMeta } from "./types";
 
@@ -10,6 +11,8 @@ export interface EmailInput {
   type: MeetingType;
   sessions: Session[];
   participants: Participant[];
+  /** Email language; defaults to the interface language. */
+  lang?: Lang;
 }
 
 export interface GeneratedEmail {
@@ -17,19 +20,27 @@ export interface GeneratedEmail {
   body: string;
 }
 
-function freqLabel(f: number): string {
+function freqLabel(f: number, lang: Lang): string {
+  if (lang === "zh") return `每周 ${Math.max(1, f)} 次`;
   if (f <= 1) return "once a week";
   if (f === 2) return "twice a week";
   return `${f}× a week`;
 }
 
 /** Sessions listed in the organizer's timezone, with each attendee's local time. */
-function sessionBlock(input: EmailInput): string {
+function sessionBlock(input: EmailInput, lang: Lang): string {
   const { meta, sessions, participants } = input;
   const lines: string[] = [];
   sessions.forEach((s, i) => {
-    const label = sessions.length > 1 ? `Session ${i + 1}` : "Time";
-    lines.push(`  ${label}: ${formatRange(s.startMs, s.endMs, meta.organizerTz)}`);
+    const label =
+      lang === "zh"
+        ? sessions.length > 1
+          ? `第 ${i + 1} 次`
+          : "时间"
+        : sessions.length > 1
+        ? `Session ${i + 1}`
+        : "Time";
+    lines.push(`  ${label}${lang === "zh" ? "：" : ": "}${formatRange(s.startMs, s.endMs, meta.organizerTz)}`);
     // Attendees who are free for this window, in their own timezone.
     const free = participants.filter((p) => s.freeIds.includes(p.id));
     const shown = free.length ? free : participants;
@@ -43,12 +54,48 @@ function sessionBlock(input: EmailInput): string {
   return lines.join("\n").trimEnd();
 }
 
-function flavor(type: MeetingType): {
+interface Flavor {
   subjectTag: string;
   intro: string;
   outro: string;
   extra: string;
-} {
+}
+
+function flavorZh(type: MeetingType): Flavor {
+  switch (type) {
+    case "team":
+      return {
+        subjectTag: "团队例会",
+        intro: "感谢大家提供空闲时间。根据大家重叠的时间，我们的定期例会安排如下：",
+        extra: "议程：[填写议程]\n会议链接：[填写视频会议链接]\n请把时间加到日历里，方便我们保持节奏。",
+        outro: "到时见，",
+      };
+    case "one_on_one":
+      return {
+        // Neutral and polite either way (student ↔ advisor, colleague ↔ colleague).
+        subjectTag: "一对一",
+        intro: "感谢您提供空闲时间，以下时间我们都方便：",
+        extra: "讨论内容：[填写话题]\n会议链接：[填写视频会议链接]",
+        outro: "如时间有变，请随时告知。谢谢！",
+      };
+    case "study":
+      return {
+        subjectTag: "学习小组",
+        intro: "谢谢大家提供空闲时间。我们的学习小组 / 研讨会时间定在：",
+        extra: "本次重点：[填写阅读材料 / 主题]\n地点 / 链接：[填写教室或视频会议链接]\n欢迎带着问题来！",
+        outro: "期待与大家一起讨论，",
+      };
+    case "interview":
+      return {
+        subjectTag: "面试",
+        intro: "感谢您的配合。现确认通话时间如下：",
+        extra: "会议链接：[填写视频会议链接]\n议程：[填写议程 / 需要准备的内容]\n如需改期，请尽早告知。",
+        outro: "期待与您交流，谢谢！",
+      };
+  }
+}
+
+function flavor(type: MeetingType): Flavor {
   switch (type) {
     case "team":
       return {
@@ -90,12 +137,18 @@ function flavor(type: MeetingType): {
 }
 
 export function generateEmail(input: EmailInput): GeneratedEmail {
+  const lang = input.lang ?? getLang();
+  // Dates in the email follow the email's language, not the interface's.
+  return withLang(lang, () => (lang === "zh" ? generateZh(input) : generateEn(input)));
+}
+
+function generateEn(input: EmailInput): GeneratedEmail {
   const { meetingName, durationMin, sessionsPerWeek, type, meta, sessions } =
     input;
   const f = flavor(type);
   const cadence =
     sessions.length > 1
-      ? `${durationMin} min each, ${freqLabel(sessionsPerWeek)}`
+      ? `${durationMin} min each, ${freqLabel(sessionsPerWeek, "en")}`
       : `${durationMin} min`;
 
   const subject = `${meetingName} — proposed time${
@@ -110,7 +163,7 @@ export function generateEmail(input: EmailInput): GeneratedEmail {
     `Meeting: ${meetingName}`,
     `Duration: ${cadence}`,
     "",
-    sessionBlock(input),
+    sessionBlock(input, "en"),
     "",
     f.extra,
     "",
@@ -118,6 +171,39 @@ export function generateEmail(input: EmailInput): GeneratedEmail {
     "",
     f.outro,
     meta.organizerName || "[your name]",
+  ].join("\n");
+
+  return { subject, body };
+}
+
+function generateZh(input: EmailInput): GeneratedEmail {
+  const { meetingName, durationMin, sessionsPerWeek, type, meta, sessions } = input;
+  const f = flavorZh(type);
+  const cadence =
+    sessions.length > 1
+      ? `每次 ${durationMin} 分钟，${freqLabel(sessionsPerWeek, "zh")}`
+      : `${durationMin} 分钟`;
+
+  const subject = `${meetingName}：拟定时间（${f.subjectTag}）`;
+
+  const body = [
+    type === "one_on_one" || type === "interview" ? "您好，" : "大家好，",
+    "",
+    f.intro,
+    "",
+    `会议：${meetingName}`,
+    `时长：${cadence}`,
+    "",
+    sessionBlock(input, "zh"),
+    "",
+    f.extra,
+    "",
+    type === "one_on_one" || type === "interview"
+      ? "如果这个时间合适，请回复确认；如需调整也请告知。"
+      : "如果这个时间可以，请回复确认；如需调整也请告诉我。",
+    "",
+    f.outro,
+    meta.organizerName || "[你的名字]",
   ].join("\n");
 
   return { subject, body };

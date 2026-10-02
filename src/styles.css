@@ -499,8 +499,18 @@ textarea {
   color: var(--text);
   transition: border-color 0.12s ease, box-shadow 0.12s ease;
 }
+/* One chevron for every dropdown, 14px in from the edge (the native arrow
+   sits nearly on the border and differs per browser). */
 select {
-  padding: 0 10px;
+  appearance: none;
+  -webkit-appearance: none;
+  padding: 0 40px 0 14px;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b6f7a' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 16px 16px;
+  text-overflow: ellipsis;
+  cursor: pointer;
 }
 textarea {
   height: auto;
@@ -542,15 +552,16 @@ div.field.tz-field {
   position: relative;
 }
 .tz-input {
-  padding-right: 30px; /* room for the caret */
+  padding-right: 40px !important; /* room for the chevron */
+  text-overflow: ellipsis;
 }
 .tz-caret {
   position: absolute;
-  right: 12px;
+  right: 14px;
   top: 50%;
   transform: translateY(-50%);
+  display: flex;
   color: var(--text-faint);
-  font-size: 0.7rem;
   pointer-events: none;
 }
 .tz-list {
@@ -2557,6 +2568,16 @@ div.field.tz-field {
   font-weight: 600;
   letter-spacing: -0.02em;
   color: var(--ink);
+}
+.email-lang {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.email-lang .field-label {
+  margin: 0;
 }
 .email-preview {
   font-family: var(--mono);

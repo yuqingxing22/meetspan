@@ -1,6 +1,7 @@
 import { useRef } from "react";
 import { QRCodeCanvas } from "qrcode.react";
 import Icon from "./Icon";
+import { t } from "../lib/i18n";
 
 /**
  * QR code for the invite link, e.g. to show on a slide or let someone across
@@ -32,13 +33,13 @@ export default function InviteQR({ url, title }: { url: string; title?: string }
           fgColor="#14151A"
           bgColor="#FFFFFF"
           level="M"
-          title="QR code for the invite link"
+          title={t("QR code for the invite link")}
         />
       </div>
       <div className="qr-side">
-        <p>Scan to open the invite on a phone. Handy for a slide, a printout or someone in the room.</p>
+        <p>{t("Scan to open the invite on a phone. Handy for a slide, a printout or someone in the room.")}</p>
         <button type="button" className="btn btn-sm" onClick={download}>
-          <Icon name="download" /> Download PNG
+          <Icon name="download" /> {t("Download PNG")}
         </button>
       </div>
     </div>

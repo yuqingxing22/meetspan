@@ -1,4 +1,5 @@
 import { buildGridModel } from "../lib/slots";
+import { t } from "../lib/i18n";
 
 export interface SlotStat {
   count: number;
@@ -124,8 +125,8 @@ export default function Heatmap({
                     key={c.key}
                     data-slot={ms}
                     className={cls}
-                    title={`${stat.count}/${total} free${names ? ` — ${names}` : ""}${
-                      maybeNames ? ` · if needed: ${maybeNames}` : ""
+                    title={`${t("{n}/{total} free", { n: stat.count, total })}${names ? ` — ${names}` : ""}${
+                      maybeNames ? ` · ${t("if needed: {names}", { names: maybeNames })}` : ""
                     }`}
                   />
                 );

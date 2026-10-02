@@ -8,6 +8,7 @@ import {
   signOutToAnonymous,
   subscribeUser,
 } from "../firebase";
+import { t } from "../lib/i18n";
 
 /**
  * Topbar account control. Everyone starts anonymous (no sign-in needed); this
@@ -34,7 +35,7 @@ export default function AccountMenu() {
         code !== "auth/popup-closed-by-user" &&
         code !== "auth/cancelled-popup-request"
       ) {
-        setErr(code || "Sign-in failed");
+        setErr(code || t("Sign-in failed"));
       }
     } finally {
       setBusy(false);
@@ -49,23 +50,23 @@ export default function AccountMenu() {
           className="btn btn-sm"
           disabled={busy}
           onClick={() => run(signInWithGoogle)}
-          title="Optional: keep your polls across devices"
-          aria-label="Sign in with Google"
+          title={t("Optional: keep your polls across devices")}
+          aria-label={t("Sign in with Google")}
         >
           <Icon name="user" />
-          <span className="hide-narrow">Sign in with Google</span>
+          <span className="hide-narrow">{t("Sign in with Google")}</span>
         </button>
         {err && <span className="account-err">{err}</span>}
       </div>
     );
   }
 
-  const name = user.displayName || user.email || "Signed in";
+  const name = user.displayName || user.email || t("Signed in");
   return (
     <div className="account">
-      <Link to="/schedule" className="btn btn-sm" aria-label="My schedule">
+      <Link to="/schedule" className="btn btn-sm" aria-label={t("My schedule")}>
         <Icon name="clock" />
-        <span className="hide-narrow">My schedule</span>
+        <span className="hide-narrow">{t("My schedule")}</span>
       </Link>
       {user.photoURL ? (
         <img
@@ -90,7 +91,7 @@ export default function AccountMenu() {
         disabled={busy}
         onClick={() => run(signOutToAnonymous)}
       >
-        Sign out
+        {t("Sign out")}
       </button>
       {err && <span className="account-err">{err}</span>}
     </div>

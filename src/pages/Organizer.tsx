@@ -38,6 +38,7 @@ import { copyText, useToast } from "../lib/useToast";
 import { MEETING_TYPES } from "../lib/types";
 import type { MeetingType, Participant, ParticipantEmail, PollMeta } from "../lib/types";
 import waitArt from "../assets/illustrations/wait-in-line.svg";
+import { joinNames, t } from "../lib/i18n";
 
 const DURATIONS = [
   { min: 30, label: "30 min" },
@@ -49,7 +50,7 @@ const DURATIONS = [
 /** Setup progress shown beside the organizer's "my times" view. */
 function SetupRail({ hasMine, onDashboard }: { hasMine: boolean; onDashboard: () => void }) {
   return (
-    <nav className="setup-rail" aria-label="Setup steps">
+    <nav className="setup-rail" aria-label={t("Setup steps")}>
       <ol>
         <li className="done">
           <span className="step-dot">
@@ -57,10 +58,10 @@ function SetupRail({ hasMine, onDashboard }: { hasMine: boolean; onDashboard: ()
           </span>
           <span className="step-text">
             <b>
-              <span className="hide-narrow">Share the invite link</span>
-              <span className="only-narrow-inline">Shared</span>
+              <span className="hide-narrow">{t("Share the invite link")}</span>
+              <span className="only-narrow-inline">{t("Shared")}</span>
             </b>
-            <span>Done when you created the poll. Copy it again from the top right any time.</span>
+            <span>{t("Done when you created the poll. Copy it again from the top right any time.")}</span>
           </span>
         </li>
         <li className={`current${hasMine ? " done" : ""}`} aria-current="step">
@@ -69,21 +70,21 @@ function SetupRail({ hasMine, onDashboard }: { hasMine: boolean; onDashboard: ()
           </span>
           <span className="step-text">
             <b>
-              <span className="hide-narrow">Add your own times</span>
-              <span className="only-narrow-inline">My times</span>
+              <span className="hide-narrow">{t("Add your own times")}</span>
+              <span className="only-narrow-inline">{t("My times")}</span>
             </b>
-            <span>{hasMine ? "Saved. Keep adjusting until it's right." : "Optional. Mark them in the grid."}</span>
+            <span>{hasMine ? t("Saved. Keep adjusting until it's right.") : t("Optional. Mark them in the grid.")}</span>
           </span>
         </li>
         <li>
           <span className="step-dot">3</span>
           <span className="step-text">
             <button type="button" className="rail-link" onClick={onDashboard}>
-              <span className="hide-narrow">See the dashboard</span>
-              <span className="only-narrow-inline">Dashboard</span>
+              <span className="hide-narrow">{t("See the dashboard")}</span>
+              <span className="only-narrow-inline">{t("Dashboard")}</span>
               <Icon name="arrowRight" size={14} />
             </button>
-            <span>Best times and everyone's overlap. It fills in as people respond.</span>
+            <span>{t("Best times and everyone's overlap. It fills in as people respond.")}</span>
           </span>
         </li>
       </ol>
@@ -217,7 +218,7 @@ function Organizer() {
       setMyId(id);
       availInited.current = true;
     } catch (e) {
-      show(`Save failed: ${(e as Error).message}`);
+      show(t("Save failed: {msg}", { msg: (e as Error).message }));
     } finally {
       setSavingAvail(false);
     }
@@ -281,25 +282,24 @@ function Organizer() {
   }, [durationMin]);
 
   if (!isFirebaseConfigured) {
-    return <p className="muted">Firebase isn't configured yet (see README).</p>;
+    return <p className="muted">{t("Firebase isn't configured yet (see README).")}</p>;
   }
   if (auth === "error")
     return (
       <div className="card state-card">
-        <h2>Couldn't sign in</h2>
+        <h2>{t("Couldn't sign in")}</h2>
         <p className="hint">
-          Enable Anonymous sign-in in your Firebase console (Authentication →
-          Sign-in method → Anonymous), then reload.
+          {t("Enable Anonymous sign-in in your Firebase console (Authentication → Sign-in method → Anonymous), then reload.")}
         </p>
       </div>
     );
-  if (auth === "loading") return <p className="muted">Signing you in…</p>;
-  if (meta === undefined) return <p className="muted">Loading…</p>;
+  if (auth === "loading") return <p className="muted">{t("Signing you in…")}</p>;
+  if (meta === undefined) return <p className="muted">{t("Loading…")}</p>;
   if (meta === null)
     return (
       <div className="card state-card">
-        <h2>Poll not found</h2>
-        <p className="hint">This link may be wrong or the poll was removed.</p>
+        <h2>{t("Poll not found")}</h2>
+        <p className="hint">{t("This link may be wrong or the poll was removed.")}</p>
       </div>
     );
 
@@ -382,7 +382,7 @@ function Organizer() {
     setParams(next);
     window.scrollTo({ top: 0 });
   }
-  const saveLabel = savingAvail || availDirty ? "Saving…" : myId && mySelected.size > 0 ? "Your times are saved" : "";
+  const saveLabel = savingAvail || availDirty ? t("Saving…") : myId && mySelected.size > 0 ? t("Your times are saved") : "";
   const zone = tzInfo(meta.organizerTz);
   const win = meta.dailyWindow;
   const hoursLabel = `${DateTime.fromObject({ hour: win.startHour % 24 }).toFormat("h a")} – ${DateTime.fromObject({
@@ -425,7 +425,7 @@ function Organizer() {
       ? requiredIds.filter((x) => x !== id)
       : [...requiredIds, id];
     updatePoll(pollId, { requiredIds: next }).catch((e) =>
-      show(`Couldn't update: ${(e as Error).message}`)
+      show(t("Couldn't update: {msg}", { msg: (e as Error).message }))
     );
   }
 
@@ -433,15 +433,15 @@ function Organizer() {
     participants.length > 0 || waitingOn.length > 0 ? (
       <div className="card people-card">
         <div className="results-head">
-          <h2>People</h2>
+          <h2>{t("People")}</h2>
           {(meta.expected?.length ?? 0) > 0 && (
             <span className="muted small">
-              {meta.expected!.length - waitingOn.length} of {meta.expected!.length} expected
+              {t("{n} of {total} expected", { n: meta.expected!.length - waitingOn.length, total: meta.expected!.length })}
             </span>
           )}
         </div>
         {canEdit && participants.length > 1 && (
-          <p className="hint">Mark who must attend. Suggested times will always include them.</p>
+          <p className="hint">{t("Mark who must attend. Suggested times will always include them.")}</p>
         )}
         <ul className="people">
           {participants.map((p) => {
@@ -462,10 +462,10 @@ function Organizer() {
                     aria-pressed={req}
                     onClick={() => toggleRequired(p.id)}
                   >
-                    {req ? "Must attend" : "Optional"}
+                    {req ? t("Must attend") : t("Optional")}
                   </button>
                 ) : (
-                  req && <span className="badge badge-brand">Must attend</span>
+                  req && <span className="badge badge-brand">{t("Must attend")}</span>
                 )}
               </li>
             );
@@ -473,7 +473,7 @@ function Organizer() {
         </ul>
         {waitingOn.length > 0 && (
           <div className="waiting-on">
-            <span className="field-label">Still waiting on</span>
+            <span className="field-label">{t("Still waiting on")}</span>
             <div className="chips chips-sm">
               {waitingOn.map((n) => (
                 <span key={n} className="chip chip-static">
@@ -495,22 +495,23 @@ function Organizer() {
       <div className="page-head page-head-row page-head-sticky">
         <div>
           <div className="title-row">
-            <h1 className="page-title">{meta.title || "Meeting poll"}</h1>
+            <h1 className="page-title">{meta.title || t("Meeting poll")}</h1>
             <span className={`status-pill ${open ? "ok" : "muted"}`}>
               <span className="dot" />
-              {open ? "Collecting responses" : "Closed"}
+              {open ? t("Collecting responses") : t("Closed")}
             </span>
           </div>
           <p className="page-sub">
             {datesLabel}
             {datesLabel ? " · " : ""}
-            {hoursLabel} · Your timezone: {zone.city} ({zone.abbr})
+            {hoursLabel} · {t("Your timezone: {zone}", { zone: `${zone.city} (${zone.abbr})` })}
             {meta.deadline && (
               <>
                 {" · "}
                 <span className={deadlinePassed ? "deadline passed" : "deadline"}>
-                  {deadlinePassed ? "Deadline passed " : "Respond by "}
-                  {DateTime.fromISO(meta.deadline).toFormat("ccc, LLL d")}
+                  {t(deadlinePassed ? "Deadline passed {date}" : "Respond by {date}", {
+                    date: DateTime.fromISO(meta.deadline).toFormat("ccc, LLL d"),
+                  })}
                 </span>
               </>
             )}
@@ -521,16 +522,16 @@ function Organizer() {
             type="button"
             className={`btn ${copied ? "btn-success" : ""}`}
             onClick={copyInvite}
-            aria-label="Copy invite link"
+            aria-label={t("Copy invite link")}
           >
             <Icon name={copied ? "check" : "copy"} />
-            <span className="hide-narrow">{copied ? "Copied" : "Copy invite link"}</span>
+            <span className="hide-narrow">{copied ? t("Copied") : t("Copy invite link")}</span>
           </button>
           <div className="menu-root" ref={qrRef}>
             <button
               type="button"
               className="icon-btn icon-btn-lg"
-              aria-label="Show invite QR code"
+              aria-label={t("Show invite QR code")}
               aria-expanded={qrOpen}
               onClick={() => setQrOpen((o) => !o)}
             >
@@ -550,7 +551,7 @@ function Organizer() {
               <button
                 type="button"
                 className="icon-btn icon-btn-lg"
-                aria-label="More actions"
+                aria-label={t("More actions")}
                 aria-expanded={menuOpen}
                 onClick={() => setMenuOpen((o) => !o)}
               >
@@ -566,7 +567,7 @@ function Organizer() {
                       setEditOpen(true);
                     }}
                   >
-                    Edit poll (name, deadline, days, hours)
+                    {t("Edit poll (name, deadline, days, hours)")}
                   </button>
                   <button
                     type="button"
@@ -574,11 +575,11 @@ function Organizer() {
                     onClick={() => {
                       setMenuOpen(false);
                       (open ? closePoll(pollId) : reopenPoll(pollId)).catch((e) =>
-                        show(`Couldn't update the poll: ${(e as Error).message}`)
+                        show(t("Couldn't update the poll: {msg}", { msg: (e as Error).message }))
                       );
                     }}
                   >
-                    {open ? "Close poll" : "Reopen poll"}
+                    {open ? t("Close poll") : t("Reopen poll")}
                   </button>
                 </div>
               )}
@@ -586,13 +587,13 @@ function Organizer() {
           )}
           {view === "times" ? (
             <button type="button" className="btn btn-primary" onClick={() => go("dashboard")}>
-              Dashboard <Icon name="arrowRight" />
+              {t("Dashboard")} <Icon name="arrowRight" />
             </button>
           ) : (
             canEdit && (
               <button type="button" className="btn btn-dark" onClick={() => go("times")}>
                 <Icon name="calendar" />
-                {mySelected.size > 0 ? "Edit my times" : "Add my times"}
+                {mySelected.size > 0 ? t("Edit my times") : t("Add my times")}
               </button>
             )
           )}
@@ -601,8 +602,7 @@ function Organizer() {
 
       {isAdmin === false && (
         <div className="notice notice-warn">
-          You're viewing without the organizer key, so controls are disabled.
-          Open your private organizer link to manage this poll.
+          {t("You're viewing without the organizer key, so controls are disabled. Open your private organizer link to manage this poll.")}
         </div>
       )}
 
@@ -611,7 +611,7 @@ function Organizer() {
           <SetupRail hasMine={mySelected.size > 0} onDashboard={() => go("dashboard")} />
           <section className="card times-main">
             <div className="results-head">
-              <h2>Your availability</h2>
+              <h2>{t("Your availability")}</h2>
               <span className="muted small" role="status">{saveLabel}</span>
             </div>
             {canEdit && (
@@ -646,10 +646,10 @@ function Organizer() {
             />
             <div className="times-foot">
               <span className="muted small">
-                Your times count toward the overlap, just like everyone else's.
+                {t("Your times count toward the overlap, just like everyone else's.")}
               </span>
               <button type="button" className="btn btn-primary btn-lg" onClick={() => go("dashboard")}>
-                Done, see the dashboard <Icon name="arrowRight" size={18} />
+                {t("Done, see the dashboard")} <Icon name="arrowRight" size={18} />
               </button>
             </div>
           </section>
@@ -660,16 +660,16 @@ function Organizer() {
             <div className="notice notice-info">
               <span>
                 {participants.length > 0
-                  ? "Only your own times so far. The results fill in by themselves as people respond."
-                  : "No responses yet. The results fill in by themselves as people respond."}
+                  ? t("Only your own times so far. The results fill in by themselves as people respond.")
+                  : t("No responses yet. The results fill in by themselves as people respond.")}
               </span>
               <button type="button" className={`btn btn-sm ${copied ? "btn-success" : "btn-primary"}`} onClick={copyInvite}>
               {copied ? (
                 <>
-                  <Icon name="check" /> Copied
+                  <Icon name="check" /> {t("Copied")}
                 </>
               ) : (
-                "Copy invite link"
+                t("Copy invite link")
               )}
             </button>
             </div>
@@ -678,7 +678,7 @@ function Organizer() {
           {participants.length > 0 && (
           <div className="stats">
             <div className="stat">
-              <div className="stat-label">Responses</div>
+              <div className="stat-label">{t("Responses")}</div>
               <div className="stat-row">
                 <span className="stat-value">{participants.length}</span>
                 <span className="avatar-stack">
@@ -696,24 +696,28 @@ function Organizer() {
               </div>
             </div>
             <div className="stat">
-              <div className="stat-label">Best overlap</div>
+              <div className="stat-label">{t("Best overlap")}</div>
               <div className="stat-value">
                 {topStat && topStat.count > 0 ? `${topStat.count} / ${participants.length}` : "–"}
               </div>
               <div className="stat-sub">
                 {topStat && topStat.count > 0
                   ? DateTime.fromMillis(topStat.ms, { zone: meta.organizerTz }).toFormat("ccc, LLL d, h:mm a")
-                  : "No overlap yet"}
+                  : t("No overlap yet")}
               </div>
             </div>
             <div className="stat">
-              <div className="stat-label">Timezones</div>
+              <div className="stat-label">{t("Timezones")}</div>
               <div className="stat-value">{zones.length}</div>
               <div className="stat-sub">
                 {offsets.length > 1
-                  ? `${tzInfo(offsets[0].z).city} to ${tzInfo(offsets[offsets.length - 1].z).city} · ${spanHours} hours apart`
+                  ? t("{a} to {b} · {n} hours apart", {
+                      a: tzInfo(offsets[0].z).city,
+                      b: tzInfo(offsets[offsets.length - 1].z).city,
+                      n: spanHours,
+                    })
                   : zones.length === 1
-                  ? `Everyone in ${tzInfo(zones[0]).city}`
+                  ? t("Everyone in {city}", { city: tzInfo(zones[0]).city })
                   : ""}
               </div>
             </div>
@@ -726,14 +730,13 @@ function Organizer() {
               <Icon name="check" size={18} strokeWidth={2.6} />
             </span>
             <div className="locked-text">
-              <div className="locked-title">Locked in: {lockedLabel}</div>
+              <div className="locked-title">{t("Locked in: {time}", { time: lockedLabel })}</div>
               <div className="locked-sub">
-                Send the final time to everyone who left an email, or download a
-                calendar invite.
+                {t("Send the final time to everyone who left an email, or download a calendar invite.")}
               </div>
             </div>
             <button type="button" className="btn btn-on-dark" onClick={() => setShowEmail(true)}>
-              <Icon name="mail" /> Email &amp; calendar invite
+              <Icon name="mail" /> {t("Email & calendar invite")}
             </button>
           </div>
         )}
@@ -744,8 +747,8 @@ function Organizer() {
                 {peopleCard}
                 <div className="card">
                   <div className="results-head">
-                    <h2>Best times</h2>
-                    <div className="seg seg-sm" role="group" aria-label="Meeting length">
+                    <h2>{t("Best times")}</h2>
+                    <div className="seg seg-sm" role="group" aria-label={t("Meeting length")}>
                       {DURATIONS.map((d) => (
                         <button
                           type="button"
@@ -754,45 +757,45 @@ function Organizer() {
                           aria-pressed={durationMin === d.min}
                           onClick={() => setDurationMin(d.min)}
                         >
-                          {d.label}
+                          {t(d.label)}
                         </button>
                       ))}
                     </div>
                   </div>
                   <p className="hint">
-                    Updates live as people respond. Hover a card to see it on the grid.
+                    {t("Updates live as people respond. Hover a card to see it on the grid.")}
                   </p>
                   <details className="more-settings">
-                    <summary>Meeting details</summary>
+                    <summary>{t("Meeting details")}</summary>
                     <div className="row">
                       <label className="field">
-                        <span className="field-label">Meeting name</span>
+                        <span className="field-label">{t("Meeting name")}</span>
                         <input
                           type="text"
                           value={meetingName}
-                          placeholder="e.g. Research sync"
+                          placeholder={t("e.g. Research sync")}
                           onChange={(e) => setMeetingName(e.target.value)}
                         />
                       </label>
                       <label className="field">
-                        <span className="field-label">Sessions per week</span>
+                        <span className="field-label">{t("Sessions per week")}</span>
                         <select
                           value={sessionsPerWeek}
                           onChange={(e) => setSessionsPerWeek(Number(e.target.value))}
                         >
                           {[1, 2, 3, 4, 5].map((n) => (
                             <option key={n} value={n}>
-                              {n === 1 ? "Once" : `${n} times`}
+                              {n === 1 ? t("Once") : t("{n} times", { n })}
                             </option>
                           ))}
                         </select>
                       </label>
                       <label className="field">
-                        <span className="field-label">Meeting type</span>
+                        <span className="field-label">{t("Meeting type")}</span>
                         <select value={type} onChange={(e) => setType(e.target.value as MeetingType)}>
-                          {MEETING_TYPES.map((t) => (
-                            <option key={t.value} value={t.value}>
-                              {t.label}
+                          {MEETING_TYPES.map((mt) => (
+                            <option key={mt.value} value={mt.value}>
+                              {t(mt.label)}
                             </option>
                           ))}
                         </select>
@@ -805,7 +808,7 @@ function Organizer() {
                   meta={meta}
                   participants={participants}
                   nameOf={nameOf}
-                  onUse={isAdmin ? onUse : () => show("Open your private organizer link to pick a time")}
+                  onUse={isAdmin ? onUse : () => show(t("Open your private organizer link to pick a time"))}
                   onHover={setHoverSessions}
                   chosenStart={lockedSessions[0]?.startMs ?? null}
                 />
@@ -813,13 +816,14 @@ function Organizer() {
                 {(common.length > 0 || result.kind === "ok") && (
                   <div className="card common-card">
                     <div className="results-head">
-                      <h2>All times everyone can make it</h2>
+                      <h2>{t("All times everyone can make it")}</h2>
                       <span className="badge badge-ok">{common.length}</span>
                     </div>
                     <p className="hint">
-                      Every {DURATIONS.find((d) => d.min === durationMin)?.label ?? `${durationMin} min`}{" "}
-                      slot where all {participants.length} people are free, in your
-                      timezone. Tick one or more to lock them in.
+                      {t("Every {d} slot where all {n} people are free, in your timezone. Tick one or more to lock them in.", {
+                        d: t(DURATIONS.find((d) => d.min === durationMin)?.label ?? `${durationMin} min`),
+                        n: participants.length,
+                      })}
                     </p>
                     {commonByDay.map((g) => (
                       <div key={g.day} className="common-day">
@@ -838,7 +842,7 @@ function Organizer() {
                                 key={w.startMs}
                                 className={`chip time-chip${on ? " on" : ""}${locked ? " locked" : ""}`}
                                 aria-pressed={on}
-                                title={night.length ? `Late night for ${night.join(", ")}` : undefined}
+                                title={night.length ? t("Late night for {names}", { names: joinNames(night) }) : undefined}
                                 onClick={() =>
                                   setPicks((p) =>
                                     p.includes(w.startMs)
@@ -854,7 +858,7 @@ function Organizer() {
                                 {(on || locked) && <Icon name="check" size={14} />}
                                 {shortRange(w)}
                                 {night.length > 0 && (
-                                  <span className="chip-night-mark" aria-label={`late night for ${night.join(", ")}`}>
+                                  <span className="chip-night-mark" aria-label={t("Late night for {names}", { names: joinNames(night) })}>
                                     <Icon name="moon" size={12} />
                                     {night.length > 1 ? night.length : ""}
                                   </span>
@@ -871,7 +875,7 @@ function Organizer() {
                       disabled={pickedSessions.length === 0}
                       onClick={() => {
                         if (!isAdmin) {
-                          show("Open your private organizer link to pick a time");
+                          show(t("Open your private organizer link to pick a time"));
                           return;
                         }
                         void onUse(pickedSessions);
@@ -879,10 +883,10 @@ function Organizer() {
                       }}
                     >
                       {pickedSessions.length === 0
-                        ? "Tick the times you want"
-                        : `Pick ${pickedSessions.length} selected ${
-                            pickedSessions.length === 1 ? "time" : "times"
-                          }`}
+                        ? t("Tick the times you want")
+                        : t(pickedSessions.length === 1 ? "Pick 1 selected time" : "Pick {n} selected times", {
+                            n: pickedSessions.length,
+                          })}
                     </button>
                   </div>
                 )}
@@ -892,14 +896,13 @@ function Organizer() {
                 {peopleCard}
                 <div className="card empty-mini">
                   <img src={waitArt} alt="" />
-                  <h2>Waiting for responses</h2>
+                  <h2>{t("Waiting for responses")}</h2>
                   <p>
-                    Send the invite link to your group. The best times show up
-                    here as soon as people mark when they're free.
+                    {t("Send the invite link to your group. The best times show up here as soon as people mark when they're free.")}
                   </p>
                   {canEdit && (
                     <button type="button" className="btn" onClick={() => go("times")}>
-                      <Icon name="calendar" /> Add my own times
+                      <Icon name="calendar" /> {t("Add my own times")}
                     </button>
                   )}
                 </div>
@@ -908,7 +911,7 @@ function Organizer() {
 
             <section className="card org-grid">
               <div className="results-head">
-                <h2>Everyone's availability</h2>
+                <h2>{t("Everyone's availability")}</h2>
               </div>
               <AvailabilityBoard
                 slots={meta.slots}
@@ -939,7 +942,7 @@ function Organizer() {
       {showEmail && lockedSessions.length > 0 && (
         <EmailModal
           meta={meta}
-          meetingName={meetingName || meta.title || "Our meeting"}
+          meetingName={meetingName || meta.title || t("Our meeting")}
           durationMin={lockedDuration}
           sessionsPerWeek={chosen.length > 0 ? sessionsPerWeek : meta.finalized?.sessionsPerWeek ?? 1}
           type={chosen.length > 0 ? type : meta.finalized?.type ?? type}

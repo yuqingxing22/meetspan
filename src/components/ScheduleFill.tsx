@@ -4,6 +4,7 @@ import Icon from "./Icon";
 import { applySchedule } from "../lib/schedule";
 import { useMySchedule } from "../lib/useMySchedule";
 import { isFirebaseConfigured, signInWithGoogle } from "../firebase";
+import { t } from "../lib/i18n";
 
 interface Props {
   /** The poll's slots. */
@@ -36,7 +37,7 @@ export default function ScheduleFill({ slots, selected, maybe, onFill }: Props) 
       <div className="fill-bar">
         <Icon name="calendar" className="icon-brand" />
         <span>
-          Same times every week?{" "}
+          {t("Same times every week?")}{" "}
           <button
             type="button"
             className="link-btn link-inline"
@@ -48,9 +49,9 @@ export default function ScheduleFill({ slots, selected, maybe, onFill }: Props) 
                 .finally(() => setSigningIn(false));
             }}
           >
-            Sign in with Google
+            {t("Sign in with Google")}
           </button>{" "}
-          to save your usual schedule and fill any poll in one click.
+          {t("to save your usual schedule and fill any poll in one click.")}
         </span>
       </div>
     );
@@ -63,9 +64,9 @@ export default function ScheduleFill({ slots, selected, maybe, onFill }: Props) 
       <div className="fill-bar">
         <Icon name="calendar" className="icon-brand" />
         <span>
-          Save your usual weekly times once, then fill any poll in one click.{" "}
+          {t("Save your usual weekly times once, then fill any poll in one click.")}{" "}
           <Link to="/schedule" className="link-inline">
-            Set up my schedule
+            {t("Set up my schedule")}
           </Link>
         </span>
       </div>
@@ -83,13 +84,18 @@ export default function ScheduleFill({ slots, selected, maybe, onFill }: Props) 
           onFill(next, new Set());
         }}
       >
-        <Icon name="calendar" /> Fill from my schedule
+        <Icon name="calendar" /> {t("Fill from my schedule")}
       </button>
       {undo ? (
         <span className="fill-note" role="status">
           {undo.filled > 0
-            ? `Filled ${undo.filled} ${undo.filled === 1 ? "slot" : "slots"}. Adjust anything that's different this time.`
-            : "Your usual schedule doesn't overlap this poll's times."}{" "}
+            ? t(
+                undo.filled === 1
+                  ? "Filled 1 slot. Adjust anything that's different this time."
+                  : "Filled {n} slots. Adjust anything that's different this time.",
+                { n: undo.filled }
+              )
+            : t("Your usual schedule doesn't overlap this poll's times.")}{" "}
           <button
             type="button"
             className="link-btn link-inline"
@@ -98,14 +104,14 @@ export default function ScheduleFill({ slots, selected, maybe, onFill }: Props) 
               setUndo(null);
             }}
           >
-            Undo
+            {t("Undo")}
           </button>
         </span>
       ) : (
         <span className="fill-note">
-          Replaces what's marked here with your usual times.{" "}
+          {t("Replaces what's marked here with your usual times.")}{" "}
           <Link to="/schedule" className="link-inline">
-            Edit schedule
+            {t("Edit schedule")}
           </Link>
         </span>
       )}
