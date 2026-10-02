@@ -9,6 +9,7 @@ const EN = {
   ],
   cta: "Try it",
   contact: "Say hello at",
+  notices: "Open-source software, fonts and illustrations used in MeetSpan",
 };
 const ZH = {
   blocks: [
@@ -18,6 +19,7 @@ const ZH = {
   ],
   cta: "试一试",
   contact: "来信请发送到",
+  notices: "MeetSpan 使用的开源软件、字体和插图（第三方许可说明）",
 };
 
 export default function About() {
@@ -38,6 +40,11 @@ export default function About() {
       </p>
       <p>
         {c.contact} <a href="mailto:hello@meetspan.app">hello@meetspan.app</a>.
+      </p>
+      <p className="prose-meta">
+        <a href={`${import.meta.env.BASE_URL}third-party-notices.txt`} target="_blank" rel="noopener">
+          {c.notices}
+        </a>
       </p>
     </div>
   );

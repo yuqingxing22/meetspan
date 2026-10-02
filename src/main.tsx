@@ -12,6 +12,7 @@ import Faq from "./pages/Faq";
 import Support from "./pages/Support";
 import About from "./pages/About";
 import Terms from "./pages/Terms";
+import "./fonts.css";
 import "./styles.css";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
