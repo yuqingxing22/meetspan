@@ -4,6 +4,8 @@
 const ADMIN_PREFIX = "meetspan.admin.";
 const PART_PREFIX = "meetspan.participant.";
 const MYPOLLS_KEY = "meetspan.mypolls";
+// Named for where it was first used; now shared by organizers and participants.
+const MYNAME_KEY = "meetspan.organizerName";
 /** Fired on window when this browser's poll list changes. */
 export const MYPOLLS_EVENT = "meetspan:mypolls";
 
@@ -92,4 +94,26 @@ export function loadParticipant(pollId: string): StoredParticipant | null {
   } catch {
     return null;
   }
+}
+
+/** The name this browser last typed when creating or answering a poll. */
+export function loadMyName(): string {
+  try {
+    return localStorage.getItem(MYNAME_KEY) ?? "";
+  } catch {
+    return "";
+  }
+}
+
+export function saveMyName(name: string): void {
+  try {
+    if (name.trim()) localStorage.setItem(MYNAME_KEY, name.trim());
+  } catch {
+    /* ignore */
+  }
+}
+
+/** First name from a Google profile, used when no name was typed before. */
+export function firstName(displayName: string | null | undefined): string {
+  return (displayName ?? "").trim().split(/\s+/)[0] ?? "";
 }

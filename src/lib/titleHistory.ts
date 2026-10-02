@@ -2,7 +2,6 @@
 // creating a new poll. Kept on this device only, capped by count and age.
 
 const TITLES_KEY = "meetspan.recentTitles";
-const NAME_KEY = "meetspan.organizerName";
 
 /** Keep at most this many names… */
 export const MAX_TITLES = 8;
@@ -64,19 +63,3 @@ export function forgetTitle(title: string, now = Date.now()): RecentTitle[] {
   return list;
 }
 
-/** The organizer name used last time on this browser. */
-export function loadOrganizerName(): string {
-  try {
-    return localStorage.getItem(NAME_KEY) ?? "";
-  } catch {
-    return "";
-  }
-}
-
-export function saveOrganizerName(name: string): void {
-  try {
-    if (name.trim()) localStorage.setItem(NAME_KEY, name.trim());
-  } catch {
-    /* ignore */
-  }
-}

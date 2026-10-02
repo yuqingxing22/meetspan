@@ -13,7 +13,7 @@ import {
   subscribePoll,
   upsertParticipant,
 } from "../lib/poll";
-import { loadParticipant, saveParticipant } from "../lib/adminStore";
+import { firstName, loadMyName, loadParticipant, saveMyName, saveParticipant } from "../lib/adminStore";
 import { newParticipantId } from "../lib/ids";
 import { bestWindow } from "../lib/best";
 import { avatarColor, initial } from "../lib/avatar";
@@ -44,7 +44,8 @@ function Participate() {
   const [meta, setMeta] = useState<PollMeta | null | undefined>(undefined);
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [pid, setPid] = useState<string>(stored?.id ?? "");
-  const [codename, setCodename] = useState(stored?.codename ?? "");
+  // This poll's saved name, else the name last typed on this browser.
+  const [codename, setCodename] = useState(stored?.codename ?? loadMyName());
   const [email, setEmail] = useState(stored?.email ?? "");
   const [tz, setTz] = useState(stored?.tz ?? detectTz());
   const [selected, setSelected] = useState<Set<number>>(new Set());
@@ -58,7 +59,7 @@ function Participate() {
   // Signed in with Google and no name yet: suggest their first name.
   useEffect(() => {
     if (codename || !user || user.isAnonymous || !user.displayName) return;
-    setCodename(user.displayName.split(" ")[0]);
+    setCodename(firstName(user.displayName));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
   // What the private email doc last held, so it's only rewritten on change.
@@ -98,6 +99,7 @@ function Participate() {
     setDirty(false);
     setSaveState("saving");
     saveParticipant(pollId, { id, codename: name, tz, email: mail });
+    saveMyName(name);
     try {
       await upsertParticipant(pollId, {
         id,

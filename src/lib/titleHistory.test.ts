@@ -34,3 +34,12 @@ describe("recent meeting names", () => {
     expect(pruneTitles(list, NOW).map((x) => x.title)).toEqual(["Recent"]);
   });
 });
+
+describe("name from a Google profile", () => {
+  it("uses the first word of the display name", async () => {
+    const { firstName } = await import("./adminStore");
+    expect(firstName("Kyra Xing")).toBe("Kyra");
+    expect(firstName("  Kyra  ")).toBe("Kyra");
+    expect(firstName(null)).toBe("");
+  });
+});

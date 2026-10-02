@@ -15,8 +15,8 @@ import {
 } from "../lib/slots";
 import { hashToken, newAdminToken, newPollId } from "../lib/ids";
 import { createPoll } from "../lib/poll";
-import { addMyPoll, saveAdminToken } from "../lib/adminStore";
-import { loadOrganizerName, rememberTitle, saveOrganizerName } from "../lib/titleHistory";
+import { addMyPoll, firstName, loadMyName, saveAdminToken, saveMyName } from "../lib/adminStore";
+import { rememberTitle } from "../lib/titleHistory";
 import type { User } from "firebase/auth";
 import { isFirebaseConfigured, subscribeUser } from "../firebase";
 import { useAuthState } from "../lib/useAuthState";
@@ -70,7 +70,7 @@ export default function Home() {
 
   const [title, setTitle] = useState("");
   const [deadline, setDeadline] = useState("");
-  const [organizerName, setOrganizerName] = useState(loadOrganizerName);
+  const [organizerName, setOrganizerName] = useState(loadMyName);
   const [tz, setTz] = useState(detectTz());
   const [pickMode, setPickMode] = useState<PickMode>("dates");
   const [dates, setDates] = useState<string[]>([]);
@@ -89,6 +89,12 @@ export default function Home() {
   const [emailing, setEmailing] = useState(false);
   const [showInvite, setShowInvite] = useState(false);
   useEffect(() => subscribeUser(setUser), []);
+  // No name typed before on this browser: start from the Google first name.
+  useEffect(() => {
+    if (!user || user.isAnonymous) return;
+    const name = firstName(user.displayName);
+    if (name) setOrganizerName((n) => n || name);
+  }, [user]);
 
   const [created, setCreated] = useState<{
     pollId: string;
@@ -176,7 +182,7 @@ export default function Home() {
       saveAdminToken(pollId, token);
       addMyPoll({ pollId, token, title: meta.title, createdAt: meta.createdAt });
       rememberTitle(meta.title);
-      saveOrganizerName(meta.organizerName);
+      saveMyName(meta.organizerName);
       setCreated({ pollId, token });
       window.scrollTo({ top: 0 });
     } catch (e) {
