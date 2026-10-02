@@ -25,7 +25,6 @@ import { useAuthState } from "../lib/useAuthState";
 import { useMySchedule } from "../lib/useMySchedule";
 import type { Participant, PollMeta } from "../lib/types";
 import { getLang, t } from "../lib/i18n";
-import { notifyResponse } from "../lib/mailer";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
@@ -115,7 +114,6 @@ function Participate() {
         savedEmailKey.current = key;
       }
       setSaveState("saved");
-      void notifyResponse(pollId);
     } catch (e) {
       console.error("Save failed", e);
       setSaveState("error");

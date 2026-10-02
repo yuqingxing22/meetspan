@@ -31,15 +31,6 @@ export async function sendWelcomeEmail(): Promise<void> {
   }
 }
 
-/** After a participant saves: the mailer tells the organizer once everyone has replied. */
-export async function notifyResponse(pollId: string): Promise<void> {
-  try {
-    await call("/notify", { pollId });
-  } catch (e) {
-    console.warn("Completion check skipped", e);
-  }
-}
-
 /**
  * Email the organizer their own private organizer link. The server sends it only to
  * the signed-in Google account's email. Returns the address it was sent to.

@@ -1,16 +1,3 @@
-/** Same matching the organizer dashboard uses to decide who has replied. */
-export const norm = (n: string): string => n.trim().toLowerCase();
-
-export function waitingOn(expected: string[], codenames: string[]): string[] {
-  const answered = new Set(codenames.map(norm));
-  return expected.filter((n) => !answered.has(norm(n)));
-}
-
-/** Stable fingerprint of the expected list, so a changed list can notify again. */
-export function expectedKey(expected: string[]): string {
-  return [...new Set(expected.map(norm))].sort().join("|");
-}
-
 export function isEmail(s: string): boolean {
   return s.length <= 254 && /^[^\s@<>"',;]+@[^\s@<>"',;]+\.[^\s@<>"',;]+$/.test(s);
 }

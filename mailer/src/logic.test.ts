@@ -1,23 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { escapeHtml, expectedKey, fromFsFields, isEmail, isInactive, norm, retentionCutoff, sha256Hex, waitingOn } from "./logic";
-import { allRespondedEmail, inviteEmail, organizerLinkEmail, welcomeEmail } from "./templates";
-
-describe("waitingOn", () => {
-  it("matches names the same way the organizer dashboard does", () => {
-    expect(waitingOn(["Mei", " alex "], ["mei", "ALEX"])).toEqual([]);
-    expect(waitingOn(["Mei", "Alex"], ["mei"])).toEqual(["Alex"]);
-  });
-  it("keeps norm trim + lowercase only", () => {
-    expect(norm("  Mei Lin ")).toBe("mei lin");
-  });
-});
-
-describe("expectedKey", () => {
-  it("ignores order and case, changes when the list changes", () => {
-    expect(expectedKey(["B", "a"])).toBe(expectedKey(["A", "b"]));
-    expect(expectedKey(["a"])).not.toBe(expectedKey(["a", "b"]));
-  });
-});
+import { escapeHtml, fromFsFields, isEmail, isInactive, retentionCutoff, sha256Hex } from "./logic";
+import { inviteEmail, organizerLinkEmail, welcomeEmail } from "./templates";
 
 describe("isEmail", () => {
   it("accepts normal addresses and rejects junk", () => {
@@ -53,20 +36,11 @@ describe("templates", () => {
       inviteEmail("zh", { organizerName: evil, title: evil, url: "https://meetspan.app/#/p/x" }),
       organizerLinkEmail("en", { title: evil, organizerUrl: "https://meetspan.app/#/o/x?k=y", inviteUrl: "https://meetspan.app/#/p/x" }),
       organizerLinkEmail("zh", { title: evil, organizerUrl: "https://meetspan.app/#/o/x?k=y", inviteUrl: "https://meetspan.app/#/p/x" }),
-      allRespondedEmail("en", { title: evil, count: 2, url: "https://meetspan.app/#/o/x" }),
       welcomeEmail("en", "https://meetspan.app", evil),
     ];
     for (const m of mails) {
       expect(m.html).not.toContain("<img src=x");
       expect(m.html).toContain("&lt;img");
-    }
-  });
-  it("renders both languages with a subject and a link", () => {
-    for (const lang of ["en", "zh"] as const) {
-      const m = allRespondedEmail(lang, { title: "Sync", count: 3, url: "https://meetspan.app/#/o/abc" });
-      expect(m.subject).toContain("Sync");
-      expect(m.html).toContain("https://meetspan.app/#/o/abc");
-      expect(m.text).toContain("https://meetspan.app/#/o/abc");
     }
   });
   it("escapeHtml covers the dangerous characters", () => {

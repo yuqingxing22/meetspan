@@ -136,23 +136,3 @@ export function organizerLinkEmail(
     text: `Your private organizer link for “${a.title}”. Keep it to yourself:\n${a.organizerUrl}\n\nThe invite link to share with your group:\n${a.inviteUrl}`,
   };
 }
-
-export function allRespondedEmail(
-  lang: Lang,
-  a: { title: string; count: number; url: string }
-): Mail {
-  if (lang === "zh") {
-    const p = [`“${h(a.title)}”预计的 ${a.count} 位参与者都已经填写完毕。`, "现在可以查看大家的共同时间，选定会议时间了。"];
-    return {
-      subject: `所有人都已回复：${a.title}`,
-      html: layout({ lang, preheader: "可以选定时间了。", heading: "所有人都已回复", paragraphs: p, cta: { label: "查看结果", url: a.url }, footnote: "你收到这封邮件，是因为你是这个排期的组织者。每个排期只会提醒一次。" }),
-      text: `“${a.title}”预计的 ${a.count} 位参与者都已经填写完毕。\n\n查看结果：${a.url}`,
-    };
-  }
-  const p = [`All ${a.count} people you expected have replied to “${h(a.title)}”.`, "You can now look at the overlap and lock in a time."];
-  return {
-    subject: `Everyone has replied: ${a.title}`,
-    html: layout({ lang, preheader: "Time to pick a slot.", heading: "Everyone has replied", paragraphs: p, cta: { label: "See the results", url: a.url }, footnote: "You’re receiving this because you organized this poll. We only send it once per poll." }),
-    text: `All ${a.count} people you expected have replied to “${a.title}”.\n\nSee the results: ${a.url}`,
-  };
-}

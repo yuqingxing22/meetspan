@@ -1,7 +1,7 @@
-import { accessToken, getDoc, listDocs, setStringField, userEmail, verifyIdToken, type IdTokenClaims } from "./google";
-import { expectedKey, isEmail, sha256Hex, waitingOn } from "./logic";
+import { accessToken, getDoc, verifyIdToken, type IdTokenClaims } from "./google";
+import { isEmail, sha256Hex } from "./logic";
 import { cleanupInactivePolls } from "./cleanup";
-import { allRespondedEmail, inviteEmail, organizerLinkEmail, welcomeEmail, type Lang, type Mail } from "./templates";
+import { inviteEmail, organizerLinkEmail, welcomeEmail, type Lang, type Mail } from "./templates";
 
 export interface Env {
   STATE: KVNamespace;
@@ -182,45 +182,6 @@ async function organizerLink(
   return json(req, env, 200, { sent: true, to: claims.email });
 }
 
-/** Called after a participant saves: tell the organizer once everyone expected has replied. */
-async function notify(req: Request, env: Env, body: { pollId?: string }) {
-  const pollId = String(body.pollId ?? "");
-  if (!pollId) return json(req, env, 400, { error: "pollId required" });
-  const project = env.FIREBASE_PROJECT_ID;
-  const token = await accessToken(env.FIREBASE_SERVICE_ACCOUNT);
-  const poll = await getDoc(project, token, `polls/${pollId}`);
-  if (!poll || poll.status !== "open") return json(req, env, 200, { sent: false, reason: "poll not open" });
-
-  const expected = Array.isArray(poll.expected) ? (poll.expected as string[]) : [];
-  if (expected.length === 0) return json(req, env, 200, { sent: false, reason: "no expected list" });
-
-  const parts = await listDocs(project, token, `polls/${pollId}/participants`);
-  if (waitingOn(expected, parts.map((p) => String(p.codename ?? ""))).length > 0) {
-    return json(req, env, 200, { sent: false, reason: "still waiting" });
-  }
-
-  const key = expectedKey(expected);
-  if (poll.completeNotifiedKey === key) return json(req, env, 200, { sent: false, reason: "already notified" });
-  const lock = `complete:${pollId}:${key}`;
-  if (await env.STATE.get(lock)) return json(req, env, 200, { sent: false, reason: "already notified" });
-  await env.STATE.put(lock, "1", { expirationTtl: 60 * 60 * 24 * 30 });
-
-  const to = await userEmail(project, token, String(poll.organizerUid ?? ""));
-  if (!to) return json(req, env, 200, { sent: false, reason: "organizer has no email" });
-
-  await sendMail(
-    env,
-    to,
-    allRespondedEmail(asLang(poll.lang), {
-      title: String(poll.title ?? ""),
-      count: expected.length,
-      url: `${env.SITE_URL}/#/o/${encodeURIComponent(pollId)}`,
-    })
-  );
-  await setStringField(project, token, `polls/${pollId}`, "completeNotifiedKey", key);
-  return json(req, env, 200, { sent: true });
-}
-
 export default {
   async scheduled(_event: ScheduledEvent, env: Env): Promise<void> {
     await cleanupInactivePolls(env);
@@ -242,7 +203,6 @@ export default {
       if (path === "/welcome") return await welcome(req, env, claims, body);
       if (path === "/invite") return await invite(req, env, claims, body);
       if (path === "/organizer-link") return await organizerLink(req, env, claims, body);
-      if (path === "/notify") return await notify(req, env, body);
       return json(req, env, 404, { error: "not found" });
     } catch (e) {
       console.error(e);

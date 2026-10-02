@@ -56,8 +56,6 @@ export interface PollMeta {
   expected?: string[];
   /** Organizer's interface language when the poll was created; picks the email language. */
   lang?: "en" | "zh";
-  /** Set by the mailer once the "everyone replied" email went out for this expected list. */
-  completeNotifiedKey?: string;
   /** Last time the organizer changed the poll (ms). Used with replies to decide when a poll is inactive. */
   lastActivityAt?: number;
 }
