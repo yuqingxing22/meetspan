@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { DateTime } from "luxon";
 import AvailabilityBoard from "../components/AvailabilityBoard";
 import TimezonePicker from "../components/TimezonePicker";
@@ -13,7 +13,7 @@ import {
   subscribePoll,
   upsertParticipant,
 } from "../lib/poll";
-import { loadMyName, loadParticipant, saveMyName, saveParticipant } from "../lib/adminStore";
+import { loadAdminToken, loadMyName, loadParticipant, saveMyName, saveParticipant } from "../lib/adminStore";
 import { newParticipantId } from "../lib/ids";
 import { bestWindow } from "../lib/best";
 import { avatarColor, initial } from "../lib/avatar";
@@ -42,6 +42,8 @@ function Participate() {
   const auth = useAuthState();
   const uid = auth !== "loading" && auth !== "error" ? auth : null;
   const stored = useMemo(() => loadParticipant(pollId), [pollId]);
+  // The organizer previewing their own poll (this browser holds its key).
+  const organizerToken = useMemo(() => loadAdminToken(pollId), [pollId]);
 
   const [meta, setMeta] = useState<PollMeta | null | undefined>(undefined);
   const [participants, setParticipants] = useState<Participant[]>([]);
@@ -214,6 +216,14 @@ function Participate() {
 
   return (
     <div>
+      {organizerToken && (
+        <div className="notice notice-info notice-row">
+          <span>{t("This is what your guests see. To add your own times, go back to your organizer page.")}</span>
+          <Link className="btn btn-sm" to={`/o/${pollId}?k=${organizerToken}`}>
+            {t("Back to my organizer page")} <Icon name="arrowRight" size={14} />
+          </Link>
+        </div>
+      )}
       <div className="page-head">
         <div className="invited-by">
           <span className="avatar avatar-sm" style={{ background: avatarColor(meta.organizerUid) }}>

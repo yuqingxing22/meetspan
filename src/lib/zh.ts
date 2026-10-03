@@ -223,6 +223,8 @@ export const ZH: Record<string, string> = {
   "Keep this one to yourself. It's how you see results and lock in the time. It's saved under “Your polls” in this browser; email it to yourself as a backup (we can't recover it for you).": "这个链接请自己保留。你要靠它查看结果、确定时间。它已保存在这个浏览器的“我的排期”里；建议发邮件给自己备份（丢了我们也找不回来）。",
   "Copy private link": "复制私人链接",
   "Share": "分享",
+  "This is what your guests see. To add your own times, go back to your organizer page.": "这是参与者看到的页面。要填写你自己的时间，请回到管理页面。",
+  "Back to my organizer page": "回到管理页面",
   "Copy invite message": "复制邀请文字",
   "Invite message copied": "邀请文字已复制",
   "Keep this one to yourself. It's how you see results and lock in the time. It's also saved under “Your polls” in this browser.": "这个链接请自己保留，查看结果、确定时间都要靠它。它也保存在这个浏览器的“我的排期”里。",

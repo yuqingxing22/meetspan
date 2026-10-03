@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { DateTime } from "luxon";
 import TimezonePicker from "../components/TimezonePicker";
 import Calendar from "../components/Calendar";
@@ -353,9 +353,10 @@ export default function Home() {
                   )}
                 </button>
               </div>
-              <Link className="preview-link" to={`/p/${created.pollId}`}>
+              {/* A new tab, so this page (links, QR) is still here afterwards. */}
+              <a className="preview-link" href={`#/p/${created.pollId}`} target="_blank" rel="noopener">
                 {t("Preview as a guest")} <Icon name="arrowRight" size={14} />
-              </Link>
+              </a>
             </div>
             <InviteQR url={participantLink} title={title.trim()} compact />
           </div>
