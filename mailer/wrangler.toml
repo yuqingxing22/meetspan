@@ -13,6 +13,12 @@ SENDER_EMAIL = "noreply@meetspan.app"
 REPLY_TO_EMAIL = "hello@meetspan.app"
 # Daily cleanup of polls with no activity for 12 months. Set to "false" for a dry run that only logs.
 CLEANUP_ENABLED = "true"
+# Daily summary of errors visitors hit (only sent on days with errors).
+ALERT_EMAIL = "hello@meetspan.app"
+
+# Request logs and errors, viewable in the Cloudflare dashboard (Workers → meetspan-mailer → Logs).
+[observability]
+enabled = true
 
 [triggers]
 crons = ["17 3 * * *"]

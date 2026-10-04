@@ -2,6 +2,7 @@ import { accessToken, getDoc, verifyIdToken, type IdTokenClaims } from "./google
 import { isEmail, sha256Hex } from "./logic";
 import { cleanupInactivePolls } from "./cleanup";
 import { deletePollAndChildren } from "./deletion";
+import { cleanReport, digestEmail, errorsForDay, MAX_REPORTS_PER_DAY, storeReport } from "./errors";
 import { inviteEmail, organizerLinkEmail, welcomeEmail, type Lang, type Mail } from "./templates";
 
 export interface Env {
@@ -15,6 +16,8 @@ export interface Env {
   REPLY_TO_EMAIL: string;
   /** "true" turns on real deletion in the daily cleanup; anything else is a dry run. */
   CLEANUP_ENABLED?: string;
+  /** Where the daily error summary goes. */
+  ALERT_EMAIL?: string;
 }
 
 /**
@@ -210,22 +213,54 @@ async function deletePoll(
   return json(req, env, 200, { deleted: true });
 }
 
+/** A browser error report (no sign-in; capped per day). */
+async function report(req: Request, env: Env): Promise<Response> {
+  const text = await req.text().catch(() => "");
+  if (text.length > 8000) return json(req, env, 413, { error: "too large" });
+  let body: Record<string, unknown> = {};
+  try {
+    body = JSON.parse(text);
+  } catch {
+    return json(req, env, 400, { error: "bad report" });
+  }
+  const r = cleanReport(body);
+  if (!r) return json(req, env, 400, { error: "bad report" });
+  const stored = await storeReport(env.STATE, r);
+  return json(req, env, 200, { stored });
+}
+
+/** Email yesterday's (UTC) errors to the owner, if there were any. */
+async function sendErrorDigest(env: Env): Promise<void> {
+  if (!env.ALERT_EMAIL) return;
+  const day = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const errors = await errorsForDay(env.STATE, day);
+  if (!errors.length) return;
+  const capped = Number((await env.STATE.get(`errtotal:${day}`)) ?? 0) >= MAX_REPORTS_PER_DAY;
+  await sendMail(env, env.ALERT_EMAIL, digestEmail(day, errors, capped));
+}
+
 export default {
   async scheduled(_event: ScheduledEvent, env: Env): Promise<void> {
-    await cleanupInactivePolls(env);
+    // Independent jobs: one failing must not stop the other.
+    await cleanupInactivePolls(env).catch((e) => console.error("cleanup failed", e));
+    await sendErrorDigest(env).catch((e) => console.error("error digest failed", e));
   },
 
   async fetch(req: Request, env: Env): Promise<Response> {
+    const path = new URL(req.url).pathname;
+    // For uptime monitors.
+    if (path === "/health") return new Response("ok", { headers: { "content-type": "text/plain" } });
     if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: cors(req, env) });
     if (req.method !== "POST") return json(req, env, 405, { error: "POST only" });
     const origin = req.headers.get("origin") ?? "";
     if (!env.ALLOWED_ORIGINS.split(",").map((s) => s.trim()).includes(origin)) {
       return json(req, env, 403, { error: "origin not allowed" });
     }
+    // Error reports come before sign-in (the page may have crashed before it).
+    if (path === "/report") return await report(req, env);
     const claims = await authed(req, env);
     if (!claims) return json(req, env, 401, { error: "sign-in required" });
 
-    const path = new URL(req.url).pathname;
     try {
       const body = (await req.json().catch(() => ({}))) as Record<string, never>;
       if (path === "/welcome") return await welcome(req, env, claims, body);
