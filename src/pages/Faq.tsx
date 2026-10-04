@@ -37,7 +37,7 @@ const EN: Item[] = [
   },
   {
     q: "I lost my organizer link. What can I do?",
-    a: ["Polls you created are saved under “Your polls” in the browser you used. If you were signed in with Google when you created the poll, you can find it under “Your polls” on any device after signing in again. If neither works, contact support and include the invite link (never the organizer link)."],
+    a: ["Polls you created are saved under “Your polls” in the browser you used. If you were signed in with Google when you created the poll, you can find it under “Your polls” on any device after signing in again. If neither works, contact support and include the invite link (never the organizer link). We can restore access only if we can confirm you created the poll, for example because you created it while signed in with Google using the email you write from."],
   },
   {
     q: "Who can see my replies?",
@@ -57,7 +57,7 @@ const EN: Item[] = [
   },
   {
     q: "How do I delete a poll or my data?",
-    a: ["Closing a poll stops new replies but doesn’t remove it. To delete a poll for good, open your organizer page, choose “Delete poll…” in the ⋯ menu and confirm: the poll, everyone’s replies and any email addresses they left are removed. For anything else, or if you can’t open the organizer page, write to privacy@meetspan.app with the poll’s invite link and we’ll remove it."],
+    a: ["Closing a poll stops new replies but doesn’t remove it. To delete a poll for good, open your organizer page, choose “Delete poll…” in the ⋯ menu and confirm: the poll, everyone’s replies and any email addresses they left are removed. For anything else, or if you can’t open the organizer page, write to privacy@meetspan.app with the poll’s invite link. Since anyone with that link could ask, we first check that you’re the organizer (for example, that you created the poll while signed in with Google using the email you write from). To remove only your own reply, tell us the name or email address you used."],
   },
   {
     q: "Is MeetSpan available in other languages?",
@@ -96,7 +96,7 @@ const ZH: Item[] = [
   },
   {
     q: "我弄丢了组织者链接怎么办？",
-    a: ["你创建的排期会保存在所用浏览器的“我的排期”里。如果创建时已经用 Google 登录，之后在任何设备上重新登录，也能在“我的排期”里找到。如果这两种办法都不行，请联系支持，并附上邀请链接（不要发组织者链接）。"],
+    a: ["你创建的排期会保存在所用浏览器的“我的排期”里。如果创建时已经用 Google 登录，之后在任何设备上重新登录，也能在“我的排期”里找到。如果这两种办法都不行，请联系支持，并附上邀请链接（不要发组织者链接）。我们需要先确认排期是你创建的才能帮你恢复，比如你创建时用 Google 登录过，而且来信邮箱就是那个 Google 邮箱。"],
   },
   {
     q: "谁能看到我的回复？",
@@ -116,7 +116,7 @@ const ZH: Item[] = [
   },
   {
     q: "怎么删除排期或我的数据？",
-    a: ["关闭排期只是停止接收新回复，并不会删除它。要永久删除排期，请打开你的组织者页面，在 ⋯ 菜单里选择“删除排期…”并确认：排期、大家的回复和留下的邮箱都会被删除。其他情况，或者打不开组织者页面时，请发邮件到 privacy@meetspan.app，附上排期的邀请链接，我们会帮你删除。"],
+    a: ["关闭排期只是停止接收新回复，并不会删除它。要永久删除排期，请打开你的组织者页面，在 ⋯ 菜单里选择“删除排期…”并确认：排期、大家的回复和留下的邮箱都会被删除。其他情况，或者打不开组织者页面时，请发邮件到 privacy@meetspan.app，附上排期的邀请链接。因为拿到这个链接的人都可以来信，我们会先确认你是组织者（比如你创建时用 Google 登录过，而且来信邮箱就是那个 Google 邮箱）。如果只想删除自己填的回复，告诉我们你当时用的名字或邮箱即可。"],
   },
   {
     q: "有其他语言吗？",

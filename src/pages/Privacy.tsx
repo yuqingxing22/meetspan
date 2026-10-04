@@ -45,7 +45,7 @@ const EN: Section[] = [
   {
     h: "How long we keep it",
     p: [
-      "We keep polls and replies until you ask us to delete them. We also delete a poll, with its replies and any email addresses left in it, once it has had no activity for 12 months. To have your data removed sooner, write to the address below from the email you used (or tell us the poll link). Our service providers may keep their own logs for a short time under their own policies.",
+      "We keep polls and replies until you ask us to delete them. We also delete a poll, with its replies and any email addresses left in it, once it has had no activity for 12 months. To have your data removed sooner, write to the address below from the email you used (or tell us the poll link). We’ll first check that the data is yours: for a whole poll, that you’re its organizer; for a reply, the name or email address you used. Our service providers may keep their own logs for a short time under their own policies.",
     ],
   },
   {
@@ -91,7 +91,7 @@ const ZH_SECTIONS: Section[] = [
   },
   {
     h: "保存多久",
-    p: ["排期和回复会一直保存，直到你要求我们删除。如果一个排期连续 12 个月没有任何活动，我们也会把它连同其中的回复和留下的邮箱一并删除。想提前删除，请用你填写过的邮箱（或告诉我们排期链接）写信到下面的地址。我们的服务商可能会按各自的政策短期保留自己的日志。"],
+    p: ["排期和回复会一直保存，直到你要求我们删除。如果一个排期连续 12 个月没有任何活动，我们也会把它连同其中的回复和留下的邮箱一并删除。想提前删除，请用你填写过的邮箱（或告诉我们排期链接）写信到下面的地址。我们会先确认这些数据是你的：整个排期需要确认你是组织者；单条回复需要你说出当时用的名字或邮箱。我们的服务商可能会按各自的政策短期保留自己的日志。"],
   },
   {
     h: "你的选择",
