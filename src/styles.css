@@ -3300,3 +3300,26 @@ div.field.tz-field {
 .delete-confirm {
   margin-top: 12px;
 }
+
+/* ---------- Crash fallback (ErrorBoundary) ---------- */
+.crash {
+  max-width: 460px;
+  margin: 80px auto;
+  padding: 0 16px;
+  text-align: center;
+}
+.crash h1 {
+  margin: 0 0 10px;
+  font-size: 24px;
+}
+.crash p {
+  color: var(--text-dim);
+  line-height: 1.55;
+}
+.crash .btn {
+  margin-top: 8px;
+}
+.crash-help {
+  margin-top: 18px;
+  font-size: 14px;
+}

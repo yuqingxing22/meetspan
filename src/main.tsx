@@ -12,28 +12,34 @@ import Faq from "./pages/Faq";
 import Support from "./pages/Support";
 import About from "./pages/About";
 import Terms from "./pages/Terms";
+import ErrorBoundary from "./components/ErrorBoundary";
+import { installErrorReporting } from "./lib/errorReport";
 import "./fonts.css";
 import "./styles.css";
 
+installErrorReporting();
+
 ReactDOM.createRoot(document.getElementById("root")!).render(
   <React.StrictMode>
-    {/* HashRouter keeps deep links (#/p/<id>) working on GitHub Pages,
-        which has no SPA server-side fallback. */}
-    <HashRouter>
-      <Routes>
-        <Route element={<App />}>
-          <Route index element={<Home />} />
-          <Route path="p/:pollId" element={<Participate />} />
-          <Route path="o/:pollId" element={<Organizer />} />
-          <Route path="schedule" element={<MySchedule />} />
-          <Route path="privacy" element={<Privacy />} />
-          <Route path="faq" element={<Faq />} />
-          <Route path="support" element={<Support />} />
-          <Route path="about" element={<About />} />
-          <Route path="terms" element={<Terms />} />
-          <Route path="*" element={<Home />} />
-        </Route>
-      </Routes>
-    </HashRouter>
+    <ErrorBoundary>
+      {/* HashRouter keeps deep links (#/p/<id>) working on GitHub Pages,
+          which has no SPA server-side fallback. */}
+      <HashRouter>
+        <Routes>
+          <Route element={<App />}>
+            <Route index element={<Home />} />
+            <Route path="p/:pollId" element={<Participate />} />
+            <Route path="o/:pollId" element={<Organizer />} />
+            <Route path="schedule" element={<MySchedule />} />
+            <Route path="privacy" element={<Privacy />} />
+            <Route path="faq" element={<Faq />} />
+            <Route path="support" element={<Support />} />
+            <Route path="about" element={<About />} />
+            <Route path="terms" element={<Terms />} />
+            <Route path="*" element={<Home />} />
+          </Route>
+        </Routes>
+      </HashRouter>
+    </ErrorBoundary>
   </React.StrictMode>
 );

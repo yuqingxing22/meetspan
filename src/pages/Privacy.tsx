@@ -26,6 +26,7 @@ const EN: Section[] = [
       "My schedule (optional): the weekly times you save on the My schedule page. They’re stored against your account if you’re signed in with Google, or against an anonymous ID in your browser if you’re not.",
       "Google Calendar (optional): if you choose to import from Google Calendar, MeetSpan asks Google only for free/busy information (the times you’re busy, not event titles or details). It is used in your browser to pre-fill your availability, and the calendar data itself isn’t stored by us. MeetSpan’s use and transfer of information received from Google APIs to any other app will adhere to the Google API Services User Data Policy, including the Limited Use requirements. We don’t use Google user data for advertising, and we don’t sell it or allow people to read it.",
       "Technical data: an anonymous sign-in ID so that you can edit your own replies, and a few settings kept in your browser (language, and which polls and replies are yours).",
+      "Error reports: if a page hits an error, your browser sends us the error message, which page it happened on (without poll IDs or links), and the browser and operating system name. They contain no names, emails or poll content, we use them only to fix bugs, and we delete them after 14 days.",
     ],
   },
   {
@@ -74,6 +75,7 @@ const ZH_SECTIONS: Section[] = [
       "我的常用时间（可选）：你在“我的常用时间”页面保存的每周时段。如果你用 Google 登录，它与你的账号关联；如果没有登录，它与你浏览器里的匿名 ID 关联。",
       "Google 日历（可选）：如果你选择从 Google 日历导入，MeetSpan 只向 Google 请求忙闲信息（你什么时候忙，不包括日程标题和内容）。这些信息只在你的浏览器里用来预填你的空闲时间，我们不会保存日历数据本身。MeetSpan 对从 Google API 获得的信息的使用和转移，将遵守 Google API Services User Data Policy（Google API 服务用户数据政策），包括其中的 Limited Use（有限使用）要求。我们不会把 Google 用户数据用于广告，不会出售，也不允许他人阅读这些数据。",
       "技术信息：一个匿名登录 ID，用来让你能修改自己的回复；以及保存在你浏览器里的少量设置（语言，以及哪些排期和回复是你的）。",
+      "错误报告：如果页面出错，你的浏览器会把错误信息、出错的页面（不含排期 ID 和链接）以及浏览器和操作系统名称发给我们。其中不包含名字、邮箱或排期内容，只用于修复问题，14 天后删除。",
     ],
   },
   {

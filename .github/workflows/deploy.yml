@@ -25,6 +25,8 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      # Stop here if any test fails, so a broken change never goes live.
+      - run: npm test
       # Firebase web config is injected at build time from repo variables.
       # (These are NOT sensitive — Firebase security is enforced by Firestore rules.)
       # Set them under Settings → Secrets and variables → Actions → Variables.
