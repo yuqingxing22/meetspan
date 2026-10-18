@@ -5,10 +5,12 @@ import DateField from "./DateField";
 import RepeatEndField from "./RepeatEndField";
 import { firstWeekMonday, repeatEndError } from "../lib/repeat";
 import Icon from "./Icon";
-import { buildSlots, enumerateDateRange } from "../lib/slots";
+import TimezonePicker from "./TimezonePicker";
+import { buildSlots, enumerateDateRange, tzInfo } from "../lib/slots";
 import { updatePoll } from "../lib/poll";
 import type { PollMeta, RepeatEnd } from "../lib/types";
 import { t } from "../lib/i18n";
+import { setPrefs } from "../lib/prefs";
 
 const WEEKDAYS = [
   { wd: 1, label: "Mon" },
@@ -34,10 +36,13 @@ interface Props {
   onSaved: (msg: string) => void;
 }
 
-/** Organizer settings after creation: title, deadline, expected people, days and hours. */
+/** Organizer settings after creation: names, timezone, deadline, expected people, days and hours. */
 export default function EditPollModal({ pollId, meta, responses, onClose, onSaved }: Props) {
   const weekly = meta.dateMode === "weekly";
   const [title, setTitle] = useState(meta.title);
+  const [organizerName, setOrganizerName] = useState(meta.organizerName);
+  // Days and hours are read in this zone; changing it moves the poll's times.
+  const [tz, setTz] = useState(meta.organizerTz);
   const [deadline, setDeadline] = useState(meta.deadline ?? "");
   const [expected, setExpected] = useState((meta.expected ?? []).join("\n"));
   const [dates, setDates] = useState<string[]>(meta.dates);
@@ -53,26 +58,28 @@ export default function EditPollModal({ pollId, meta, responses, onClose, onSave
 
   // Weekly polls keep their first week; changed weekdays map onto it.
   const firstMonday = DateTime.fromISO([...meta.dates].sort()[0] ?? DateTime.now().toISODate()!, {
-    zone: meta.organizerTz,
+    zone: tz,
   }).startOf("week");
   const resolvedDates = weekly
     ? [...weekdays].sort((a, b) => a - b).map((wd) => firstMonday.plus({ days: wd - 1 }).toISODate()!)
     : [...dates].sort();
 
+  const tzChanged = tz !== meta.organizerTz;
   const timesChanged =
+    tzChanged ||
     startHour !== meta.dailyWindow.startHour ||
     endHour !== meta.dailyWindow.endHour ||
     resolvedDates.join() !== [...meta.dates].sort().join();
   const badRange = endHour <= startHour;
   // The first meeting day in the (possibly moved) start week, to check the end against.
   const firstMeetingDay = weekly
-    ? DateTime.fromISO(firstWeek, { zone: meta.organizerTz })
+    ? DateTime.fromISO(firstWeek, { zone: tz })
         .startOf("week")
         .plus({ days: Math.min(...weekdays, 7) - 1 })
         .toISODate()!
     : undefined;
   const endError = weekly ? repeatEndError(repeatEnd, firstMeetingDay) : "";
-  const canSave = !busy && !badRange && !endError && resolvedDates.length > 0;
+  const canSave = !busy && !!tz && !badRange && !endError && resolvedDates.length > 0;
 
   function pickDay(iso: string, shift: boolean) {
     if (shift && lastPick && lastPick !== iso) {
@@ -91,6 +98,7 @@ export default function EditPollModal({ pollId, meta, responses, onClose, onSave
     try {
       const patch: Parameters<typeof updatePoll>[1] = {
         title: title.trim(),
+        organizerName: organizerName.trim(),
         deadline,
         expected: expected
           .split(/[\n,]/)
@@ -98,11 +106,12 @@ export default function EditPollModal({ pollId, meta, responses, onClose, onSave
           .filter(Boolean),
       };
       if (weekly) {
-        const monday = DateTime.fromISO(firstWeek, { zone: meta.organizerTz }).startOf("week").toISODate()!;
+        const monday = DateTime.fromISO(firstWeek, { zone: tz }).startOf("week").toISODate()!;
         if (monday !== initialFirstWeek) patch.firstWeek = monday;
         patch.repeatEnd = repeatEnd ?? null;
       }
       if (timesChanged) {
+        if (tzChanged) patch.organizerTz = tz;
         patch.dates = resolvedDates;
         patch.weekdays = weekly ? weekdays : [];
         patch.dailyWindow = { startHour, endHour };
@@ -110,10 +119,11 @@ export default function EditPollModal({ pollId, meta, responses, onClose, onSave
           resolvedDates,
           { startHour, endHour },
           meta.granularityMin,
-          meta.organizerTz
+          tz
         );
       }
       await updatePoll(pollId, patch);
+      if (tzChanged) setPrefs({ tz });
       onSaved(t("Poll updated"));
       onClose();
     } catch (e) {
@@ -138,9 +148,24 @@ export default function EditPollModal({ pollId, meta, responses, onClose, onSave
         </label>
 
         <div className="row">
+          <label className="field">
+            <span className="field-label">{t("Your name")}</span>
+            <input type="text" value={organizerName} onChange={(e) => setOrganizerName(e.target.value)} />
+          </label>
+          <TimezonePicker id="edit-tz" value={tz} onChange={setTz} label={t("Your timezone")} />
+        </div>
+        {tzChanged && (
+          <p className="hint">
+            {t("The days and hours below will be read in {city} time. Guests still see everything in their own timezone.", {
+              city: tzInfo(tz).city,
+            })}
+          </p>
+        )}
+
+        <div className="row">
           <div className="field">
             <label className="field-label" htmlFor="poll-deadline">{t("Respond by (optional)")}</label>
-            <DateField id="poll-deadline" value={deadline} onChange={setDeadline} />
+            <DateField id="poll-deadline" value={deadline} onChange={setDeadline} tz={tz} />
           </div>
           <label className="field">
             <span className="field-label">{t("Who should respond? (optional)")}</span>
@@ -189,9 +214,10 @@ export default function EditPollModal({ pollId, meta, responses, onClose, onSave
                 value={firstWeek}
                 onChange={(iso) => setFirstWeek(iso || initialFirstWeek)}
                 clearable={false}
+                tz={tz}
                 format={(iso) =>
                   t("Week of {date}", {
-                    date: DateTime.fromISO(iso, { zone: meta.organizerTz }).startOf("week").toFormat("LLL d, yyyy"),
+                    date: DateTime.fromISO(iso, { zone: tz }).startOf("week").toFormat("LLL d, yyyy"),
                   })
                 }
               />
@@ -201,7 +227,7 @@ export default function EditPollModal({ pollId, meta, responses, onClose, onSave
         )}
         {weekly ? null : (
           <div className="daypick">
-            <Calendar selectedDates={new Set(dates)} onDayClick={pickDay} />
+            <Calendar selectedDates={new Set(dates)} onDayClick={pickDay} tz={tz} initialMonth={[...dates].sort()[0]} />
             <div className="daypick-side">
               <span className="field-label">{t("Selected · {n}", { n: dates.length })}</span>
               <div className="chips">

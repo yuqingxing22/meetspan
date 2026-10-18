@@ -126,6 +126,20 @@ describe("generateEmail options", () => {
     expect(zh.body).not.toContain("10月14日");
     expect(zh.body).not.toContain("第 1 次");
   });
+
+  it("sends back-to-back start times as one window", async () => {
+    const { generateEmail } = await import("./email");
+    // 9:00, 9:30, 10:00 and 10:30 AM PDT starts, each 1 hr: any hour from 9 to 11:30.
+    const run = [0, 1, 2, 3].map((i) => s(start + i * 1800_000));
+    const en = generateEmail({ ...base, meta: { ...meta, dateMode: "specific" }, sessions: [...run, s(start + 86_400_000)], lang: "en" });
+    expect(en.body).toContain("All 2 times below work for everyone");
+    expect(en.body).toContain("Option A: Wed, Oct 14 · 9:00 AM – 11:30 AM PDT (any 60 min in this window)");
+    expect(en.body).toContain("Option B: Thu, Oct 15 · 9:00 AM – 10:00 AM PDT");
+    expect(en.body).not.toContain("Option C:");
+    const zh = generateEmail({ ...base, meta: { ...meta, dateMode: "specific" }, sessions: run, lang: "zh" });
+    expect(zh.body).toContain("以下时间段所有人都可以");
+    expect(zh.body).toContain("（这段时间内任选 60 分钟）");
+  });
 });
 
 describe("weekly emails show weekdays, not dates", () => {

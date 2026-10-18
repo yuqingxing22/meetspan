@@ -4,6 +4,7 @@ import { getLang, withLang, type Lang } from "./i18n";
 import type { Session } from "./overlap";
 import type { MeetingType, Participant, PollMeta } from "./types";
 import { repeatEndLabel, sessionInFirstWeek } from "./repeat";
+import { mergeSessions } from "./ranges";
 
 export interface EmailInput {
   meta: PollMeta;
@@ -31,18 +32,42 @@ function freqLabel(f: number, lang: Lang): string {
   return `${f}× a week`;
 }
 
+/**
+ * Options that overlap or touch (back-to-back start times from one free
+ * stretch) are sent as one option, "any 60 min between 9:00 and 12:00", so a
+ * long list of start times doesn't fill the email.
+ */
+function optionBlocks(input: EmailInput) {
+  return mergeSessions(input.sessions);
+}
+
 /** Sessions listed in the organizer's timezone, with each attendee's local time. */
 function sessionBlock(input: EmailInput, lang: Lang): string {
   const { meta, sessions, participants } = input;
   const weekly = meta.dateMode === "weekly";
   const lines: string[] = [];
+  if (input.options) {
+    optionBlocks(input).forEach((b, i) => {
+      const letter = String.fromCharCode(65 + i);
+      const range = b.sessions.length > 1;
+      const any = range
+        ? lang === "zh"
+          ? `（这段时间内任选 ${input.durationMin} 分钟）`
+          : ` (any ${input.durationMin} min in this window)`
+        : "";
+      lines.push(
+        `  ${lang === "zh" ? `选项 ${letter}：` : `Option ${letter}: `}${formatRange(b.startMs, b.endMs, meta.organizerTz, weekly)}${any}`
+      );
+      const free = participants.filter((p) => b.sessions[0].freeIds.includes(p.id));
+      for (const p of free.length ? free : participants) {
+        lines.push(`      • ${p.codename} — ${formatRange(b.startMs, b.endMs, p.tz, weekly)}`);
+      }
+      lines.push("");
+    });
+    return lines.join("\n").trimEnd();
+  }
   sessions.forEach((s, i) => {
-    const letter = String.fromCharCode(65 + i);
-    const label = input.options
-      ? lang === "zh"
-        ? `选项 ${letter}`
-        : `Option ${letter}`
-      : lang === "zh"
+    const label = lang === "zh"
         ? sessions.length > 1
           ? `第 ${i + 1} 次`
           : "时间"
@@ -271,14 +296,19 @@ function isPersonal(type: MeetingType): boolean {
  * Nothing is confirmed yet, so there's no agenda block and the sign-off is neutral.
  */
 function optionsEn(input: EmailInput, f: Flavor): GeneratedEmail {
-  const { meetingName, durationMin, sessionsPerWeek, type, meta, sessions } = input;
+  const { meetingName, durationMin, sessionsPerWeek, type, meta } = input;
   const personal = isPersonal(type);
   const weekly = meta.dateMode === "weekly";
-  const n = sessions.length;
+  const n = optionBlocks(input).length;
   const per = Math.max(1, sessionsPerWeek);
-  const choose = personal
-    ? `All ${n} times below work for both of us. Which one suits you best?`
-    : `All ${n} times below work for everyone, so please pick the one(s) you prefer:`;
+  const choose =
+    n === 1
+      ? personal
+        ? "The time window below works for both of us. Which part of it suits you best?"
+        : "The time window below works for everyone. Please say which part of it suits you:"
+      : personal
+      ? `All ${n} times below work for both of us. Which one suits you best?`
+      : `All ${n} times below work for everyone, so please pick the one(s) you prefer:`;
   const intro = weekly
     ? `Thanks${personal ? "" : " everyone"} for sharing your availability. We'll meet ${freqLabel(per, "en")}, ${durationMin} min each time. ${choose}`
     : `Thanks${personal ? "" : " everyone"} for sharing your availability. ${choose}`;
@@ -312,15 +342,20 @@ function optionsEn(input: EmailInput, f: Flavor): GeneratedEmail {
 }
 
 function optionsZh(input: EmailInput, f: Flavor): GeneratedEmail {
-  const { meetingName, durationMin, sessionsPerWeek, type, meta, sessions } = input;
+  const { meetingName, durationMin, sessionsPerWeek, type, meta } = input;
   const personal = isPersonal(type);
   const weekly = meta.dateMode === "weekly";
-  const n = sessions.length;
+  const n = optionBlocks(input).length;
   const per = Math.max(1, sessionsPerWeek);
   const times = per === 1 ? "一次" : ` ${per} 次`;
-  const choose = personal
-    ? `以下 ${n} 个时间我们都方便，请您选择最合适的一个：`
-    : `以下 ${n} 个时间所有人都可以，请选出你方便的：`;
+  const choose =
+    n === 1
+      ? personal
+        ? "以下时间段我们都方便，请告诉我其中哪段时间最适合您："
+        : "以下时间段所有人都可以，请告诉我其中哪段时间你最方便："
+      : personal
+      ? `以下 ${n} 个时间我们都方便，请您选择最合适的一个：`
+      : `以下 ${n} 个时间所有人都可以，请选出你方便的：`;
   const intro = weekly
     ? personal
       ? `感谢您提供空闲时间。我们每周见${times}，每次 ${durationMin} 分钟。${choose}`

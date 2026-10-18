@@ -140,6 +140,8 @@ export async function updatePoll(
     Pick<
       PollMeta,
       | "title"
+      | "organizerName"
+      | "organizerTz"
       | "requiredIds"
       | "deadline"
       | "expected"

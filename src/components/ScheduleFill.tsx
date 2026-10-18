@@ -39,7 +39,7 @@ export default function ScheduleFill({ slots, selected, maybe, onFill }: Props) 
         <Icon name="calendar" className="icon-brand" />
         <span>
           {t("Save your usual weekly times once, then fill any poll in one click.")}{" "}
-          <Link to="/schedule" className="link-inline">
+          <Link to="/settings?tab=schedule" className="link-inline">
             {t("Set up my schedule")}
           </Link>
         </span>
@@ -84,7 +84,7 @@ export default function ScheduleFill({ slots, selected, maybe, onFill }: Props) 
       ) : (
         <span className="fill-note">
           {t("Replaces what's marked here with your usual times.")}{" "}
-          <Link to="/schedule" className="link-inline">
+          <Link to="/settings?tab=schedule" className="link-inline">
             {t("Edit schedule")}
           </Link>
         </span>

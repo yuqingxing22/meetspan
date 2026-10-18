@@ -16,9 +16,13 @@ import Icon from "./Icon";
 import { t } from "../lib/i18n";
 
 interface Props {
+  /** IANA zone, or "" for none picked yet. */
   value: string;
   onChange: (tz: string) => void;
   label?: string;
+  /** Shown while nothing is picked (default "Choose a timezone"). */
+  placeholder?: string;
+  id?: string;
 }
 
 type Row =
@@ -32,7 +36,7 @@ type Row =
  * best first. Every zone shows its code in parentheses, e.g.
  * "Los Angeles (PDT)", and its current local time.
  */
-export default function TimezonePicker({ value, onChange, label }: Props) {
+export default function TimezonePicker({ value, onChange, label, placeholder, id }: Props) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(0);
@@ -48,7 +52,8 @@ export default function TimezonePicker({ value, onChange, label }: Props) {
     return groupTimeZones(names);
   }, [value]);
 
-  const selected = useMemo(() => tzInfo(value), [value]);
+  const selected = useMemo(() => (value ? tzInfo(value) : null), [value]);
+  const shown = selected ? `${selected.city} (${selected.abbr})` : "";
 
   // Re-read when the list opens, so a zone picked in another picker shows up.
   const recent = useMemo(() => (open ? listRecentTzs() : []), [open]);
@@ -153,18 +158,23 @@ export default function TimezonePicker({ value, onChange, label }: Props) {
 
   return (
     <div className="field tz-field" ref={rootRef}>
-      {label && <span className="field-label">{label}</span>}
+      {label && (
+        <label className="field-label" htmlFor={id}>
+          {label}
+        </label>
+      )}
       <div className="tz-combo">
         <input
           ref={inputRef}
+          id={id}
           type="text"
           role="combobox"
           aria-expanded={open}
           aria-autocomplete="list"
           spellCheck={false}
-          className="tz-input"
-          value={open ? query : `${selected.city} (${selected.abbr})`}
-          placeholder={`${selected.city} (${selected.abbr})`}
+          className={`tz-input${selected ? "" : " tz-input-empty"}`}
+          value={open ? query : shown}
+          placeholder={shown || placeholder || t("Choose a timezone")}
           onFocus={() => {
             setOpen(true);
             setActive(0);
@@ -190,11 +200,11 @@ export default function TimezonePicker({ value, onChange, label }: Props) {
                 <li
                   key={row.key}
                   role="option"
-                  aria-selected={row.info.key === selected.key}
+                  aria-selected={row.info.key === selected?.key}
                   className={
                     "tz-opt" +
                     (i === optionIdxs[active] ? " active" : "") +
-                    (row.info.key === selected.key ? " sel" : "")
+                    (row.info.key === selected?.key ? " sel" : "")
                   }
                   onMouseDown={(e) => {
                     e.preventDefault();

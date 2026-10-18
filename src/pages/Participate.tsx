@@ -27,6 +27,7 @@ import { googleFirstName } from "../lib/useUser";
 import { useMySchedule } from "../lib/useMySchedule";
 import type { Participant, PollMeta } from "../lib/types";
 import { getLang, t } from "../lib/i18n";
+import { getPrefs } from "../lib/prefs";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
@@ -51,7 +52,7 @@ function Participate() {
   // This poll's saved name, else the name last typed on this browser.
   const [codename, setCodename] = useState(stored?.codename ?? loadMyName());
   const [email, setEmail] = useState(stored?.email ?? "");
-  const [tz, setTz] = useState(stored?.tz ?? detectTz());
+  const [tz, setTz] = useState(stored?.tz ?? (getPrefs().tz || detectTz()));
   const [selected, setSelected] = useState<Set<number>>(new Set());
   const [maybe, setMaybe] = useState<Set<number>>(new Set());
   const [dirty, setDirty] = useState(false);

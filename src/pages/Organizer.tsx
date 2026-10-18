@@ -10,6 +10,7 @@ import EditPollModal from "../components/EditPollModal";
 import DeletePollModal from "../components/DeletePollModal";
 import ScheduleFill from "../components/ScheduleFill";
 import CalendarImport from "../components/CalendarImport";
+import CommonTimes from "../components/CommonTimes";
 import {
   closePoll,
   finalizePoll,
@@ -34,7 +35,7 @@ import { formatRange, formatSlot, tzInfo } from "../lib/slots";
 import { weeklyRangeLabel } from "../lib/repeat";
 import { commonWindows } from "../lib/best";
 import { sessionAt } from "../lib/finalized";
-import { windowComfort } from "../lib/comfort";
+import { mergeSessions } from "../lib/ranges";
 import { avatarColor, initial } from "../lib/avatar";
 import { isFirebaseConfigured } from "../firebase";
 import { deletePoll, mailerEnabled } from "../lib/mailer";
@@ -43,7 +44,7 @@ import { copyText, useToast } from "../lib/useToast";
 import { MEETING_TYPES } from "../lib/types";
 import type { MeetingType, Participant, ParticipantEmail, PollMeta } from "../lib/types";
 import waitArt from "../assets/illustrations/wait-in-line.svg";
-import { getLang, joinNames, t } from "../lib/i18n";
+import { getLang, t } from "../lib/i18n";
 
 const DURATIONS = [
   { min: 30, label: "30 min" },
@@ -343,21 +344,8 @@ function Organizer() {
   const asOptions = pickedSessions.length > Math.max(1, sessionsPerWeek);
   const lockedStarts = new Set(lockedSessions.map((s) => s.startMs));
 
-  // Common windows grouped by day, in the organizer's timezone.
-  const commonByDay: { day: string; windows: { startMs: number; endMs: number }[] }[] = [];
-  for (const w of common) {
-    const day = DateTime.fromMillis(w.startMs, { zone: meta.organizerTz }).toFormat(
-      meta.dateMode === "weekly" ? "cccc" : "ccc, LLL d"
-    );
-    const last = commonByDay[commonByDay.length - 1];
-    if (last && last.day === day) last.windows.push(w);
-    else commonByDay.push({ day, windows: [w] });
-  }
-  const shortRange = (w: { startMs: number; endMs: number }) => {
-    const a = DateTime.fromMillis(w.startMs, { zone: meta.organizerTz });
-    const b = DateTime.fromMillis(w.endMs, { zone: meta.organizerTz });
-    return `${a.toFormat(a.toFormat("a") === b.toFormat("a") ? "h:mm" : "h:mm a")} – ${b.toFormat("h:mm a")}`;
-  };
+  // Back-to-back ticked times go out as one option in the email.
+  const optionCount = mergeSessions(pickedSessions).length;
 
   // Outline the previewed (hovered) option, else the ticked ones, else the
   // locked-in time.
@@ -572,6 +560,17 @@ function Organizer() {
             )}
           </div>
           {isAdmin && (
+            <button
+              type="button"
+              className="icon-btn icon-btn-lg"
+              aria-label={t("Poll settings")}
+              title={t("Poll settings")}
+              onClick={() => setEditOpen(true)}
+            >
+              <Icon name="settings" size={18} />
+            </button>
+          )}
+          {isAdmin && (
             <div className="menu-root" ref={menuRef}>
               <button
                 type="button"
@@ -592,7 +591,7 @@ function Organizer() {
                       setEditOpen(true);
                     }}
                   >
-                    {t("Edit poll (name, deadline, days, hours)")}
+                    {t("Edit poll (name, timezone, deadline, days, hours)")}
                   </button>
                   <button
                     type="button"
@@ -867,84 +866,44 @@ function Organizer() {
                 />
 
                 {(common.length > 0 || result.kind === "ok") && (
-                  <div className="card common-card">
-                    <div className="results-head">
-                      <h2>{t("All times everyone can make it")}</h2>
-                      <span className="badge badge-ok">{common.length}</span>
-                    </div>
-                    <p className="hint">
-                      {t("Every {d} slot where all {n} people are free, in your timezone. Tick the time to lock it in, or tick several to email them as options for people to choose from.", {
-                        d: t(DURATIONS.find((d) => d.min === durationMin)?.label ?? `${durationMin} min`),
-                        n: participants.length,
-                      })}
-                    </p>
-                    {commonByDay.map((g) => (
-                      <div key={g.day} className="common-day">
-                        <div className="common-day-label">{g.day}</div>
-                        <div className="chips">
-                          {g.windows.map((w) => {
-                            const on = picks.includes(w.startMs);
-                            const locked = lockedStarts.has(w.startMs);
-                            // Who would be up at night for this slot?
-                            const night = participants
-                              .filter((p) => windowComfort(w.startMs, w.endMs, p.tz) === "night")
-                              .map((p) => p.codename);
-                            return (
-                              <button
-                                type="button"
-                                key={w.startMs}
-                                className={`chip time-chip${on ? " on" : ""}${locked ? " locked" : ""}`}
-                                aria-pressed={on}
-                                title={night.length ? t("Late night for {names}", { names: joinNames(night) }) : undefined}
-                                onClick={() =>
-                                  setPicks((p) =>
-                                    p.includes(w.startMs)
-                                      ? p.filter((x) => x !== w.startMs)
-                                      : [...p, w.startMs]
-                                  )
-                                }
-                                onMouseEnter={() =>
-                                  setHoverSessions([sessionAt(w.startMs, durationMin, meta, participants)])
-                                }
-                                onMouseLeave={() => setHoverSessions(null)}
-                              >
-                                {(on || locked) && <Icon name="check" size={14} />}
-                                {shortRange(w)}
-                                {night.length > 0 && (
-                                  <span className="chip-night-mark" aria-label={t("Late night for {names}", { names: joinNames(night) })}>
-                                    <Icon name="moon" size={12} />
-                                    {night.length > 1 ? night.length : ""}
-                                  </span>
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    ))}
-                    <button
-                      type="button"
-                      className="btn btn-primary btn-block"
-                      disabled={pickedSessions.length === 0}
-                      onClick={() => {
-                        if (!isAdmin) {
-                          show(t("Open your private organizer link to pick a time"));
-                          return;
-                        }
-                        if (asOptions) setOptionSessions(pickedSessions);
-                        else void onUse(pickedSessions);
-                        setPicks([]);
-                      }}
-                    >
-                      {pickedSessions.length === 0
-                        ? t("Tick the times you want")
-                        : asOptions
-                        ? t("Email these {n} times as options", { n: pickedSessions.length })
-                        : t(pickedSessions.length === 1 ? "Pick 1 selected time" : "Pick {n} selected times", {
-                            n: pickedSessions.length,
-                          })}
-                    </button>
-                  </div>
+                  <CommonTimes
+                    meta={meta}
+                    participants={participants}
+                    common={common}
+                    durationMin={durationMin}
+                    durationLabel={t(DURATIONS.find((d) => d.min === durationMin)?.label ?? `${durationMin} min`)}
+                    sessionsPerWeek={sessionsPerWeek}
+                    picks={picks}
+                    onPicks={setPicks}
+                    lockedStarts={lockedStarts}
+                    onHover={setHoverSessions}
+                    footer={
+                      <button
+                        type="button"
+                        className="btn btn-primary btn-block"
+                        disabled={pickedSessions.length === 0}
+                        onClick={() => {
+                          if (!isAdmin) {
+                            show(t("Open your private organizer link to pick a time"));
+                            return;
+                          }
+                          if (asOptions) setOptionSessions(pickedSessions);
+                          else void onUse(pickedSessions);
+                          setPicks([]);
+                        }}
+                      >
+                        {pickedSessions.length === 0
+                          ? t("Tick the times you want")
+                          : asOptions
+                          ? optionCount === 1
+                            ? t("Email this time window as an option")
+                            : t("Email these {n} times as options", { n: optionCount })
+                          : t(pickedSessions.length === 1 ? "Pick 1 selected time" : "Pick {n} selected times", {
+                              n: pickedSessions.length,
+                            })}
+                      </button>
+                    }
+                  />
                 )}
               </section>
             ) : (

@@ -10,6 +10,7 @@ import { detectTz } from "../lib/slots";
 import { useMySchedule } from "../lib/useMySchedule";
 import { isFirebaseConfigured, signInWithGoogle } from "../firebase";
 import { t } from "../lib/i18n";
+import { getPrefs } from "../lib/prefs";
 
 type SaveState = "idle" | "saving" | "saved" | "error";
 
@@ -26,9 +27,10 @@ const PRESETS: { label: string; days: number[]; start: number; end: number }[] =
   { label: "Weekday evenings", days: [1, 2, 3, 4, 5], start: 18, end: 21 },
 ];
 
-export default function MySchedule() {
+/** The weekly-schedule editor. `embedded` renders it as a Settings tab instead of a page. */
+export default function MySchedule({ embedded = false }: { embedded?: boolean }) {
   const { signedIn, uid, schedule, setSchedule } = useMySchedule();
-  const [tz, setTz] = useState(detectTz());
+  const [tz, setTz] = useState(() => getPrefs().tz || detectTz());
   const [blocks, setBlocks] = useState<Set<string>>(new Set());
   const [fullDay, setFullDay] = useState(false);
   // Slots taken on Google Calendar at the last import (this visit only).
@@ -111,9 +113,9 @@ export default function MySchedule() {
 
   return (
     <div>
-      <div className="page-head page-head-row">
+      <div className={embedded ? "settings-section-head" : "page-head page-head-row"}>
         <div>
-          <h1 className="page-title">{t("My schedule")}</h1>
+          {embedded ? <h2>{t("My schedule")}</h2> : <h1 className="page-title">{t("My schedule")}</h1>}
           <p className="page-sub">
             {t("The times you're usually free each week. In any poll, “Fill from my schedule” marks these for you, converted to that poll's timezone.")}
           </p>

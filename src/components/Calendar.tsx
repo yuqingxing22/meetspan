@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { DateTime } from "luxon";
 import Icon from "./Icon";
 import { t } from "../lib/i18n";
+import { usePrefs } from "../lib/prefs";
 
 interface Props {
   /** ISO dates (yyyy-mm-dd) to render as selected/highlighted. */
@@ -10,9 +11,22 @@ interface Props {
   onDayClick: (iso: string, shift: boolean) => void;
   /** ISO date whose month to show first (default: this month). */
   initialMonth?: string;
+  /**
+   * Timezone that decides which day is "today" (default: this device's).
+   * Late in the evening in Los Angeles it is already tomorrow in Shanghai, so
+   * a poll made in Shanghai time can't start on the Los Angeles date.
+   */
+  tz?: string;
 }
 
 const DOW = ["Su", "Mo", "Tu", "We", "Th", "Fr", "Sa"]; // translated at render
+
+/** Today's date in `tz` (or on this device), as a zone-free local DateTime. */
+export function todayIn(tz?: string): DateTime {
+  const now = tz ? DateTime.now().setZone(tz) : DateTime.now();
+  const iso = (now.isValid ? now : DateTime.now()).toISODate()!;
+  return DateTime.fromISO(iso).startOf("day");
+}
 /** How far ahead the month picker goes. */
 const MAX_YEARS_AHEAD = 5;
 
@@ -21,8 +35,9 @@ const MAX_YEARS_AHEAD = 5;
  * switches to a month picker for jumping months or years ahead. Past days and
  * months are disabled.
  */
-export default function Calendar({ selectedDates, onDayClick, initialMonth }: Props) {
-  const today = DateTime.now().startOf("day");
+export default function Calendar({ selectedDates, onDayClick, initialMonth, tz }: Props) {
+  const { weekStart } = usePrefs();
+  const today = todayIn(tz);
   const thisMonth = today.startOf("month");
   const [view, setView] = useState<DateTime>(() => {
     const start = initialMonth ? DateTime.fromISO(initialMonth).startOf("month") : thisMonth;
@@ -39,7 +54,9 @@ export default function Calendar({ selectedDates, onDayClick, initialMonth }: Pr
   );
 
   const first = view.startOf("month");
-  const lead = first.weekday % 7; // Sun-first grid: Sun→0 … Sat→6
+  // Sun-first grid: Sun→0 … Sat→6; Mon-first: Mon→0 … Sun→6.
+  const lead = (first.weekday - (weekStart === 1 ? 1 : 0) + 7) % 7;
+  const dow = weekStart === 1 ? [...DOW.slice(1), DOW[0]] : DOW;
   const daysInMonth = view.daysInMonth ?? 30;
   const canGoPrev = view.startOf("month") > thisMonth;
   const lastYear = today.year + MAX_YEARS_AHEAD;
@@ -158,7 +175,7 @@ export default function Calendar({ selectedDates, onDayClick, initialMonth }: Pr
       </div>
 
       <div className="cal-grid">
-        {DOW.map((d) => (
+        {dow.map((d) => (
           <div key={d} className="cal-dow">
             {t(d)}
           </div>

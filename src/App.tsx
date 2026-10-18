@@ -1,15 +1,33 @@
-import { useEffect } from "react";
-import { Link, Outlet, useLocation } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { isFirebaseConfigured } from "./firebase";
 import AccountMenu from "./components/AccountMenu";
 import YourPollsMenu from "./components/YourPollsMenu";
 import Icon from "./components/Icon";
+import Tour, { TOUR_EVENT, startTour } from "./components/Tour";
+import { usePrefs } from "./lib/prefs";
+import { startPrefsSync } from "./lib/prefsSync";
 import { t, useLang } from "./lib/i18n";
 import markUrl from "./assets/meetspan-mark.svg";
 
 export default function App() {
   const { pathname } = useLocation();
+  const nav = useNavigate();
   const [lang, setLang] = useLang();
+  const { clock } = usePrefs();
+  const [touring, setTouring] = useState(false);
+
+  useEffect(() => startPrefsSync(), []);
+
+  // The tutorial walks through the create form on the home page.
+  useEffect(() => {
+    const onTour = () => setTouring(true);
+    window.addEventListener(TOUR_EVENT, onTour);
+    return () => window.removeEventListener(TOUR_EVENT, onTour);
+  }, []);
+  useEffect(() => {
+    if (pathname !== "/") setTouring(false);
+  }, [pathname]);
   // Promote the app on shared pages (invite / organizer) — but not on the
   // home page, which already *is* the create form.
   const showCta = pathname !== "/";
@@ -20,8 +38,8 @@ export default function App() {
   }, [pathname]);
 
   return (
-    // Keyed by language so every page re-renders its text and dates.
-    <div className="app" key={lang}>
+    // Keyed by language and clock so every page re-renders its text and dates.
+    <div className="app" key={`${lang}-${clock}`}>
       <header className="topbar">
         <Link to="/" className="brand">
           <img className="brand-mark" src={markUrl} alt="" width={30} height={30} />
@@ -36,6 +54,28 @@ export default function App() {
             </Link>
           )}
           <AccountMenu />
+          <Link
+            to="/settings"
+            className={`btn btn-sm icon-only${pathname === "/settings" ? " active" : ""}`}
+            aria-label={t("Settings")}
+            title={t("Settings")}
+            data-tour="settings"
+          >
+            <Icon name="settings" />
+          </Link>
+          <button
+            type="button"
+            className="btn btn-sm"
+            aria-label={t("Tutorial")}
+            title={t("Tutorial")}
+            onClick={() => {
+              if (pathname !== "/") nav("/");
+              startTour();
+            }}
+          >
+            <Icon name="help" />
+            <span className="hide-narrow">{t("Tutorial")}</span>
+          </button>
           <button
             type="button"
             className="btn btn-sm lang-toggle"
@@ -57,6 +97,7 @@ export default function App() {
       <main className="content">
         <Outlet />
       </main>
+      {touring && pathname === "/" && <Tour onClose={() => setTouring(false)} />}
 
       <footer className="footer">
         <div className="footer-grid">

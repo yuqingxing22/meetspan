@@ -1,12 +1,12 @@
 import "./lib/i18n"; // first: localizes date formatting before anything renders
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { HashRouter, Routes, Route } from "react-router-dom";
+import { HashRouter, Navigate, Routes, Route } from "react-router-dom";
 import App from "./App";
 import Home from "./pages/Home";
 import Participate from "./pages/Participate";
 import Organizer from "./pages/Organizer";
-import MySchedule from "./pages/MySchedule";
+import Settings from "./pages/Settings";
 import Privacy from "./pages/Privacy";
 import Faq from "./pages/Faq";
 import Support from "./pages/Support";
@@ -30,7 +30,9 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
             <Route index element={<Home />} />
             <Route path="p/:pollId" element={<Participate />} />
             <Route path="o/:pollId" element={<Organizer />} />
-            <Route path="schedule" element={<MySchedule />} />
+            <Route path="settings" element={<Settings />} />
+            {/* "My schedule" moved into Settings; old links still work. */}
+            <Route path="schedule" element={<Navigate to="/settings?tab=schedule" replace />} />
             <Route path="privacy" element={<Privacy />} />
             <Route path="faq" element={<Faq />} />
             <Route path="support" element={<Support />} />

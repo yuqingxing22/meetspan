@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { DateTime } from "luxon";
 import TimezonePicker from "../components/TimezonePicker";
-import Calendar from "../components/Calendar";
+import Calendar, { todayIn } from "../components/Calendar";
 import DateField from "../components/DateField";
 import RepeatEndField from "../components/RepeatEndField";
 import { repeatEndError, repeatEndLabel } from "../lib/repeat";
@@ -29,6 +29,7 @@ import type { Granularity, PollMeta, RepeatEnd } from "../lib/types";
 import heroArt from "../assets/illustrations/time-management.svg";
 import shareArt from "../assets/illustrations/share-link.svg";
 import { getLang, t } from "../lib/i18n";
+import { rememberCustomHours, setPrefs, usePrefs } from "../lib/prefs";
 
 type PickMode = "dates" | "weekly";
 
@@ -73,7 +74,10 @@ export default function Home() {
   const [title, setTitle] = useState("");
   const [deadline, setDeadline] = useState("");
   const [organizerName, setOrganizerName] = useState(loadMyName);
-  const [tz, setTz] = useState(detectTz());
+  const prefs = usePrefs();
+  // The zone picked last (here or on this account), else this device's.
+  const [tz, setTzState] = useState(() => prefs.tz || detectTz());
+  const tzTouched = useRef(false);
   const [pickMode, setPickMode] = useState<PickMode>("dates");
   const [dates, setDates] = useState<string[]>([]);
   const [lastPick, setLastPick] = useState<string | null>(null);
@@ -95,6 +99,37 @@ export default function Home() {
   useEffect(() => {
     if (googleName) setOrganizerName((n) => n || googleName);
   }, [googleName]);
+
+  // Settings synced from the account can arrive after the page opened.
+  useEffect(() => {
+    if (!tzTouched.current && prefs.tz && prefs.tz !== tz) changeTz(prefs.tz);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [prefs.tz]);
+
+  function setTz(next: string) {
+    tzTouched.current = true;
+    setPrefs({ tz: next });
+    changeTz(next);
+  }
+
+  function changeTz(next: string) {
+    setTzState(next);
+    // A day can already be over in the new zone (it's tomorrow in Shanghai
+    // while it's still today in Los Angeles): drop it rather than create a
+    // poll with times in the past.
+    const today = todayIn(next).toISODate()!;
+    const past = dates.filter((d) => d < today);
+    if (past.length) {
+      setDates((d) => d.filter((x) => x >= today));
+      show(
+        t(past.length === 1 ? "Removed 1 day that's already over in {city}" : "Removed {n} days that are already over in {city}", {
+          n: past.length,
+          city: tzInfo(next).city,
+        })
+      );
+    }
+    if (deadline && deadline < today) setDeadline("");
+  }
 
   const [created, setCreated] = useState<{
     pollId: string;
@@ -149,6 +184,10 @@ export default function Home() {
       ? t(dayCount === 1 ? "1 day" : "{n} days", { n: dayCount })
       : t(dayCount === 1 ? "1 weekday, every week" : "{n} weekdays, every week", { n: dayCount });
   const hoursText = `${shortHour(startHour)} – ${shortHour(endHour)}`;
+  // The last custom hours used for a poll (built-in presets aren't repeated here).
+  const recentHours = prefs.customHours.filter(
+    (h) => !PRESETS.some((p) => p.start === h.start && p.end === h.end)
+  );
 
   const previewCols = resolvedDates.slice(0, 7).map((iso) => {
     const dt = DateTime.fromISO(iso);
@@ -187,6 +226,8 @@ export default function Home() {
       addMyPoll({ pollId, token, title: meta.title, createdAt: meta.createdAt });
       rememberTitle(meta.title);
       saveMyName(meta.organizerName);
+      setPrefs({ tz });
+      if (preset === "custom") rememberCustomHours({ start: startHour, end: endHour });
       setCreated({ pollId, token });
       window.scrollTo({ top: 0 });
     } catch (e) {
@@ -448,7 +489,7 @@ export default function Home() {
 
       <div className="create-layout">
         <div className="create-main">
-          <section className="card">
+          <section className="card" data-tour="basics">
             <StepHead n={1} title={t("The basics")} />
             {/* A div, not a label: clicks in the suggestion list must not refocus the input. */}
             <div className="field">
@@ -464,17 +505,22 @@ export default function Home() {
                   onChange={(e) => setOrganizerName(e.target.value)}
                 />
               </label>
-              <div>
-                <TimezonePicker value={tz} onChange={setTz} label={t("Your timezone")} />
+              <div data-tour="tz">
+                <TimezonePicker
+                  id="poll-tz"
+                  value={tz}
+                  onChange={setTz}
+                  label={t("Your timezone")}
+                />
               </div>
             </div>
             <div className="field field-narrow">
               <label className="field-label" htmlFor="poll-deadline">{t("Respond by (optional)")}</label>
-              <DateField id="poll-deadline" value={deadline} onChange={setDeadline} />
+              <DateField id="poll-deadline" value={deadline} onChange={setDeadline} tz={tz} />
             </div>
           </section>
 
-          <section className="card">
+          <section className="card" data-tour="days">
             <div className="step-head-row">
               <StepHead n={2} title={t("Which days?")} />
               <div className="seg" role="group" aria-label={t("How to pick days")}>
@@ -500,7 +546,7 @@ export default function Home() {
             <div className="days-body">
               {pickMode === "dates" ? (
                 <div className="daypick">
-                  <Calendar selectedDates={new Set(dates)} onDayClick={pickDay} />
+                  <Calendar selectedDates={new Set(dates)} onDayClick={pickDay} tz={tz} />
                   <div className="daypick-side">
                     <div className="daypick-side-head">
                       <span className="field-label">{t("Selected · {n}", { n: dates.length })}</span>
@@ -573,6 +619,7 @@ export default function Home() {
                         id="first-week"
                         value={firstWeek}
                         onChange={setFirstWeek}
+                        tz={tz}
                         placeholder={t("Starting this week")}
                         format={(iso) =>
                           t("Week of {date}", {
@@ -614,7 +661,7 @@ export default function Home() {
             </div>
           </section>
 
-          <section className="card">
+          <section className="card" data-tour="hours">
             <StepHead n={3} title={t("What hours?")} />
             <div className="preset-grid">
               {PRESETS.map((p) => {
@@ -672,6 +719,31 @@ export default function Home() {
                 </label>
               </div>
             )}
+            {recentHours.length > 0 && (
+              <div className="recent-hours">
+                <span className="field-label">{t("Your recent custom hours")}</span>
+                <div className="chips chips-sm">
+                  {recentHours.map((h) => {
+                    const on = preset === "custom" && startHour === h.start && endHour === h.end;
+                    return (
+                      <button
+                        type="button"
+                        key={`${h.start}-${h.end}`}
+                        className={`chip${on ? " on" : ""}`}
+                        aria-pressed={on}
+                        onClick={() => {
+                          setPreset("custom");
+                          setStartHour(h.start);
+                          setEndHour(h.end);
+                        }}
+                      >
+                        {shortHour(h.start)} – {shortHour(h.end)}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
             {badRange && (
               <p className="error-text">{t("The end time needs to be after the start time.")}</p>
             )}
@@ -685,7 +757,7 @@ export default function Home() {
         </div>
 
         <aside className="create-aside">
-          <div className="card preview-card">
+          <div className="card preview-card" data-tour="create">
             <div className="eyebrow">{t("Preview")}</div>
             <div className="preview-title">{title.trim() || t("Untitled poll")}</div>
             <ul className="meta-list">

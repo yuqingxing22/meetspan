@@ -15,6 +15,8 @@ interface Props {
   format?: (iso: string) => string;
   /** Hide the × (when empty already means something, e.g. "this week"). */
   clearable?: boolean;
+  /** Timezone whose "today" is the first pickable day (default: this device's). */
+  tz?: string;
 }
 
 /**
@@ -22,7 +24,7 @@ interface Props {
  * the browser's language (mm/dd/yyyy even on the Chinese page), so this shows
  * the date in the page's language and opens our calendar instead.
  */
-export default function DateField({ value, onChange, id, placeholder, format, clearable = true }: Props) {
+export default function DateField({ value, onChange, id, placeholder, format, clearable = true, tz }: Props) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -79,6 +81,7 @@ export default function DateField({ value, onChange, id, placeholder, format, cl
           <Calendar
             selectedDates={new Set(value ? [value] : [])}
             initialMonth={value || undefined}
+            tz={tz}
             onDayClick={(iso) => {
               onChange(iso);
               setOpen(false);

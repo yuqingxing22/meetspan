@@ -1,62 +1,27 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
-import { DateTime } from "luxon";
+import { useEffect, useRef, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import Icon from "./Icon";
-import { MYPOLLS_EVENT, listMyPolls, type MyPoll } from "../lib/adminStore";
-import { listPollsByOrganizer } from "../lib/poll";
-import { isFirebaseConfigured } from "../firebase";
-import { useAuthState } from "../lib/useAuthState";
+import PollList from "./PollList";
+import { useMyPolls } from "../lib/useMyPolls";
+import { useToast } from "../lib/useToast";
 import { t } from "../lib/i18n";
 
-/**
- * Topbar "Your polls" dropdown. Merges polls created in this browser (which
- * carry the admin token) with polls tied to this account on the server (any
- * device where the same Google account is signed in).
- */
+/** How many polls the menu shows; the rest are under Settings → Your polls. */
+const MENU_LIMIT = 4;
+
+/** Topbar "Your polls" dropdown: the latest few polls, batch actions, and a way to all of them. */
 export default function YourPollsMenu() {
   const nav = useNavigate();
   const { pathname } = useLocation();
-  const auth = useAuthState();
-  const uid = typeof auth === "string" && auth !== "loading" && auth !== "error" ? auth : null;
-
+  const { polls, refresh } = useMyPolls();
+  const { show, node } = useToast();
   const [open, setOpen] = useState(false);
-  const [localPolls, setLocalPolls] = useState<MyPoll[]>(() => listMyPolls());
-  const [cloudPolls, setCloudPolls] = useState<MyPoll[]>([]);
   const rootRef = useRef<HTMLDivElement>(null);
-
-  const refreshCloud = useCallback(() => {
-    if (!isFirebaseConfigured || !uid) return () => {};
-    let alive = true;
-    listPollsByOrganizer(uid)
-      .then((list) => {
-        if (!alive) return;
-        setCloudPolls(
-          list.map(({ pollId, meta }) => ({
-            pollId,
-            token: "",
-            title: meta.title,
-            createdAt: meta.createdAt,
-          }))
-        );
-      })
-      .catch((e) => console.error("Couldn't load your polls", e));
-    return () => {
-      alive = false;
-    };
-  }, [uid]);
 
   // Re-read on navigation so a poll created a moment ago shows up.
   useEffect(() => {
-    setLocalPolls(listMyPolls());
-    return refreshCloud();
-  }, [refreshCloud, pathname]);
-
-  // A poll created (or forgotten) on this page updates the list right away.
-  useEffect(() => {
-    const onChange = () => setLocalPolls(listMyPolls());
-    window.addEventListener(MYPOLLS_EVENT, onChange);
-    return () => window.removeEventListener(MYPOLLS_EVENT, onChange);
-  }, []);
+    refresh();
+  }, [pathname, refresh]);
 
   useEffect(() => {
     if (!open) return;
@@ -74,18 +39,12 @@ export default function YourPollsMenu() {
     };
   }, [open]);
 
-  // Local entries carry the admin token; cloud-only ones are opened by uid.
-  const polls = useMemo(() => {
-    const byId = new Map<string, MyPoll>();
-    cloudPolls.forEach((p) => byId.set(p.pollId, p));
-    localPolls.forEach((p) => byId.set(p.pollId, p));
-    return [...byId.values()].sort((a, b) => b.createdAt - a.createdAt);
-  }, [cloudPolls, localPolls]);
+  if (polls.length === 0) return <>{node}</>;
 
-  if (polls.length === 0) return null;
+  const more = polls.length - MENU_LIMIT;
 
   return (
-    <div className="menu-root" ref={rootRef}>
+    <div className="menu-root" ref={rootRef} data-tour="polls">
       <button
         type="button"
         className="btn btn-sm"
@@ -100,30 +59,22 @@ export default function YourPollsMenu() {
       {open && (
         <div className="menu menu-wide">
           <div className="menu-title">{t("Your polls")}</div>
-          {polls.map((p) => (
-            <div key={p.pollId} className="mypoll">
-              <button
-                type="button"
-                className="mypoll-open"
-                onClick={() => {
-                  setOpen(false);
-                  nav(p.token ? `/o/${p.pollId}?k=${p.token}` : `/o/${p.pollId}`);
-                }}
-              >
-                <span className="mypoll-title">{p.title || t("Untitled poll")}</span>
-                <span className="mypoll-date">
-                  {DateTime.fromMillis(p.createdAt).toFormat("LLL d, yyyy")}
-                </span>
-              </button>
-            </div>
-          ))}
-          <p className="menu-foot">
-            {uid
-              ? t("Saved in this browser and under your account. Removing one here doesn't delete the poll.")
-              : t("Saved in this browser. Removing one here doesn't delete the poll.")}
-          </p>
+          <PollList
+            polls={polls.slice(0, MENU_LIMIT)}
+            onOpen={(p) => {
+              setOpen(false);
+              nav(p.token ? `/o/${p.pollId}?k=${p.token}` : `/o/${p.pollId}`);
+            }}
+            onChanged={refresh}
+            onMessage={show}
+          />
+          <Link to="/settings?tab=polls" className="menu-more" onClick={() => setOpen(false)}>
+            {more > 0 ? t("More ({n})", { n: more }) : t("All polls")}
+            <Icon name="arrowRight" size={14} />
+          </Link>
         </div>
       )}
+      {node}
     </div>
   );
 }
