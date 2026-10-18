@@ -3,6 +3,8 @@ dist
 dist-ssr
 # Third-party design-reference collection — kept locally, not shipped in the repo.
 design/references/awesome-design-md/
+# Ops material (promo videos, inbox script, todo, notes) — local only, not shipped in the public repo.
+ops/
 *.local
 *.tsbuildinfo
 .DS_Store
