@@ -15,7 +15,21 @@ export interface CustomHours {
   end: number;
 }
 
+/** A user-defined email category: its name and the text sent for it (see fillTemplate in email.ts). */
+export interface EmailTemplate {
+  id: string;
+  /** The category name shown in the template lists, e.g. "Lab meeting". */
+  name: string;
+  subject: string;
+  /** Email for a confirmed time. */
+  body: string;
+  /** Email when several times are sent as options; empty uses `body`. */
+  optionsBody: string;
+}
+
 export interface Prefs {
+  /** What to call the user: the default organizer name and answer name. */
+  name: string;
   accent: Accent;
   textSize: TextSize;
   clock: Clock;
@@ -25,6 +39,8 @@ export interface Prefs {
   tz: string;
   /** Custom daily hours used for recent polls, newest first, at most MAX_CUSTOM_HOURS. */
   customHours: CustomHours[];
+  /** The user's own email categories and templates. */
+  templates: EmailTemplate[];
   /** When these were last changed (ms); the newer copy wins when syncing. */
   updatedAt: number;
 }
@@ -32,18 +48,25 @@ export interface Prefs {
 export const ACCENTS: Accent[] = ["indigo", "blue", "teal", "violet", "rose"];
 export const TEXT_SIZES: TextSize[] = ["sm", "md", "lg", "xl"];
 export const MAX_CUSTOM_HOURS = 3;
+export const MAX_TEMPLATES = 20;
+/** Keeps the synced settings document well under Firestore's size limit. */
+export const MAX_TEMPLATE_TEXT = 4000;
 
 export const DEFAULT_PREFS: Prefs = {
+  name: "",
   accent: "indigo",
   textSize: "md",
   clock: "auto",
   weekStart: 0,
   tz: "",
   customHours: [],
+  templates: [],
   updatedAt: 0,
 };
 
 const KEY = "meetspan.prefs";
+/** The name typed last before settings existed (adminStore.ts wrote it here). */
+const OLD_NAME_KEY = "meetspan.organizerName";
 /** Older browsers kept the timezone list here; its first entry seeds `tz`. */
 const RECENT_TZS_KEY = "meetspan.recentTzs";
 
@@ -51,7 +74,10 @@ const RECENT_TZS_KEY = "meetspan.recentTzs";
 export function cleanPrefs(raw: unknown): Prefs {
   const r = (raw && typeof raw === "object" ? raw : {}) as Partial<Record<keyof Prefs, unknown>>;
   const hours = Array.isArray(r.customHours) ? r.customHours : [];
+  const templates = Array.isArray(r.templates) ? r.templates : [];
+  const str = (v: unknown, max: number) => (typeof v === "string" ? v.slice(0, max) : "");
   return {
+    name: str(r.name, 80),
     accent: ACCENTS.includes(r.accent as Accent) ? (r.accent as Accent) : DEFAULT_PREFS.accent,
     textSize: TEXT_SIZES.includes(r.textSize as TextSize) ? (r.textSize as TextSize) : DEFAULT_PREFS.textSize,
     clock: r.clock === "12" || r.clock === "24" ? r.clock : "auto",
@@ -69,6 +95,16 @@ export function cleanPrefs(raw: unknown): Prefs {
       )
       .slice(0, MAX_CUSTOM_HOURS)
       .map(({ start, end }) => ({ start, end })),
+    templates: templates
+      .filter((x): x is EmailTemplate => !!x && typeof (x as EmailTemplate).id === "string")
+      .slice(0, MAX_TEMPLATES)
+      .map((x) => ({
+        id: str(x.id, 40),
+        name: str(x.name, 60),
+        subject: str(x.subject, 300),
+        body: str(x.body, MAX_TEMPLATE_TEXT),
+        optionsBody: str(x.optionsBody, MAX_TEMPLATE_TEXT),
+      })),
     updatedAt: typeof r.updatedAt === "number" ? r.updatedAt : 0,
   };
 }
@@ -76,10 +112,12 @@ export function cleanPrefs(raw: unknown): Prefs {
 function read(): Prefs {
   try {
     const raw = localStorage.getItem(KEY);
-    if (raw) return cleanPrefs(JSON.parse(raw));
+    const saved = raw ? cleanPrefs(JSON.parse(raw)) : null;
     // First visit since settings existed: keep the zone picked last.
     const recent = JSON.parse(localStorage.getItem(RECENT_TZS_KEY) ?? "[]");
-    return { ...DEFAULT_PREFS, tz: Array.isArray(recent) && typeof recent[0] === "string" ? recent[0] : "" };
+    const base = saved ?? { ...DEFAULT_PREFS, tz: Array.isArray(recent) && typeof recent[0] === "string" ? recent[0] : "" };
+    // …and the name typed last, from before the name was a setting.
+    return base.name ? base : { ...base, name: (localStorage.getItem(OLD_NAME_KEY) ?? "").trim() };
   } catch {
     return { ...DEFAULT_PREFS };
   }
@@ -103,6 +141,21 @@ export function setPrefs(patch: Partial<Prefs>, opts: { fromAccount?: boolean } 
     /* private mode: settings last for this visit */
   }
   applyPrefs(current);
+
+// Settings changed in another tab (e.g. a template added in Settings while an
+// email draft is open) show up here too.
+if (typeof window !== "undefined") {
+  window.addEventListener("storage", (e) => {
+    if (e.key !== KEY || !e.newValue) return;
+    try {
+      current = cleanPrefs(JSON.parse(e.newValue));
+    } catch {
+      return;
+    }
+    applyPrefs(current);
+    listeners.forEach((fn) => fn(current, true));
+  });
+}
   listeners.forEach((fn) => fn(current, !!opts.fromAccount));
 }
 

@@ -1,11 +1,11 @@
+import { getPrefs, setPrefs } from "./prefs";
+
 // Small localStorage helpers so a returning organizer keeps control of their
 // poll, and a returning participant keeps their identity/selections.
 
 const ADMIN_PREFIX = "meetspan.admin.";
 const PART_PREFIX = "meetspan.participant.";
 const MYPOLLS_KEY = "meetspan.mypolls";
-// Named for where it was first used; now shared by organizers and participants.
-const MYNAME_KEY = "meetspan.organizerName";
 /** Fired on window when this browser's poll list changes. */
 export const MYPOLLS_EVENT = "meetspan:mypolls";
 
@@ -96,21 +96,18 @@ export function loadParticipant(pollId: string): StoredParticipant | null {
   }
 }
 
-/** The name this browser last typed when creating or answering a poll. */
+/** What to call this person (Settings → Preferences), used to prefill names. */
 export function loadMyName(): string {
-  try {
-    return localStorage.getItem(MYNAME_KEY) ?? "";
-  } catch {
-    return "";
-  }
+  return getPrefs().name;
 }
 
+/**
+ * Remember a name typed when creating or answering a poll, as the default for
+ * next time. A name already chosen in Settings is kept: a one-off name for one
+ * poll shouldn't replace it.
+ */
 export function saveMyName(name: string): void {
-  try {
-    if (name.trim()) localStorage.setItem(MYNAME_KEY, name.trim());
-  } catch {
-    /* ignore */
-  }
+  if (name.trim() && !getPrefs().name) setPrefs({ name: name.trim() });
 }
 
 /** First name from a Google profile, used when no name was typed before. */

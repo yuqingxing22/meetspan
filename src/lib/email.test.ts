@@ -160,3 +160,43 @@ describe("weekly emails show weekdays, not dates", () => {
     expect(zh.body).toContain("夏令时切换后");
   });
 });
+
+describe("custom email templates", () => {
+  const values = {
+    meeting: "Lab meeting",
+    times: "  Time: Wed 9–10",
+    duration: "60 min",
+    frequency: "",
+    start: "",
+    organizer: "Kyra",
+  };
+
+  it("fills English and Chinese placeholders and leaves unknown ones", async () => {
+    const { fillTemplate } = await import("./email");
+    expect(fillTemplate("{meeting} / {会议} / {Meeting} / {room}", values)).toBe("Lab meeting / Lab meeting / Lab meeting / {room}");
+  });
+
+  it("collapses lines left empty by an empty value", async () => {
+    const { fillTemplate } = await import("./email");
+    expect(fillTemplate("Hi\n\n{times}\n\n{start}\n\nBye {organizer}", values)).toBe("Hi\n\n  Time: Wed 9–10\n\nBye Kyra");
+  });
+
+  it("uses the template instead of the built-in text, and the options version for options", async () => {
+    const { generateEmail } = await import("./email");
+    const meta = { title: "Lab", organizerName: "Kyra", organizerTz: "America/Los_Angeles", dateMode: "specific" } as unknown as import("./types").PollMeta;
+    const start = Date.UTC(2026, 9, 14, 16, 0);
+    const s = (ms: number) => ({ startMs: ms, endMs: ms + 3600_000, slotCount: 2, count: 1, freeIds: ["k"], missing: [], blockId: 0 });
+    const participants = [{ id: "k", codename: "Kyra", tz: "America/Los_Angeles", ownerUid: "u", selectedSlots: [], updatedAt: 0 }];
+    const template = { id: "t1", name: "Lab", subject: "{meeting}\nconfirmed", body: "Hello lab,\n{times}\n— {organizer}", optionsBody: "" };
+    const base = { meta, meetingName: "Lab meeting", durationMin: 60, sessionsPerWeek: 1, type: "team" as const, participants, template, lang: "en" as const };
+    const one = generateEmail({ ...base, sessions: [s(start)] });
+    expect(one.subject).toBe("Lab meeting confirmed");
+    expect(one.body).toContain("Hello lab,\n  Time: Wed, Oct 14 · 9:00 AM – 10:00 AM PDT");
+    expect(one.body.endsWith("— Kyra")).toBe(true);
+    // No options version written: the same body, with the times listed as options.
+    const opts = generateEmail({ ...base, sessions: [s(start), s(start + 86_400_000)], options: true });
+    expect(opts.body).toContain("Option B:");
+    const own = generateEmail({ ...base, sessions: [s(start), s(start + 86_400_000)], options: true, template: { ...template, optionsBody: "Pick one:\n{times}" } });
+    expect(own.body.startsWith("Pick one:\n  Option A:")).toBe(true);
+  });
+});

@@ -3546,18 +3546,26 @@ html[data-textsize="xl"] .app {
 }
 
 /* ---------- Settings page ---------- */
+.settings-page {
+  max-width: 860px;
+  margin: 0 auto;
+}
 .settings-tabs {
   display: flex;
   gap: 4px;
   margin-bottom: 20px;
   border-bottom: 1px solid var(--border);
   overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+}
+.settings-tabs::-webkit-scrollbar {
+  display: none;
 }
 .settings-tabs button {
   border: 0;
   background: none;
   padding: 10px 14px;
-  margin-bottom: -1px;
   border-bottom: 2px solid transparent;
   font-size: 14px;
   font-weight: 500;
@@ -3573,29 +3581,51 @@ html[data-textsize="xl"] .app {
   border-bottom-color: var(--brand);
   font-weight: 600;
 }
-.settings-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 420px), 1fr));
+.settings-stack {
+  display: flex;
+  flex-direction: column;
   gap: 16px;
-  align-items: start;
 }
-.settings-grid .card {
+.settings-card {
   margin: 0;
+  padding: 6px 24px;
 }
-.settings-grid h2,
-.settings-section-head h2 {
-  margin: 0 0 14px;
+.settings-card h2 {
+  margin: 0;
+  padding: 18px 0 12px;
   font-size: 17px;
 }
-.settings-grid .field {
-  margin-bottom: 16px;
+.setting-row {
+  display: grid;
+  grid-template-columns: minmax(150px, 220px) 1fr;
+  gap: 8px 24px;
+  align-items: center;
+  padding: 16px 0;
+  border-top: 1px solid var(--border-card);
 }
-.settings-grid .field .hint {
-  display: block;
-  margin-top: 6px;
+.setting-name {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
 }
-.settings-grid .seg {
+.setting-note {
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.45;
+  color: var(--text-faint);
+}
+.setting-control {
+  min-width: 0;
+}
+.setting-control .seg {
   flex-wrap: wrap;
+}
+.setting-empty {
+  font-size: 13px;
+  color: var(--text-faint);
 }
 .settings-section-head {
   display: flex;
@@ -3607,6 +3637,7 @@ html[data-textsize="xl"] .app {
 }
 .settings-section-head h2 {
   margin: 0;
+  font-size: 17px;
 }
 .settings-section-head .page-sub {
   margin: 4px 0 0;
@@ -3655,30 +3686,34 @@ html[data-textsize="xl"] .app {
 }
 .settings-tz {
   display: flex;
-  align-items: flex-end;
+  align-items: center;
   gap: 8px;
 }
-.settings-tz .tz-field {
+.settings-tz div.field.tz-field {
   flex: 1;
-  margin-bottom: 0;
-}
-.settings-tz .link-btn {
-  margin-bottom: 12px;
-}
-.settings-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
+  min-width: 0;
+  margin: 0;
 }
 .settings-sync {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   align-items: flex-start;
-  margin-top: 14px;
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-body);
 }
 .settings-sync svg {
   flex: none;
   margin-top: 2px;
+}
+@media (max-width: 640px) {
+  .settings-card {
+    padding: 4px 16px;
+  }
+  .setting-row {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* ---------- All times everyone can make it: ranges and smart picks ---------- */
@@ -3805,25 +3840,34 @@ html[data-textsize="xl"] .app {
   position: fixed;
   inset: 0;
   z-index: 80;
+  animation: tour-in 0.25s ease-out;
 }
-.tour-dim,
+@keyframes tour-in {
+  from {
+    opacity: 0;
+  }
+}
+/* Placed with transform every frame by Tour.tsx; starts off-screen until measured. */
 .tour-spot {
   position: fixed;
+  top: 0;
+  left: 0;
+  width: 0;
+  height: 0;
+  transform: translate(-200px, -200px);
   pointer-events: none;
-}
-.tour-dim {
-  inset: 0;
-  background: rgba(15, 16, 20, 0.55);
-}
-.tour-spot {
   border-radius: 18px;
   box-shadow: 0 0 0 9999px rgba(15, 16, 20, 0.55);
   outline: 2px solid var(--brand);
-  outline-offset: 0;
-  transition: top 0.2s ease, left 0.2s ease, width 0.2s ease, height 0.2s ease;
+  will-change: transform, width, height;
 }
 .tour-pop {
   position: fixed;
+  top: 0;
+  left: 0;
+  width: 320px;
+  transform: translate(-9999px, 0);
+  will-change: transform;
   padding: 16px 18px 14px;
   background: var(--surface);
   border-radius: var(--radius-lg);
@@ -3870,4 +3914,136 @@ html[data-textsize="xl"] .app {
 }
 .tour-actions .btn-row {
   margin-top: 0;
+}
+
+/* ---------- Settings: name and email templates ---------- */
+.setting-input {
+  width: 100%;
+  max-width: 360px;
+}
+.field-label-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+.field-label-row .link-btn {
+  padding: 0;
+  text-decoration: none;
+}
+.tpl-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.tpl-item {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 14px 0;
+  border-top: 1px solid var(--border-card);
+}
+.tpl-main {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.tpl-name {
+  font-weight: 600;
+  color: var(--ink);
+}
+.tpl-subject {
+  font-size: 13px;
+  color: var(--text-faint);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tpl-actions {
+  margin-top: 0;
+  flex: none;
+}
+.tpl-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+.tpl-editor textarea {
+  font-family: var(--font-sans);
+  line-height: 1.55;
+  resize: vertical;
+}
+.tpl-insert {
+  margin-bottom: 14px;
+}
+.tpl-insert .field-label {
+  display: block;
+  margin-bottom: 6px;
+}
+.tpl-insert .chip {
+  font-family: var(--mono);
+}
+.tpl-insert .chip .muted {
+  font-family: var(--font-sans);
+  font-size: 11px;
+}
+.tpl-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 2px 0 14px;
+  font-size: 14px;
+  color: var(--text-body);
+  cursor: pointer;
+}
+.tpl-toggle input {
+  width: 16px;
+  height: 16px;
+  accent-color: var(--brand);
+}
+.tpl-preview-col {
+  position: sticky;
+  top: 88px;
+}
+.tpl-preview-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+.tpl-preview {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-2);
+  padding: 12px;
+}
+.tpl-preview-subject {
+  font-weight: 600;
+  color: var(--ink);
+  margin-bottom: 8px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.tpl-preview .email-preview {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  max-height: none;
+}
+@media (max-width: 760px) {
+  .tpl-grid {
+    grid-template-columns: 1fr;
+  }
+  .tpl-preview-col {
+    position: static;
+  }
+  .tpl-item {
+    flex-direction: column;
+    align-items: flex-start;
+  }
 }

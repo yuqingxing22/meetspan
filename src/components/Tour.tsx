@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useLayoutEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { t } from "../lib/i18n";
 
@@ -56,41 +56,138 @@ const STEPS: Step[] = [
 ];
 
 type Rect = { top: number; left: number; width: number; height: number };
+/** Where the card sits: under the target, over it, or pinned to the bottom (tall targets). */
+type Placement = "below" | "above" | "pinned";
 
 const PAD = 8;
+const GAP = 12;
+const EDGE = 16;
 const POP_W = 320;
+const MOVE_MS = 450;
 
-/** A step-by-step spotlight over the home page. Esc or “Skip” ends it. */
+const ease = (x: number) => (x < 0.5 ? 4 * x * x * x : 1 - Math.pow(-2 * x + 2, 3) / 2);
+const lerp = (a: Rect, b: Rect, k: number): Rect => ({
+  top: a.top + (b.top - a.top) * k,
+  left: a.left + (b.left - a.left) * k,
+  width: a.width + (b.width - a.width) * k,
+  height: a.height + (b.height - a.height) * k,
+});
+
+function targetOf(step: Step | undefined): Element | null {
+  return step ? document.querySelector(`[data-tour="${step.target}"]`) : null;
+}
+
+function padded(el: Element): Rect {
+  const r = el.getBoundingClientRect();
+  return { top: r.top - PAD, left: r.left - PAD, width: r.width + PAD * 2, height: r.height + PAD * 2 };
+}
+
+/**
+ * A step-by-step spotlight over the home page. Esc or “Skip” ends it.
+ *
+ * Positions are set straight on the elements every animation frame (no React
+ * re-render), so the spotlight follows the page while it scrolls, and glides
+ * from one target to the next with an ease-in-out curve.
+ */
 export default function Tour({ onClose }: { onClose: () => void }) {
-  const steps = useMemo(() => STEPS.filter((s) => document.querySelector(`[data-tour="${s.target}"]`)), []);
+  const steps = useMemo(() => STEPS.filter((s) => targetOf(s)), []);
   const [i, setI] = useState(0);
-  const [rect, setRect] = useState<Rect | null>(null);
   const step = steps[i];
+  const spotRef = useRef<HTMLDivElement>(null);
+  const popRef = useRef<HTMLDivElement>(null);
+  const shown = useRef<Rect | null>(null);
+  /** A glide in progress: to where the target will be once the page has scrolled to `scrollTop`. */
+  const move = useRef<{ from: Rect; to: Rect; start: number; scrollTop: number } | null>(null);
+  const placement = useRef<Placement>("below");
 
-  const measure = useCallback(() => {
-    const el = step && document.querySelector(`[data-tour="${step.target}"]`);
-    if (!el) return setRect(null);
+  // New step: plan the scroll so the target and the card both fit, then glide there.
+  useLayoutEffect(() => {
+    const el = targetOf(step);
+    if (!el) return;
+    const vh = window.innerHeight;
+    const popH = popRef.current?.offsetHeight ?? 210;
     const r = el.getBoundingClientRect();
-    setRect({ top: r.top - PAD, left: r.left - PAD, width: r.width + PAD * 2, height: r.height + PAD * 2 });
+    const glide = (to: Rect, scrollTop: number) => {
+      move.current = { from: shown.current ?? to, to, start: performance.now(), scrollTop };
+    };
+
+    if (el.closest(".topbar")) {
+      // The top bar never scrolls away.
+      placement.current = "below";
+      glide(padded(el), window.scrollY);
+      return;
+    }
+    const header = document.querySelector(".topbar")?.getBoundingClientRect().bottom ?? 0;
+    const room = vh - header - EDGE * 2;
+    const need = r.height + PAD * 2 + GAP + popH;
+    const fits = need <= room;
+    const docTop = r.top + window.scrollY - PAD;
+    const maxScroll = document.documentElement.scrollHeight - vh;
+    const wanted = docTop - header - EDGE - (fits ? (room - need) / 2 : 0);
+    const top = Math.round(Math.max(0, Math.min(wanted, maxScroll)));
+
+    // Measure where the target lands at that scroll position (sticky columns
+    // don't move with the page), then go back and scroll there smoothly. All
+    // before the next paint, so the jump is never seen.
+    const startTop = window.scrollY;
+    window.scrollTo({ top, behavior: "instant" });
+    const landed = padded(el);
+    window.scrollTo({ top: startTop, behavior: "instant" });
+    window.scrollTo({ top, behavior: "smooth" });
+    glide(landed, top);
+    const finalTop = landed.top;
+    if (!fits) placement.current = "pinned";
+    else placement.current = finalTop + landed.height + GAP + popH <= vh - EDGE ? "below" : "above";
   }, [step]);
 
-  // Bring the target into view, then follow it while the page scrolls or resizes.
-  useLayoutEffect(() => {
-    const el = step && document.querySelector(`[data-tour="${step.target}"]`);
-    if (!el) return;
-    const tall = el.getBoundingClientRect().height > window.innerHeight * 0.6;
-    el.scrollIntoView({ block: tall ? "start" : "center", behavior: "smooth" });
-    measure();
-    window.addEventListener("scroll", measure, true);
-    window.addEventListener("resize", measure);
-    // Smooth scrolling fires scroll events, but measure once more when it settles.
-    const settle = window.setTimeout(measure, 450);
-    return () => {
-      window.removeEventListener("scroll", measure, true);
-      window.removeEventListener("resize", measure);
-      window.clearTimeout(settle);
+  // Follow the target every frame.
+  useEffect(() => {
+    let raf = 0;
+    const frame = (now: number) => {
+      const el = targetOf(step);
+      const spot = spotRef.current;
+      const pop = popRef.current;
+      if (el && spot && pop) {
+        const target = padded(el);
+        let r = target;
+        const m = move.current;
+        if (m) {
+          // Glide to where the target will end up, independent of the page's
+          // own smooth scroll, and wait there until the scroll arrives (or
+          // the visitor scrolls somewhere else), so it never overshoots.
+          const k = Math.min(1, (now - m.start) / MOVE_MS);
+          r = lerp(m.from, m.to, ease(k));
+          const arrived = Math.abs(window.scrollY - m.scrollTop) < 1 || now - m.start > 1500;
+          if (k >= 1 && arrived) {
+            move.current = null;
+            r = target;
+          }
+        }
+        shown.current = r;
+        spot.style.transform = `translate(${r.left}px, ${r.top}px)`;
+        spot.style.width = `${r.width}px`;
+        spot.style.height = `${r.height}px`;
+
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        const w = Math.min(POP_W, vw - EDGE * 2);
+        const h = pop.offsetHeight;
+        const left = Math.min(Math.max(EDGE, r.left), vw - w - EDGE);
+        let top =
+          placement.current === "below"
+            ? r.top + r.height + GAP
+            : placement.current === "above"
+            ? r.top - GAP - h
+            : vh - h - EDGE;
+        top = Math.max(EDGE, Math.min(top, vh - h - EDGE));
+        pop.style.width = `${w}px`;
+        pop.style.transform = `translate(${left}px, ${top}px)`;
+      }
+      raf = requestAnimationFrame(frame);
     };
-  }, [step, measure]);
+    raf = requestAnimationFrame(frame);
+    return () => cancelAnimationFrame(raf);
+  }, [step]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -105,30 +202,10 @@ export default function Tour({ onClose }: { onClose: () => void }) {
   if (!step) return null;
   const last = i === steps.length - 1;
 
-  // Below the target if it fits, otherwise above, otherwise pinned to the bottom.
-  const vw = window.innerWidth;
-  const vh = window.innerHeight;
-  const width = Math.min(POP_W, vw - 32);
-  let top = vh - 220;
-  let left = (vw - width) / 2;
-  if (rect) {
-    left = Math.min(Math.max(16, rect.left), vw - width - 16);
-    if (rect.top + rect.height + 200 < vh) top = rect.top + rect.height + 12;
-    else if (rect.top > 212) top = rect.top - 12 - 200;
-    top = Math.max(16, Math.min(top, vh - 216));
-  }
-
   return createPortal(
     <div className="tour" role="dialog" aria-modal="true" aria-label={t("Tutorial")}>
-      {rect ? (
-        <div
-          className="tour-spot"
-          style={{ top: rect.top, left: rect.left, width: rect.width, height: rect.height }}
-        />
-      ) : (
-        <div className="tour-dim" />
-      )}
-      <div className="tour-pop" style={{ top, left, width }}>
+      <div className="tour-spot" ref={spotRef} />
+      <div className="tour-pop" ref={popRef}>
         <div className="tour-count">
           {t("Step {n} of {total}", { n: i + 1, total: steps.length })}
         </div>

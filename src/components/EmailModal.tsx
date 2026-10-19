@@ -6,6 +6,7 @@ import { MEETING_TYPES } from "../lib/types";
 import type { Session } from "../lib/overlap";
 import type { MeetingType, Participant, PollMeta } from "../lib/types";
 import { getLang, t as tr, type Lang } from "../lib/i18n";
+import { usePrefs } from "../lib/prefs";
 
 interface Props {
   meta: PollMeta;
@@ -19,6 +20,8 @@ interface Props {
   recipientEmails: string[];
   /** The sessions are candidates for people to choose from, not a confirmed time. */
   options?: boolean;
+  /** One of the organizer's own templates to start with (Settings → Email templates). */
+  templateId?: string | null;
   onClose: () => void;
 }
 
@@ -47,10 +50,15 @@ export default function EmailModal({
   participants,
   recipientEmails,
   options = false,
+  templateId = null,
   onClose,
 }: Props) {
   const { show, node } = useToast();
+  const { templates } = usePrefs();
   const [type, setType] = useState<MeetingType>(initialType);
+  // A built-in type, or "custom:<id>" for one of the organizer's templates.
+  const [choice, setChoice] = useState<string>(templateId ? `custom:${templateId}` : initialType);
+  const template = choice.startsWith("custom:") ? templates.find((x) => `custom:${x.id}` === choice) : undefined;
   const [emailLang, setEmailLang] = useState<Lang>(getLang());
   const mailTip = defaultMailTip();
 
@@ -66,8 +74,9 @@ export default function EmailModal({
         participants,
         lang: emailLang,
         options,
+        template,
       }),
-    [meta, meetingName, durationMin, sessionsPerWeek, type, sessions, participants, emailLang, options]
+    [meta, meetingName, durationMin, sessionsPerWeek, type, sessions, participants, emailLang, options, template]
   );
 
   // Recipients collected from participants who shared an email (organizer-only).
@@ -131,19 +140,43 @@ export default function EmailModal({
           </div>
         </div>
 
-        <label className="field">
-          <span className="field-label">{tr("Template (by meeting type)")}</span>
+        <div className="field">
+          <div className="field-label-row">
+            <label className="field-label" htmlFor="email-template">{tr("Template (by meeting type)")}</label>
+            <a className="link-btn" href="#/settings?tab=templates" target="_blank" rel="noopener">
+              {templates.length ? tr("Manage my templates") : tr("Make your own template")}
+            </a>
+          </div>
           <select
-            value={type}
-            onChange={(e) => setType(e.target.value as MeetingType)}
+            id="email-template"
+            value={template ? choice : type}
+            onChange={(e) => {
+              const v = e.target.value;
+              setChoice(v);
+              if (!v.startsWith("custom:")) setType(v as MeetingType);
+            }}
           >
-            {MEETING_TYPES.map((t) => (
-              <option key={t.value} value={t.value}>
-                {tr(t.label)}
-              </option>
-            ))}
+            <optgroup label={tr("Built in")}>
+              {MEETING_TYPES.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {tr(t.label)}
+                </option>
+              ))}
+            </optgroup>
+            {templates.length > 0 && (
+              <optgroup label={tr("My templates")}>
+                {templates.map((x) => (
+                  <option key={x.id} value={`custom:${x.id}`}>
+                    {x.name || tr("Untitled template")}
+                  </option>
+                ))}
+              </optgroup>
+            )}
           </select>
-        </label>
+          {template && (
+            <p className="hint">{tr("Your template is used as written. The email language only changes how the dates and times are written.")}</p>
+          )}
+        </div>
 
         <div className="field-label">{tr("Subject")}</div>
         <div className="linkbox" style={{ marginBottom: 12 }}>

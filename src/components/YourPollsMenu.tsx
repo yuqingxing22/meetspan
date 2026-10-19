@@ -9,7 +9,7 @@ import { t } from "../lib/i18n";
 /** How many polls the menu shows; the rest are under Settings → Your polls. */
 const MENU_LIMIT = 4;
 
-/** Topbar "Your polls" dropdown: the latest few polls, batch actions, and a way to all of them. */
+/** Topbar "Your polls" dropdown: the latest few polls, with links to all of them and batch actions in Settings. */
 export default function YourPollsMenu() {
   const nav = useNavigate();
   const { pathname } = useLocation();
@@ -67,6 +67,10 @@ export default function YourPollsMenu() {
             }}
             onChanged={refresh}
             onMessage={show}
+            onBatch={() => {
+              setOpen(false);
+              nav("/settings?tab=polls");
+            }}
           />
           <Link to="/settings?tab=polls" className="menu-more" onClick={() => setOpen(false)}>
             {more > 0 ? t("More ({n})", { n: more }) : t("All polls")}

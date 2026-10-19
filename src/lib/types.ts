@@ -27,6 +27,8 @@ export interface Finalized {
   type: MeetingType;
   /** UTC epoch-ms start of each chosen session window. */
   chosenSlots: number[];
+  /** The organizer's own email template (Settings → Email templates), if one was picked. */
+  templateId?: string;
 }
 
 /** The poll document stored at polls/{pollId}. */

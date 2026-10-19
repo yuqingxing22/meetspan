@@ -45,6 +45,7 @@ import { MEETING_TYPES } from "../lib/types";
 import type { MeetingType, Participant, ParticipantEmail, PollMeta } from "../lib/types";
 import waitArt from "../assets/illustrations/wait-in-line.svg";
 import { getLang, t } from "../lib/i18n";
+import { usePrefs } from "../lib/prefs";
 
 const DURATIONS = [
   { min: 30, label: "30 min" },
@@ -123,6 +124,9 @@ function Organizer() {
   const [durationMin, setDurationMin] = useState(60);
   const [sessionsPerWeek, setSessionsPerWeek] = useState(1);
   const [type, setType] = useState<MeetingType>("team");
+  // One of the organizer's own email templates, chosen in "Meeting type".
+  const [templateId, setTemplateId] = useState<string | null>(null);
+  const { templates } = usePrefs();
 
   const [chosen, setChosen] = useState<Session[]>([]);
   const [hoverSessions, setHoverSessions] = useState<Session[] | null>(null);
@@ -366,6 +370,7 @@ function Organizer() {
         sessionsPerWeek,
         type,
         chosenSlots: sessions.map((s) => s.startMs),
+        ...(templateId ? { templateId } : {}),
       });
     } catch {
       /* non-fatal — email still works locally */
@@ -844,12 +849,33 @@ function Organizer() {
                       </label>
                       <label className="field">
                         <span className="field-label">{t("Meeting type")}</span>
-                        <select value={type} onChange={(e) => setType(e.target.value as MeetingType)}>
-                          {MEETING_TYPES.map((mt) => (
-                            <option key={mt.value} value={mt.value}>
-                              {t(mt.label)}
-                            </option>
-                          ))}
+                        <select
+                          value={templateId && templates.some((x) => x.id === templateId) ? `custom:${templateId}` : type}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            if (v.startsWith("custom:")) setTemplateId(v.slice(7));
+                            else {
+                              setTemplateId(null);
+                              setType(v as MeetingType);
+                            }
+                          }}
+                        >
+                          <optgroup label={t("Built in")}>
+                            {MEETING_TYPES.map((mt) => (
+                              <option key={mt.value} value={mt.value}>
+                                {t(mt.label)}
+                              </option>
+                            ))}
+                          </optgroup>
+                          {templates.length > 0 && (
+                            <optgroup label={t("My templates")}>
+                              {templates.map((x) => (
+                                <option key={x.id} value={`custom:${x.id}`}>
+                                  {x.name || t("Untitled template")}
+                                </option>
+                              ))}
+                            </optgroup>
+                          )}
                         </select>
                       </label>
                     </div>
@@ -988,6 +1014,7 @@ function Organizer() {
           durationMin={lockedDuration}
           sessionsPerWeek={chosen.length > 0 ? sessionsPerWeek : meta.finalized?.sessionsPerWeek ?? 1}
           type={chosen.length > 0 ? type : meta.finalized?.type ?? type}
+          templateId={chosen.length > 0 ? templateId : meta.finalized?.templateId ?? templateId}
           sessions={lockedSessions}
           participants={participants}
           recipientEmails={emails.map((e) => e.email)}
@@ -1004,6 +1031,7 @@ function Organizer() {
           sessions={optionSessions}
           participants={participants}
           recipientEmails={emails.map((e) => e.email)}
+          templateId={templateId}
           options
           onClose={() => setOptionSessions(null)}
         />

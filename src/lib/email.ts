@@ -5,6 +5,7 @@ import type { Session } from "./overlap";
 import type { MeetingType, Participant, PollMeta } from "./types";
 import { repeatEndLabel, sessionInFirstWeek } from "./repeat";
 import { mergeSessions } from "./ranges";
+import type { EmailTemplate } from "./prefs";
 
 export interface EmailInput {
   meta: PollMeta;
@@ -18,6 +19,8 @@ export interface EmailInput {
   lang?: Lang;
   /** The sessions are candidates to choose from, not a confirmed schedule. */
   options?: boolean;
+  /** The user's own template; replaces the built-in text for `type`. */
+  template?: EmailTemplate;
 }
 
 export interface GeneratedEmail {
@@ -210,7 +213,97 @@ export function generateEmail(input: EmailInput): GeneratedEmail {
   if (input.meta.dateMode === "weekly")
     input = { ...input, sessions: input.sessions.map((s) => sessionInFirstWeek(input.meta, s)) };
   // Dates in the email follow the email's language, not the interface's.
+  const tpl = input.template;
+  if (tpl) return withLang(lang, () => fromTemplate(input, tpl, lang));
   return withLang(lang, () => (lang === "zh" ? generateZh(input) : generateEn(input)));
+}
+
+// ---- The user's own templates ----------------------------------------------
+
+/** Placeholders a template can use; each has an English and a Chinese spelling. */
+export const TEMPLATE_FIELDS = [
+  { key: "meeting", zh: "会议", label: "Meeting name" },
+  { key: "times", zh: "时间", label: "Times, with everyone's local time" },
+  { key: "duration", zh: "时长", label: "Length" },
+  { key: "frequency", zh: "频率", label: "How often (weekly meetings)" },
+  { key: "start", zh: "开始", label: "Start week and time-change note (weekly meetings)" },
+  { key: "organizer", zh: "称呼", label: "Your name" },
+] as const;
+
+export type TemplateValues = Record<(typeof TEMPLATE_FIELDS)[number]["key"], string>;
+
+/**
+ * Replace {meeting}, {times}… (or {会议}, {时间}…) in `text`. Unknown
+ * placeholders stay as typed; lines left empty by an empty value collapse.
+ */
+export function fillTemplate(text: string, values: TemplateValues): string {
+  const byName = new Map<string, string>();
+  for (const f of TEMPLATE_FIELDS) {
+    byName.set(f.key, values[f.key]);
+    byName.set(f.zh, values[f.key]);
+  }
+  return text
+    .replace(/\{([^{}\s]+)\}/g, (m, k: string) => byName.get(k) ?? byName.get(k.toLowerCase()) ?? m)
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function templateValues(input: EmailInput, lang: Lang): TemplateValues {
+  const weekly = input.meta.dateMode === "weekly";
+  return {
+    meeting: input.meetingName,
+    times: sessionBlock(input, lang),
+    duration: lang === "zh" ? `${input.durationMin} 分钟` : `${input.durationMin} min`,
+    frequency: weekly ? freqLabel(input.sessionsPerWeek, lang) : "",
+    start: [startLine(input, lang), dstLine(input, lang)].filter(Boolean).join("\n"),
+    organizer: input.meta.organizerName || (lang === "zh" ? "[你的名字]" : "[your name]"),
+  };
+}
+
+function fromTemplate(input: EmailInput, tpl: EmailTemplate, lang: Lang): GeneratedEmail {
+  const values = templateValues(input, lang);
+  const body = input.options && tpl.optionsBody.trim() ? tpl.optionsBody : tpl.body;
+  return {
+    subject: fillTemplate(tpl.subject, values).replace(/\s*\n\s*/g, " "),
+    body: fillTemplate(body, values),
+  };
+}
+
+/** Starting text for a new template, in the interface language. */
+export function starterTemplate(lang: Lang): Pick<EmailTemplate, "subject" | "body" | "optionsBody"> {
+  return lang === "zh"
+    ? {
+        subject: "{会议}：时间确认",
+        body: "大家好，\n\n{会议}的时间定好了，每次 {时长}：\n\n{时间}\n\n{开始}\n\n会议链接：[填写链接]\n\n谢谢！\n{称呼}",
+        optionsBody: "大家好，\n\n下面这些时间大家都有空，请回复你方便的选项（可多选）：\n\n{时间}\n\n谢谢！\n{称呼}",
+      }
+    : {
+        subject: "{meeting}: time confirmed",
+        body: "Hi all,\n\nHere's the time for {meeting} ({duration}):\n\n{times}\n\n{start}\n\nMeeting link: [add link]\n\nThanks,\n{organizer}",
+        optionsBody: "Hi all,\n\nThese times work for everyone. Please reply with the ones that suit you (more than one is fine):\n\n{times}\n\nThanks,\n{organizer}",
+      };
+}
+
+/** Made-up values to preview a template in Settings. */
+export function sampleTemplateValues(lang: Lang): TemplateValues {
+  return lang === "zh"
+    ? {
+        meeting: "每周研究例会",
+        times: "  时间：10月21日 周三 · 9:00 – 10:00 PDT\n      • Alex — 10月21日 周三 · 9:00 – 10:00 PDT\n      • Mei — 10月22日 周四 · 0:00 – 1:00 GMT+8",
+        duration: "60 分钟",
+        frequency: "每周 1 次",
+        start: "从 10月19日 那周开始。",
+        organizer: "Alex",
+      }
+    : {
+        meeting: "Weekly research sync",
+        times: "  Time: Wed, Oct 21 · 9:00 AM – 10:00 AM PDT\n      • Alex — Wed, Oct 21 · 9:00 AM – 10:00 AM PDT\n      • Mei — Thu, Oct 22 · 12:00 AM – 1:00 AM GMT+8",
+        duration: "60 min",
+        frequency: "once a week",
+        start: "Starting the week of Oct 19.",
+        organizer: "Alex",
+      };
 }
 
 function generateEn(input: EmailInput): GeneratedEmail {

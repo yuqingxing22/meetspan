@@ -94,11 +94,13 @@ export default function Home() {
   const user = useUser();
   const [mailState, setMailState] = useState<"idle" | "sending" | "failed" | { to: string }>("idle");
   const [shareOpen, setShareOpen] = useState(false);
-  // No name typed before on this browser: start from the Google first name.
+  // No name set yet: the one saved on the account (it can arrive a moment
+  // later), else the Google first name.
   const googleName = googleFirstName(user);
   useEffect(() => {
-    if (googleName) setOrganizerName((n) => n || googleName);
-  }, [googleName]);
+    const fallback = prefs.name || googleName;
+    if (fallback) setOrganizerName((n) => n || fallback);
+  }, [googleName, prefs.name]);
 
   // Settings synced from the account can arrive after the page opened.
   useEffect(() => {

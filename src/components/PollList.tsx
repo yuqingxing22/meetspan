@@ -14,13 +14,15 @@ interface Props {
   onMessage: (msg: string) => void;
   /** Start in selection mode (the Settings page shows checkboxes right away). */
   selecting?: boolean;
+  /** "Batch actions" goes here instead of selecting in place (the menu sends people to Settings). */
+  onBatch?: () => void;
 }
 
 /**
  * The organizer's polls, with an optional selection mode for closing or
  * deleting several at once. Used by the "Your polls" menu and Settings.
  */
-export default function PollList({ polls, onOpen, onChanged, onMessage, selecting: alwaysSelecting = false }: Props) {
+export default function PollList({ polls, onOpen, onChanged, onMessage, selecting: alwaysSelecting = false, onBatch }: Props) {
   const [selecting, setSelecting] = useState(alwaysSelecting);
   const [picked, setPicked] = useState<Set<string>>(new Set());
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -171,7 +173,7 @@ export default function PollList({ polls, onOpen, onChanged, onMessage, selectin
         )
       ) : (
         polls.length > 0 && (
-          <button type="button" className="menu-link batch-start" onClick={() => setSelecting(true)}>
+          <button type="button" className="menu-link batch-start" onClick={() => (onBatch ? onBatch() : setSelecting(true))}>
             <Icon name="list" size={14} /> {t("Batch actions")}
           </button>
         )
