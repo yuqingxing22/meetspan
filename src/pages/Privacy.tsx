@@ -1,7 +1,7 @@
 import { Link } from "react-router-dom";
 import { getLang, t } from "../lib/i18n";
 
-const UPDATED = "2026-10-02";
+const UPDATED = "2026-10-18";
 const CONTACT = "privacy@meetspan.app";
 
 interface Section {
@@ -23,9 +23,10 @@ const EN: Section[] = [
       "Replies: the name or nickname a participant types, their timezone, and the times they mark as free or “if needed”. Anyone with a poll’s link can see these replies.",
       "Email addresses (optional): a participant can leave an email address so the organizer can contact them. Only the organizer of that poll can read it.",
       "Google sign-in (optional): if you connect a Google account, we receive your name, email address and profile photo from Google. We use them to show who you’re signed in as, to find your polls on other devices, and to send the emails described below.",
-      "My schedule (optional): the weekly times you save on the My schedule page. They’re stored against your account if you’re signed in with Google, or against an anonymous ID in your browser if you’re not.",
+      "My schedule (optional): the weekly times you save under Settings → My schedule. They’re stored against your account if you’re signed in with Google, or against an anonymous ID in your browser if you’re not.",
+      "Settings (optional): what you choose on the Settings page, which is the name you want to be called, theme color, text size, time format, first day of the week, the timezone for new polls, your last few custom hours, and any email templates you write. They’re kept in your browser. If you’re signed in with Google, they’re also saved to your account so they work on your other devices. Only you can read them; your templates are used only to draft emails in your own browser.",
       "Google Calendar (optional): if you choose to import from Google Calendar, MeetSpan asks Google only for free/busy information (the times you’re busy, not event titles or details). It is used in your browser to pre-fill your availability, and the calendar data itself isn’t stored by us. MeetSpan’s use and transfer of information received from Google APIs to any other app will adhere to the Google API Services User Data Policy, including the Limited Use requirements. We don’t use Google user data for advertising, and we don’t sell it or allow people to read it.",
-      "Technical data: an anonymous sign-in ID so that you can edit your own replies, and a few settings kept in your browser (language, and which polls and replies are yours).",
+      "Technical data: an anonymous sign-in ID so that you can edit your own replies, and a few things kept in your browser (language, and which polls and replies are yours).",
       "Error reports: if a page hits an error, your browser sends us the error message, which page it happened on (without poll IDs or links), and the browser and operating system name. They contain no names, emails or poll content, we use them only to fix bugs, and we delete them after 14 days.",
     ],
   },
@@ -45,13 +46,13 @@ const EN: Section[] = [
   {
     h: "How long we keep it",
     p: [
-      "We keep polls and replies until you ask us to delete them. We also delete a poll, with its replies and any email addresses left in it, once it has had no activity for 12 months. To have your data removed sooner, write to the address below from the email you used (or tell us the poll link). We’ll first check that the data is yours: for a whole poll, that you’re its organizer; for a reply, the name or email address you used. Our service providers may keep their own logs for a short time under their own policies.",
+      "We keep polls and replies until you ask us to delete them. We also delete a poll, with its replies and any email addresses left in it, once it has had no activity for 12 months. Settings saved to a Google account stay until you change them or ask us to delete them. To have your data removed sooner, write to the address below from the email you used (or tell us the poll link). We’ll first check that the data is yours: for a whole poll, that you’re its organizer; for a reply, the name or email address you used. Our service providers may keep their own logs for a short time under their own policies.",
     ],
   },
   {
     h: "Your choices",
     p: [
-      "You can use MeetSpan without signing in or giving an email address. You can sign out at any time. An organizer can delete their own poll, with its replies and email addresses, from the poll’s ⋯ menu, and anyone can ask us to see, correct or delete their data.",
+      "You can use MeetSpan without signing in or giving an email address. You can sign out at any time, and change or remove your settings and email templates on the Settings page. An organizer can close a poll with the lock button on its organizer page, or delete it for good, with its replies and email addresses, with the delete button there (or several at once under Settings → Your polls). Anyone can ask us to see, correct or delete their data.",
     ],
   },
   {
@@ -72,9 +73,10 @@ const ZH_SECTIONS: Section[] = [
       "回复：参与者填写的名字或昵称、所在时区，以及标记为有空或“勉强可以”的时间。任何拿到排期链接的人都能看到这些回复。",
       "邮箱（可选）：参与者可以留下邮箱，方便组织者联系。只有该排期的组织者能看到。",
       "Google 登录（可选）：如果你连接 Google 账号，我们会从 Google 获得你的姓名、邮箱和头像。用途是显示你当前登录的账号、让你在其他设备上找回自己的排期，以及发送下面说明的邮件。",
-      "我的常用时间（可选）：你在“我的常用时间”页面保存的每周时段。如果你用 Google 登录，它与你的账号关联；如果没有登录，它与你浏览器里的匿名 ID 关联。",
+      "我的常用时间（可选）：你在“设置 → 我的常用时间”里保存的每周时段。如果你用 Google 登录，它与你的账号关联；如果没有登录，它与你浏览器里的匿名 ID 关联。",
+      "设置（可选）：你在“设置”页面里选择的内容，包括你希望的称呼、主题色、字体大小、时间格式、每周从哪天开始、新排期的时区、最近用过的自定义时段，以及你写的邮件模板。它们保存在你的浏览器里；如果你用 Google 登录，也会保存到你的账号，方便在其他设备上使用。只有你自己能读取；邮件模板只用于在你自己的浏览器里起草邮件。",
       "Google 日历（可选）：如果你选择从 Google 日历导入，MeetSpan 只向 Google 请求忙闲信息（你什么时候忙，不包括日程标题和内容）。这些信息只在你的浏览器里用来预填你的空闲时间，我们不会保存日历数据本身。MeetSpan 对从 Google API 获得的信息的使用和转移，将遵守 Google API Services User Data Policy（Google API 服务用户数据政策），包括其中的 Limited Use（有限使用）要求。我们不会把 Google 用户数据用于广告，不会出售，也不允许他人阅读这些数据。",
-      "技术信息：一个匿名登录 ID，用来让你能修改自己的回复；以及保存在你浏览器里的少量设置（语言，以及哪些排期和回复是你的）。",
+      "技术信息：一个匿名登录 ID，用来让你能修改自己的回复；以及保存在你浏览器里的少量信息（语言，以及哪些排期和回复是你的）。",
       "错误报告：如果页面出错，你的浏览器会把错误信息、出错的页面（不含排期 ID 和链接）以及浏览器和操作系统名称发给我们。其中不包含名字、邮箱或排期内容，只用于修复问题，14 天后删除。",
     ],
   },
@@ -91,11 +93,11 @@ const ZH_SECTIONS: Section[] = [
   },
   {
     h: "保存多久",
-    p: ["排期和回复会一直保存，直到你要求我们删除。如果一个排期连续 12 个月没有任何活动，我们也会把它连同其中的回复和留下的邮箱一并删除。想提前删除，请用你填写过的邮箱（或告诉我们排期链接）写信到下面的地址。我们会先确认这些数据是你的：整个排期需要确认你是组织者；单条回复需要你说出当时用的名字或邮箱。我们的服务商可能会按各自的政策短期保留自己的日志。"],
+    p: ["排期和回复会一直保存，直到你要求我们删除。如果一个排期连续 12 个月没有任何活动，我们也会把它连同其中的回复和留下的邮箱一并删除。保存到 Google 账号的设置会一直保留，直到你修改，或要求我们删除。想提前删除，请用你填写过的邮箱（或告诉我们排期链接）写信到下面的地址。我们会先确认这些数据是你的：整个排期需要确认你是组织者；单条回复需要你说出当时用的名字或邮箱。我们的服务商可能会按各自的政策短期保留自己的日志。"],
   },
   {
     h: "你的选择",
-    p: ["你可以不登录、不留邮箱就使用 MeetSpan。你随时可以退出登录。组织者可以在排期的 ⋯ 菜单里自行删除自己的排期，连同其中的回复和邮箱；任何人也都可以要求我们查看、更正或删除自己的数据。"],
+    p: ["你可以不登录、不留邮箱就使用 MeetSpan。你随时可以退出登录，也可以在“设置”页面修改或删除自己的设置和邮件模板。组织者可以在排期的组织者页面用锁形按钮关闭排期，或用删除按钮把排期连同其中的回复和邮箱永久删除（也可以在“设置 → 我的排期”里一次处理多个）。任何人都可以要求我们查看、更正或删除自己的数据。"],
   },
   {
     h: "联系我们",

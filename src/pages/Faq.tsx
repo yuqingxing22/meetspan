@@ -13,7 +13,7 @@ const EN: Item[] = [
   },
   {
     q: "Do I need an account?",
-    a: ["No. You can create a poll and reply to one without signing up. You can even save your usual weekly times on the My schedule page without one (they stay in this browser). Signing in with Google is optional: it lets you find your polls and your usual times on other devices."],
+    a: ["No. You can create a poll and reply to one without signing up. You can even save your usual weekly times and your settings without one, under Settings (they stay in this browser). Signing in with Google is optional: it lets you find your polls, usual times and settings on other devices."],
   },
   {
     q: "How do I create a poll and invite people?",
@@ -33,11 +33,11 @@ const EN: Item[] = [
   },
   {
     q: "How does MeetSpan choose a time?",
-    a: ["It looks for windows where everyone overlaps for the full length of the meeting. If nothing fits, it suggests alternatives such as a shorter meeting, splitting the meeting across days, or leaving out one person, each with concrete times."],
+    a: ["It looks for windows where everyone overlaps for the full length of the meeting. If nothing fits, it suggests alternatives such as a shorter meeting, splitting the meeting across days, or leaving out one person, each with concrete times.", "When many times work, “All times everyone can make it” groups back-to-back start times into ranges, and “Smart picks” ticks the few most comfortable ones: daytime for everyone in their own timezone, on a weekday, away from lunch, and spread over different days."],
   },
   {
     q: "I lost my organizer link. What can I do?",
-    a: ["Polls you created are saved under “Your polls” in the browser you used. If you were signed in with Google when you created the poll, you can find it under “Your polls” on any device after signing in again. If neither works, contact support and include the invite link (never the organizer link). We can restore access only if we can confirm you created the poll, for example because you created it while signed in with Google using the email you write from."],
+    a: ["Polls you created are saved under “Your polls” in the browser you used (the menu shows the latest few; Settings → Your polls has them all). If you were signed in with Google when you created the poll, you can find it under “Your polls” on any device after signing in again. If neither works, contact support and include the invite link (never the organizer link). We can restore access only if we can confirm you created the poll, for example because you created it while signed in with Google using the email you write from."],
   },
   {
     q: "Who can see my replies?",
@@ -53,15 +53,19 @@ const EN: Item[] = [
   },
   {
     q: "Can I close a poll?",
-    a: ["Yes. On your organizer page, open the ⋯ menu and choose “Close poll”. People who open the invite link can still see the poll, but they can no longer add or change their times. You can choose “Reopen poll” any time to start accepting replies again."],
+    a: ["Yes. On your organizer page, click the lock button next to the settings button and confirm. People who open the invite link can still see the poll, but they can no longer add or change their times. Click the same button again any time to reopen the poll. To close several polls at once, use Settings → Your polls."],
   },
   {
     q: "How do I delete a poll or my data?",
-    a: ["Closing a poll stops new replies but doesn’t remove it. To delete a poll for good, open your organizer page, choose “Delete poll…” in the ⋯ menu and confirm: the poll, everyone’s replies and any email addresses they left are removed. For anything else, or if you can’t open the organizer page, write to privacy@meetspan.app with the poll’s invite link. Since anyone with that link could ask, we first check that you’re the organizer (for example, that you created the poll while signed in with Google using the email you write from). To remove only your own reply, tell us the name or email address you used."],
+    a: ["Closing a poll stops new replies but doesn’t remove it. To delete a poll for good, open your organizer page, click the delete (trash) button next to the settings button and confirm by typing “delete”: the poll, everyone’s replies and any email addresses they left are removed. To delete several polls at once, use Settings → Your polls. For anything else, or if you can’t open the organizer page, write to privacy@meetspan.app with the poll’s invite link. Since anyone with that link could ask, we first check that you’re the organizer (for example, that you created the poll while signed in with Google using the email you write from). To remove only your own reply, tell us the name or email address you used."],
+  },
+  {
+    q: "Can I change the email MeetSpan drafts?",
+    a: ["Yes. Under Settings → Email templates you can edit the wording of each built-in meeting type, or add your own categories, using placeholders such as {meeting} and {times} for the details. They then appear under “Meeting type” on your poll page and in the email draft. You can restore a built-in one to its original text at any time."],
   },
   {
     q: "Is MeetSpan available in other languages?",
-    a: ["Yes. Use the language button at the top right to switch between English and Chinese (中文). Dates and times follow the language you choose."],
+    a: ["Yes. Use the language button at the top right, or Settings, to switch between English and Chinese (中文). Dates and times follow the language you choose, and Settings also lets you pick a 12- or 24-hour clock."],
   },
 ];
 
@@ -72,7 +76,7 @@ const ZH: Item[] = [
   },
   {
     q: "需要注册账号吗？",
-    a: ["不需要。创建排期和回复排期都不用注册。在“我的常用时间”页面保存每周常用时间也不需要账号（它们保存在当前浏览器里）。用 Google 登录是可选的：登录后可以在其他设备上找回自己的排期和常用时间。"],
+    a: ["不需要。创建排期和回复排期都不用注册。在“设置”里保存每周常用时间和个人设置也不需要账号（它们保存在当前浏览器里）。用 Google 登录是可选的：登录后可以在其他设备上找回自己的排期、常用时间和设置。"],
   },
   {
     q: "怎么创建排期并邀请大家？",
@@ -92,11 +96,11 @@ const ZH: Item[] = [
   },
   {
     q: "MeetSpan 是怎么选时间的？",
-    a: ["它会寻找所有人在整个会议时长内都重叠的时段。如果找不到，会给出替代建议，比如缩短会议、把会议拆到几天里，或者不考虑某一个人，每个建议都带有具体时间。"],
+    a: ["它会寻找所有人在整个会议时长内都重叠的时段。如果找不到，会给出替代建议，比如缩短会议、把会议拆到几天里，或者不考虑某一个人，每个建议都带有具体时间。", "如果可选的时间很多，“所有人都有空的全部时间”会把连续的开始时间合并成一段，“智能推荐”会勾出最合适的几个：按每个人自己的时区都是白天、在工作日、避开午饭，并尽量分在不同的日子。"],
   },
   {
     q: "我弄丢了组织者链接怎么办？",
-    a: ["你创建的排期会保存在所用浏览器的“我的排期”里。如果创建时已经用 Google 登录，之后在任何设备上重新登录，也能在“我的排期”里找到。如果这两种办法都不行，请联系支持，并附上邀请链接（不要发组织者链接）。我们需要先确认排期是你创建的才能帮你恢复，比如你创建时用 Google 登录过，而且来信邮箱就是那个 Google 邮箱。"],
+    a: ["你创建的排期会保存在所用浏览器的“我的排期”里（菜单里显示最近几个，“设置 → 我的排期”里有全部）。如果创建时已经用 Google 登录，之后在任何设备上重新登录，也能在“我的排期”里找到。如果这两种办法都不行，请联系支持，并附上邀请链接（不要发组织者链接）。我们需要先确认排期是你创建的才能帮你恢复，比如你创建时用 Google 登录过，而且来信邮箱就是那个 Google 邮箱。"],
   },
   {
     q: "谁能看到我的回复？",
@@ -112,15 +116,19 @@ const ZH: Item[] = [
   },
   {
     q: "可以关闭排期吗？",
-    a: ["可以。在你的组织者页面打开 ⋯ 菜单，选择“关闭排期”。拿到邀请链接的人仍然能看到这个排期，但不能再添加或修改自己的时间。你随时可以选择“重新开放排期”，继续接收回复。"],
+    a: ["可以。在你的组织者页面，点设置按钮旁边的锁形按钮并确认。拿到邀请链接的人仍然能看到这个排期，但不能再添加或修改自己的时间。之后随时再点同一个按钮，就能重新开放排期。想一次关闭多个排期，可以用“设置 → 我的排期”。"],
   },
   {
     q: "怎么删除排期或我的数据？",
-    a: ["关闭排期只是停止接收新回复，并不会删除它。要永久删除排期，请打开你的组织者页面，在 ⋯ 菜单里选择“删除排期…”并确认：排期、大家的回复和留下的邮箱都会被删除。其他情况，或者打不开组织者页面时，请发邮件到 privacy@meetspan.app，附上排期的邀请链接。因为拿到这个链接的人都可以来信，我们会先确认你是组织者（比如你创建时用 Google 登录过，而且来信邮箱就是那个 Google 邮箱）。如果只想删除自己填的回复，告诉我们你当时用的名字或邮箱即可。"],
+    a: ["关闭排期只是停止接收新回复，并不会删除它。要永久删除排期，请打开你的组织者页面，点设置按钮旁边的删除（垃圾桶）按钮，输入“删除”确认：排期、大家的回复和留下的邮箱都会被删除。想一次删除多个排期，可以用“设置 → 我的排期”。其他情况，或者打不开组织者页面时，请发邮件到 privacy@meetspan.app，附上排期的邀请链接。因为拿到这个链接的人都可以来信，我们会先确认你是组织者（比如你创建时用 Google 登录过，而且来信邮箱就是那个 Google 邮箱）。如果只想删除自己填的回复，告诉我们你当时用的名字或邮箱即可。"],
+  },
+  {
+    q: "可以修改 MeetSpan 起草的邮件吗？",
+    a: ["可以。在“设置 → 邮件模板”里，你可以修改每种内置会议类型的措辞，也可以新建自己的类别，用 {会议}、{时间} 这样的占位符代替具体内容。之后它们会出现在排期页的“会议类型”和起草邮件的模板列表里。改过的内置类型随时可以恢复原样。"],
   },
   {
     q: "有其他语言吗？",
-    a: ["有。点右上角的语言按钮，可以在英文和中文之间切换，日期和时间的格式也会跟着变。"],
+    a: ["有。点右上角的语言按钮，或者在“设置”里，可以在英文和中文之间切换，日期和时间的格式也会跟着变。“设置”里还可以选择 12 小时制或 24 小时制。"],
   },
 ];
 
