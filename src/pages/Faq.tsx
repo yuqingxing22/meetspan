@@ -61,7 +61,7 @@ const EN: Item[] = [
   },
   {
     q: "Can I change the email MeetSpan drafts?",
-    a: ["Yes. Under Settings → Email templates you can edit the wording of each built-in meeting type, or add your own categories, using placeholders such as {meeting} and {times} for the details. They then appear under “Meeting type” on your poll page and in the email draft. You can restore a built-in one to its original text at any time."],
+    a: ["Yes. Under Settings → Email templates you can edit the wording of each built-in meeting type, or add your own categories, using placeholders such as {meeting} and {times} for the details. Each has an English and a Chinese version, and an email uses the one in its own language, so you can send English emails from the Chinese interface. They appear under “Meeting type” on your poll page and in the email draft. You can restore a built-in one to its original text at any time."],
   },
   {
     q: "Is MeetSpan available in other languages?",
@@ -124,7 +124,7 @@ const ZH: Item[] = [
   },
   {
     q: "可以修改 MeetSpan 起草的邮件吗？",
-    a: ["可以。在“设置 → 邮件模板”里，你可以修改每种内置会议类型的措辞，也可以新建自己的类别，用 {会议}、{时间} 这样的占位符代替具体内容。之后它们会出现在排期页的“会议类型”和起草邮件的模板列表里。改过的内置类型随时可以恢复原样。"],
+    a: ["可以。在“设置 → 邮件模板”里，你可以修改每种内置会议类型的措辞，也可以新建自己的类别，用 {会议}、{时间} 这样的占位符代替具体内容。每个模板都有英文和中文两个版本，邮件用哪种语言就用哪个版本，所以在中文界面里也能发英文邮件。它们会出现在排期页的“会议类型”和起草邮件的模板列表里。改过的内置类型随时可以恢复原样。"],
   },
   {
     q: "有其他语言吗？",

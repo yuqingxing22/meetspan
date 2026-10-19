@@ -5,7 +5,7 @@ import type { Session } from "./overlap";
 import type { MeetingType, Participant, PollMeta } from "./types";
 import { repeatEndLabel, sessionInFirstWeek } from "./repeat";
 import { mergeSessions } from "./ranges";
-import type { EmailTemplate } from "./prefs";
+import type { EmailTemplate, TemplateText } from "./prefs";
 
 export interface EmailInput {
   meta: PollMeta;
@@ -213,8 +213,8 @@ export function generateEmail(input: EmailInput): GeneratedEmail {
   if (input.meta.dateMode === "weekly")
     input = { ...input, sessions: input.sessions.map((s) => sessionInFirstWeek(input.meta, s)) };
   // Dates in the email follow the email's language, not the interface's.
-  const tpl = input.template;
-  if (tpl) return withLang(lang, () => fromTemplate(input, tpl, lang));
+  const text = input.template && templateTextFor(input.template, lang);
+  if (text) return withLang(lang, () => fromTemplate(input, text.text, lang));
   return withLang(lang, () => (lang === "zh" ? generateZh(input) : generateEn(input)));
 }
 
@@ -261,7 +261,19 @@ function templateValues(input: EmailInput, lang: Lang): TemplateValues {
   };
 }
 
-function fromTemplate(input: EmailInput, tpl: EmailTemplate, lang: Lang): GeneratedEmail {
+/**
+ * The version of `tpl` an email in `lang` uses: that language's, else (for the
+ * user's own categories) the other one. Null means "use the built-in text":
+ * an edited built-in category whose version in this language wasn't changed.
+ */
+export function templateTextFor(tpl: EmailTemplate, lang: Lang): { text: TemplateText; lang: Lang } | null {
+  if (tpl[lang].body.trim()) return { text: tpl[lang], lang };
+  if (tpl.builtin) return null;
+  const other: Lang = lang === "zh" ? "en" : "zh";
+  return tpl[other].body.trim() ? { text: tpl[other], lang: other } : null;
+}
+
+function fromTemplate(input: EmailInput, tpl: TemplateText, lang: Lang): GeneratedEmail {
   const values = templateValues(input, lang);
   const body = input.options && tpl.optionsBody.trim() ? tpl.optionsBody : tpl.body;
   return {
@@ -270,8 +282,8 @@ function fromTemplate(input: EmailInput, tpl: EmailTemplate, lang: Lang): Genera
   };
 }
 
-/** Starting text for a new template, in the interface language. */
-export function starterTemplate(lang: Lang): Pick<EmailTemplate, "subject" | "body" | "optionsBody"> {
+/** Starting text for a new template in `lang`. */
+export function starterTemplate(lang: Lang): TemplateText {
   return lang === "zh"
     ? {
         subject: "{会议}：时间确认",
@@ -290,7 +302,7 @@ export function starterTemplate(lang: Lang): Pick<EmailTemplate, "subject" | "bo
  * writes for it, with placeholders where the details go. Settings opens this
  * when someone edits a built-in category.
  */
-export function builtinTemplate(type: MeetingType, lang: Lang): Pick<EmailTemplate, "subject" | "body" | "optionsBody"> {
+export function builtinTemplate(type: MeetingType, lang: Lang): TemplateText {
   const personal = isPersonal(type);
   if (lang === "zh") {
     const f = flavorZh(type);

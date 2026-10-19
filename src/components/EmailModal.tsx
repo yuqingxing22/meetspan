@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { generateEmail, gmailLink, mailtoLink, outlookLink } from "../lib/email";
+import { generateEmail, gmailLink, mailtoLink, outlookLink, templateTextFor } from "../lib/email";
 import { buildICS, downloadICS } from "../lib/ics";
 import { copyText, useToast } from "../lib/useToast";
 import { MEETING_TYPES } from "../lib/types";
@@ -63,6 +63,8 @@ export default function EmailModal({
   const custom = choice.startsWith("custom:") ? templates.find((x) => `custom:${x.id}` === choice) : undefined;
   const template = custom ?? allTemplates.find((x) => x.builtin === type);
   const [emailLang, setEmailLang] = useState<Lang>(getLang());
+  // Which version of it this email uses (null: the built-in wording).
+  const used = template ? templateTextFor(template, emailLang) : null;
   const mailTip = defaultMailTip();
 
   const email = useMemo(
@@ -176,9 +178,18 @@ export default function EmailModal({
               </optgroup>
             )}
           </select>
-          {template && (
+          {used && (
             <p className="hint">
-              {tr(custom ? "Your template is used as written. The email language only changes how the dates and times are written." : "You edited this category in Settings, so your version is used as written. The email language only changes how the dates and times are written.")}
+              {used.lang !== emailLang
+                ? tr("This template has no {lang} version yet, so the {other} one is used. You can add it in Settings → Email templates.", {
+                    lang: emailLang === "zh" ? "中文" : "English",
+                    other: used.lang === "zh" ? "中文" : "English",
+                  })
+                : tr(
+                    custom
+                      ? "Your template is used as written, in the version for this email's language."
+                      : "You edited this category in Settings, so your version for this language is used as written."
+                  )}
             </p>
           )}
         </div>

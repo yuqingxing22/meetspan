@@ -4070,3 +4070,51 @@ html[data-textsize="xl"] .app {
 .tpl-note {
   margin: 12px 0 0;
 }
+.tpl-name-field {
+  max-width: 420px;
+}
+.tpl-lang-tabs {
+  display: flex;
+  gap: 4px;
+  margin: 4px 0 8px;
+  border-bottom: 1px solid var(--border);
+}
+.tpl-lang-tabs button {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  border: 0;
+  background: none;
+  padding: 10px 14px;
+  border-bottom: 2px solid transparent;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-dim);
+  cursor: pointer;
+}
+.tpl-lang-tabs button.active {
+  color: var(--brand-ink);
+  border-bottom-color: var(--brand);
+}
+.tpl-lang-status {
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--text-faint);
+}
+.tpl-lang-tabs button.active .tpl-lang-status {
+  color: var(--brand);
+}
+.tpl-empty-lang {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  border: 1px dashed var(--brand-line);
+  border-radius: var(--radius-sm);
+  background: var(--brand-softer);
+  font-size: 13px;
+  color: var(--brand-ink);
+}

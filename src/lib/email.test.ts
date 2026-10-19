@@ -187,7 +187,9 @@ describe("custom email templates", () => {
     const start = Date.UTC(2026, 9, 14, 16, 0);
     const s = (ms: number) => ({ startMs: ms, endMs: ms + 3600_000, slotCount: 2, count: 1, freeIds: ["k"], missing: [], blockId: 0 });
     const participants = [{ id: "k", codename: "Kyra", tz: "America/Los_Angeles", ownerUid: "u", selectedSlots: [], updatedAt: 0 }];
-    const template = { id: "t1", name: "Lab", subject: "{meeting}\nconfirmed", body: "Hello lab,\n{times}\n— {organizer}", optionsBody: "" };
+    const en = { subject: "{meeting}\nconfirmed", body: "Hello lab,\n{times}\n— {organizer}", optionsBody: "" };
+    const empty = { subject: "", body: "", optionsBody: "" };
+    const template = { id: "t1", name: "Lab", en, zh: empty };
     const base = { meta, meetingName: "Lab meeting", durationMin: 60, sessionsPerWeek: 1, type: "team" as const, participants, template, lang: "en" as const };
     const one = generateEmail({ ...base, sessions: [s(start)] });
     expect(one.subject).toBe("Lab meeting confirmed");
@@ -196,7 +198,7 @@ describe("custom email templates", () => {
     // No options version written: the same body, with the times listed as options.
     const opts = generateEmail({ ...base, sessions: [s(start), s(start + 86_400_000)], options: true });
     expect(opts.body).toContain("Option B:");
-    const own = generateEmail({ ...base, sessions: [s(start), s(start + 86_400_000)], options: true, template: { ...template, optionsBody: "Pick one:\n{times}" } });
+    const own = generateEmail({ ...base, sessions: [s(start), s(start + 86_400_000)], options: true, template: { ...template, en: { ...en, optionsBody: "Pick one:\n{times}" } } });
     expect(own.body.startsWith("Pick one:\n  Option A:")).toBe(true);
   });
 });
@@ -212,9 +214,41 @@ describe("built-in categories as templates", () => {
       for (const type of ["team", "one_on_one", "study", "interview"] as const) {
         const base = { meta, meetingName: "Sync", durationMin: 60, sessionsPerWeek: 1, type, sessions, participants, lang };
         const builtIn = generateEmail(base);
-        const asTemplate = generateEmail({ ...base, template: { id: "x", name: "", ...builtinTemplate(type, lang) } });
+        const asTemplate = generateEmail({ ...base, template: { id: "x", name: "", en: builtinTemplate(type, "en"), zh: builtinTemplate(type, "zh") } });
         expect(asTemplate).toEqual(builtIn);
       }
     }
+  });
+});
+
+describe("English and Chinese versions of a template", () => {
+  const meta = { title: "Lab", organizerName: "Kyra", organizerTz: "America/Los_Angeles", dateMode: "specific" } as unknown as import("./types").PollMeta;
+  const start = Date.UTC(2026, 9, 14, 16, 0);
+  const sessions = [{ startMs: start, endMs: start + 3600_000, slotCount: 2, count: 1, freeIds: ["k"], missing: [], blockId: 0 }];
+  const participants = [{ id: "k", codename: "Kyra", tz: "America/Los_Angeles", ownerUid: "u", selectedSlots: [], updatedAt: 0 }];
+  const base = { meta, meetingName: "Lab", durationMin: 60, sessionsPerWeek: 1, type: "team" as const, sessions, participants };
+  const empty = { subject: "", body: "", optionsBody: "" };
+  const en = { subject: "EN {meeting}", body: "English body", optionsBody: "" };
+  const zh = { subject: "中 {会议}", body: "中文正文", optionsBody: "" };
+
+  it("uses the version in the email's language", async () => {
+    const { generateEmail } = await import("./email");
+    const template = { id: "t", name: "Lab", en, zh };
+    expect(generateEmail({ ...base, template, lang: "en" }).body).toBe("English body");
+    expect(generateEmail({ ...base, template, lang: "zh" }).body).toBe("中文正文");
+  });
+
+  it("falls back to the other version for the user's own category", async () => {
+    const { generateEmail, templateTextFor } = await import("./email");
+    const template = { id: "t", name: "Lab", en: empty, zh };
+    expect(generateEmail({ ...base, template, lang: "en" }).body).toBe("中文正文");
+    expect(templateTextFor(template, "en")?.lang).toBe("zh");
+  });
+
+  it("keeps the built-in wording for an edited built-in category's unedited version", async () => {
+    const { generateEmail } = await import("./email");
+    const template = { id: "b", builtin: "team" as const, name: "", en: empty, zh };
+    expect(generateEmail({ ...base, template, lang: "zh" }).body).toBe("中文正文");
+    expect(generateEmail({ ...base, template, lang: "en" })).toEqual(generateEmail({ ...base, lang: "en" }));
   });
 });

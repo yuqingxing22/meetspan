@@ -16,19 +16,32 @@ export interface CustomHours {
   end: number;
 }
 
-/** A user-defined email category: its name and the text sent for it (see fillTemplate in email.ts). */
+/** One language's text of a template (see fillTemplate in email.ts). */
+export interface TemplateText {
+  subject: string;
+  /** Email for a confirmed time. Empty: this language isn't written (see EmailTemplate). */
+  body: string;
+  /** Email when several times are sent as options; empty uses `body`. */
+  optionsBody: string;
+}
+
+/**
+ * A user-defined email category, or the user's edited copy of a built-in one,
+ * with an English and a Chinese version: the email uses the version in its
+ * own language. A version left empty falls back to the built-in text (for a
+ * built-in category) or to the other language (for the user's own).
+ */
 export interface EmailTemplate {
   id: string;
   /** Set when this is the user's edited copy of a built-in category; it replaces the built-in text. */
   builtin?: MeetingType;
   /** The category name shown in the template lists, e.g. "Lab meeting". */
   name: string;
-  subject: string;
-  /** Email for a confirmed time. */
-  body: string;
-  /** Email when several times are sent as options; empty uses `body`. */
-  optionsBody: string;
+  en: TemplateText;
+  zh: TemplateText;
 }
+
+export const EMPTY_TEXT: TemplateText = { subject: "", body: "", optionsBody: "" };
 
 export interface Prefs {
   /** What to call the user: the default organizer name and answer name. */
@@ -52,8 +65,8 @@ export const ACCENTS: Accent[] = ["indigo", "blue", "teal", "violet", "rose"];
 export const TEXT_SIZES: TextSize[] = ["sm", "md", "lg", "xl"];
 export const MAX_CUSTOM_HOURS = 3;
 export const MAX_TEMPLATES = 20;
-/** Keeps the synced settings document well under Firestore's size limit. */
-export const MAX_TEMPLATE_TEXT = 4000;
+/** Keeps the synced settings document under Firestore's 1 MB limit even when every template is full. */
+export const MAX_TEMPLATE_TEXT = 2500;
 
 export const DEFAULT_PREFS: Prefs = {
   name: "",
@@ -106,12 +119,29 @@ export function cleanPrefs(raw: unknown): Prefs {
         id: str(x.id, 40),
         ...(MEETING_TYPES.some((m) => m.value === x.builtin) ? { builtin: x.builtin } : {}),
         name: str(x.name, 60),
-        subject: str(x.subject, 300),
-        body: str(x.body, MAX_TEMPLATE_TEXT),
-        optionsBody: str(x.optionsBody, MAX_TEMPLATE_TEXT),
+        ...bothLanguages(x as unknown as Record<string, unknown>, str),
       })),
     updatedAt: typeof r.updatedAt === "number" ? r.updatedAt : 0,
   };
+}
+
+/** A template's two versions. Templates saved before there were two get theirs by the language they're written in. */
+function bothLanguages(
+  x: Record<string, unknown>,
+  str: (v: unknown, max: number) => string
+): { en: TemplateText; zh: TemplateText } {
+  const text = (v: unknown): TemplateText => {
+    const o = (v && typeof v === "object" ? v : {}) as Record<string, unknown>;
+    return {
+      subject: str(o.subject, 300),
+      body: str(o.body, MAX_TEMPLATE_TEXT),
+      optionsBody: str(o.optionsBody, MAX_TEMPLATE_TEXT),
+    };
+  };
+  if (x.en || x.zh) return { en: text(x.en), zh: text(x.zh) };
+  const old = text(x);
+  const chinese = /[\u4e00-\u9fff]/.test(old.subject + old.body);
+  return chinese ? { en: { ...EMPTY_TEXT }, zh: old } : { en: old, zh: { ...EMPTY_TEXT } };
 }
 
 function read(): Prefs {
