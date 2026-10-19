@@ -132,7 +132,6 @@ function Organizer() {
   const [chosen, setChosen] = useState<Session[]>([]);
   const [hoverSessions, setHoverSessions] = useState<Session[] | null>(null);
   const [showEmail, setShowEmail] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
   const [copied, setCopied] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
@@ -144,7 +143,6 @@ function Organizer() {
   const [picks, setPicks] = useState<number[]>([]);
   // Ticked times sent as choices (more than the meetings per week), not locked in.
   const [optionSessions, setOptionSessions] = useState<Session[] | null>(null);
-  const menuRef = useRef<HTMLDivElement>(null);
   const qrRef = useRef<HTMLDivElement>(null);
 
   // The organizer's own availability — stored as a participant so it counts in
@@ -203,17 +201,15 @@ function Organizer() {
     }
   }, [participants, myId]);
 
-  // Close the ⋯ menu / QR popover on an outside click.
+  // Close the QR popover on an outside click.
   useEffect(() => {
-    if (!menuOpen && !qrOpen) return;
+    if (!qrOpen) return;
     function onDoc(e: MouseEvent) {
-      const t = e.target as Node;
-      if (menuRef.current && !menuRef.current.contains(t)) setMenuOpen(false);
-      if (qrRef.current && !qrRef.current.contains(t)) setQrOpen(false);
+      if (qrRef.current && !qrRef.current.contains(e.target as Node)) setQrOpen(false);
     }
     document.addEventListener("mousedown", onDoc);
     return () => document.removeEventListener("mousedown", onDoc);
-  }, [menuOpen, qrOpen]);
+  }, [qrOpen]);
 
   async function saveMyAvailability() {
     if (!meta || !uid) return;
@@ -577,56 +573,33 @@ function Organizer() {
             </button>
           )}
           {isAdmin && (
-            <div className="menu-root" ref={menuRef}>
-              <button
-                type="button"
-                className="icon-btn icon-btn-lg"
-                aria-label={t("More actions")}
-                aria-expanded={menuOpen}
-                onClick={() => setMenuOpen((o) => !o)}
-              >
-                <Icon name="more" size={18} />
-              </button>
-              {menuOpen && (
-                <div className="menu">
-                  <button
-                    type="button"
-                    className="menu-item"
-                    onClick={() => {
-                      setMenuOpen(false);
-                      setEditOpen(true);
-                    }}
-                  >
-                    {t("Edit poll (name, timezone, deadline, days, hours)")}
-                  </button>
-                  <button
-                    type="button"
-                    className={`menu-item${open ? " danger" : ""}`}
-                    onClick={() => {
-                      setMenuOpen(false);
-                      (open ? closePoll(pollId) : reopenPoll(pollId)).catch((e) =>
-                        show(t("Couldn't update the poll: {msg}", { msg: (e as Error).message }))
-                      );
-                    }}
-                  >
-                    {open ? t("Close poll") : t("Reopen poll")}
-                  </button>
-                  {mailerEnabled && (
-                    <button
-                      type="button"
-                      className="menu-item danger"
-                      onClick={() => {
-                        setMenuOpen(false);
-                        setDeleteError(null);
-                        setDeleteOpen(true);
-                      }}
-                    >
-                      {t("Delete poll…")}
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
+            <button
+              type="button"
+              className="icon-btn icon-btn-lg"
+              aria-label={open ? t("Close poll") : t("Reopen poll")}
+              title={open ? t("Close poll: stop taking answers (you can reopen it)") : t("Reopen poll")}
+              onClick={() =>
+                (open ? closePoll(pollId) : reopenPoll(pollId))
+                  .then(() => show(open ? t("Poll closed. Guests can no longer change their answers.") : t("Poll reopened")))
+                  .catch((e) => show(t("Couldn't update the poll: {msg}", { msg: (e as Error).message })))
+              }
+            >
+              <Icon name={open ? "lock" : "unlock"} size={18} />
+            </button>
+          )}
+          {isAdmin && mailerEnabled && (
+            <button
+              type="button"
+              className="icon-btn icon-btn-lg icon-btn-danger"
+              aria-label={t("Delete poll…")}
+              title={t("Delete poll…")}
+              onClick={() => {
+                setDeleteError(null);
+                setDeleteOpen(true);
+              }}
+            >
+              <Icon name="trash" size={18} />
+            </button>
           )}
           {view === "times" ? (
             <button type="button" className="btn btn-primary" onClick={() => go("dashboard")}>

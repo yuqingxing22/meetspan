@@ -624,4 +624,7 @@ export const ZH: Record<string, string> = {
   "Unedited categories adjust their wording on their own (one person or a group, one time or several, English or Chinese). An edited one is used as you wrote it.": "没改过的类别会自动调整措辞（发给一个人还是一群人、一个时间还是多个时间、中文还是英文）。改过的类别会按你写的原样使用。",
   "Edit a built-in category": "编辑内置类别",
   "You edited this category in Settings, so your version is used as written. The email language only changes how the dates and times are written.": "你在设置里改过这个类别，所以会按你的版本原样生成。切换邮件语言只会改变日期和时间的写法。",
+  "Close poll: stop taking answers (you can reopen it)": "关闭排期：不再接受回复（之后可以重新开放）",
+  "Poll closed. Guests can no longer change their answers.": "排期已关闭，参与者不能再修改回复。",
+  "Poll reopened": "排期已重新开放",
 };
