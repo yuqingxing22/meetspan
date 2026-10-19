@@ -200,3 +200,21 @@ describe("custom email templates", () => {
     expect(own.body.startsWith("Pick one:\n  Option A:")).toBe(true);
   });
 });
+
+describe("built-in categories as templates", () => {
+  it("fill in to the same email the app writes for one time", async () => {
+    const { builtinTemplate, generateEmail } = await import("./email");
+    const meta = { title: "Sync", organizerName: "Kyra", organizerTz: "America/Los_Angeles", dateMode: "specific" } as unknown as import("./types").PollMeta;
+    const start = Date.UTC(2026, 9, 14, 16, 0);
+    const sessions = [{ startMs: start, endMs: start + 3600_000, slotCount: 2, count: 1, freeIds: ["k"], missing: [], blockId: 0 }];
+    const participants = [{ id: "k", codename: "Kyra", tz: "America/Los_Angeles", ownerUid: "u", selectedSlots: [], updatedAt: 0 }];
+    for (const lang of ["en", "zh"] as const) {
+      for (const type of ["team", "one_on_one", "study", "interview"] as const) {
+        const base = { meta, meetingName: "Sync", durationMin: 60, sessionsPerWeek: 1, type, sessions, participants, lang };
+        const builtIn = generateEmail(base);
+        const asTemplate = generateEmail({ ...base, template: { id: "x", name: "", ...builtinTemplate(type, lang) } });
+        expect(asTemplate).toEqual(builtIn);
+      }
+    }
+  });
+});

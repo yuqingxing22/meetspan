@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { MEETING_TYPES, type MeetingType } from "./types";
 
 /**
  * Personal settings (Settings page): look and feel, plus a few things
@@ -18,6 +19,8 @@ export interface CustomHours {
 /** A user-defined email category: its name and the text sent for it (see fillTemplate in email.ts). */
 export interface EmailTemplate {
   id: string;
+  /** Set when this is the user's edited copy of a built-in category; it replaces the built-in text. */
+  builtin?: MeetingType;
   /** The category name shown in the template lists, e.g. "Lab meeting". */
   name: string;
   subject: string;
@@ -97,9 +100,11 @@ export function cleanPrefs(raw: unknown): Prefs {
       .map(({ start, end }) => ({ start, end })),
     templates: templates
       .filter((x): x is EmailTemplate => !!x && typeof (x as EmailTemplate).id === "string")
-      .slice(0, MAX_TEMPLATES)
+      // Room for an edited copy of each built-in category on top of the user's own.
+      .slice(0, MAX_TEMPLATES + MEETING_TYPES.length)
       .map((x) => ({
         id: str(x.id, 40),
+        ...(MEETING_TYPES.some((m) => m.value === x.builtin) ? { builtin: x.builtin } : {}),
         name: str(x.name, 60),
         subject: str(x.subject, 300),
         body: str(x.body, MAX_TEMPLATE_TEXT),

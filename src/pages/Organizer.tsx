@@ -126,7 +126,8 @@ function Organizer() {
   const [type, setType] = useState<MeetingType>("team");
   // One of the organizer's own email templates, chosen in "Meeting type".
   const [templateId, setTemplateId] = useState<string | null>(null);
-  const { templates } = usePrefs();
+  const { templates: allTemplates } = usePrefs();
+  const templates = allTemplates.filter((x) => !x.builtin);
 
   const [chosen, setChosen] = useState<Session[]>([]);
   const [hoverSessions, setHoverSessions] = useState<Session[] | null>(null);
@@ -863,7 +864,7 @@ function Organizer() {
                           <optgroup label={t("Built in")}>
                             {MEETING_TYPES.map((mt) => (
                               <option key={mt.value} value={mt.value}>
-                                {t(mt.label)}
+                                {allTemplates.find((x) => x.builtin === mt.value)?.name || t(mt.label)}
                               </option>
                             ))}
                           </optgroup>

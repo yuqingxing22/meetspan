@@ -285,6 +285,103 @@ export function starterTemplate(lang: Lang): Pick<EmailTemplate, "subject" | "bo
       };
 }
 
+/**
+ * A built-in category as an editable template: the same wording the app
+ * writes for it, with placeholders where the details go. Settings opens this
+ * when someone edits a built-in category.
+ */
+export function builtinTemplate(type: MeetingType, lang: Lang): Pick<EmailTemplate, "subject" | "body" | "optionsBody"> {
+  const personal = isPersonal(type);
+  if (lang === "zh") {
+    const f = flavorZh(type);
+    return {
+      subject: `{会议}：拟定时间（${f.subjectTag}）`,
+      body: [
+        personal ? "您好，" : "大家好，",
+        "",
+        f.intro,
+        "",
+        "会议：{会议}",
+        "时长：{时长}",
+        "",
+        "{时间}",
+        "",
+        "{开始}",
+        "",
+        f.extra,
+        "",
+        personal ? "如果这个时间合适，请回复确认；如需调整也请告知。" : "如果这个时间可以，请回复确认；如需调整也请告诉我。",
+        "",
+        f.outro,
+        "{称呼}",
+      ].join("\n"),
+      optionsBody: [
+        personal ? "您好，" : "大家好，",
+        "",
+        personal
+          ? "感谢您提供空闲时间。以下时间我们都方便，请您选择最合适的一个："
+          : "感谢大家提供空闲时间。以下时间所有人都可以，请选出你方便的：",
+        "",
+        "会议：{会议}",
+        "时长：{时长}",
+        "",
+        "{时间}",
+        "",
+        "{开始}",
+        "",
+        personal ? "请回复您选择的选项，确认后我会发送日历邀请。" : "请回复你方便的选项（可多选），收齐大家的回复后我会确定最终时间。",
+        "",
+        personal ? "谢谢！" : "谢谢大家！",
+        "{称呼}",
+      ].join("\n"),
+    };
+  }
+  const f = flavor(type);
+  return {
+    subject: `{meeting} — proposed time (${f.subjectTag})`,
+    body: [
+      "Hi all,",
+      "",
+      f.intro,
+      "",
+      "Meeting: {meeting}",
+      "Duration: {duration}",
+      "",
+      "{times}",
+      "",
+      "{start}",
+      "",
+      f.extra,
+      "",
+      "Please reply to confirm this works for you, or suggest an adjustment.",
+      "",
+      f.outro,
+      "{organizer}",
+    ].join("\n"),
+    optionsBody: [
+      personal ? "Hi," : "Hi all,",
+      "",
+      personal
+        ? "Thanks for sharing your availability. The times below work for both of us. Which one suits you best?"
+        : "Thanks everyone for sharing your availability. The times below work for everyone, so please pick the one(s) you prefer:",
+      "",
+      "Meeting: {meeting}",
+      "Duration: {duration}",
+      "",
+      "{times}",
+      "",
+      "{start}",
+      "",
+      personal
+        ? "Just reply with the option that works best for you, and I'll send a calendar invite."
+        : "Reply with the option(s) that suit you (more than one is fine). I'll confirm the final time once I've heard from everyone.",
+      "",
+      "Thanks,",
+      "{organizer}",
+    ].join("\n"),
+  };
+}
+
 /** Made-up values to preview a template in Settings. */
 export function sampleTemplateValues(lang: Lang): TemplateValues {
   return lang === "zh"

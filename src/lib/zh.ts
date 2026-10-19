@@ -615,4 +615,13 @@ export const ZH: Record<string, string> = {
   "Length": "时长",
   "How often (weekly meetings)": "频率（每周例会）",
   "Start week and time-change note (weekly meetings)": "开始周和夏令时提醒（每周例会）",
+  "Built-in categories": "内置类别",
+  "The emails MeetSpan writes for each meeting type. Edit one to use your own wording; you can restore the original any time.": "MeetSpan 为每种会议类型准备的邮件。编辑后就用你自己的措辞，随时可以恢复原样。",
+  "Edited": "已修改",
+  "Go back to the original text?": "恢复成原来的文字？",
+  "Restore": "恢复",
+  "Restore default": "恢复默认",
+  "Unedited categories adjust their wording on their own (one person or a group, one time or several, English or Chinese). An edited one is used as you wrote it.": "没改过的类别会自动调整措辞（发给一个人还是一群人、一个时间还是多个时间、中文还是英文）。改过的类别会按你写的原样使用。",
+  "Edit a built-in category": "编辑内置类别",
+  "You edited this category in Settings, so your version is used as written. The email language only changes how the dates and times are written.": "你在设置里改过这个类别，所以会按你的版本原样生成。切换邮件语言只会改变日期和时间的写法。",
 };

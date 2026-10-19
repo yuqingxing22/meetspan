@@ -54,11 +54,14 @@ export default function EmailModal({
   onClose,
 }: Props) {
   const { show, node } = useToast();
-  const { templates } = usePrefs();
+  const { templates: allTemplates } = usePrefs();
+  // The user's own categories; edited built-in ones replace the built-in text below.
+  const templates = allTemplates.filter((x) => !x.builtin);
   const [type, setType] = useState<MeetingType>(initialType);
   // A built-in type, or "custom:<id>" for one of the organizer's templates.
   const [choice, setChoice] = useState<string>(templateId ? `custom:${templateId}` : initialType);
-  const template = choice.startsWith("custom:") ? templates.find((x) => `custom:${x.id}` === choice) : undefined;
+  const custom = choice.startsWith("custom:") ? templates.find((x) => `custom:${x.id}` === choice) : undefined;
+  const template = custom ?? allTemplates.find((x) => x.builtin === type);
   const [emailLang, setEmailLang] = useState<Lang>(getLang());
   const mailTip = defaultMailTip();
 
@@ -149,7 +152,7 @@ export default function EmailModal({
           </div>
           <select
             id="email-template"
-            value={template ? choice : type}
+            value={custom ? choice : type}
             onChange={(e) => {
               const v = e.target.value;
               setChoice(v);
@@ -159,7 +162,7 @@ export default function EmailModal({
             <optgroup label={tr("Built in")}>
               {MEETING_TYPES.map((t) => (
                 <option key={t.value} value={t.value}>
-                  {tr(t.label)}
+                  {allTemplates.find((x) => x.builtin === t.value)?.name || tr(t.label)}
                 </option>
               ))}
             </optgroup>
@@ -174,7 +177,9 @@ export default function EmailModal({
             )}
           </select>
           {template && (
-            <p className="hint">{tr("Your template is used as written. The email language only changes how the dates and times are written.")}</p>
+            <p className="hint">
+              {tr(custom ? "Your template is used as written. The email language only changes how the dates and times are written." : "You edited this category in Settings, so your version is used as written. The email language only changes how the dates and times are written.")}
+            </p>
           )}
         </div>
 
