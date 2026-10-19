@@ -8,6 +8,7 @@ import Icon from "../components/Icon";
 import InviteQR from "../components/InviteQR";
 import EditPollModal from "../components/EditPollModal";
 import DeletePollModal from "../components/DeletePollModal";
+import ClosePollModal from "../components/ClosePollModal";
 import ScheduleFill from "../components/ScheduleFill";
 import CalendarImport from "../components/CalendarImport";
 import CommonTimes from "../components/CommonTimes";
@@ -135,6 +136,8 @@ function Organizer() {
   const [copied, setCopied] = useState(false);
   const [qrOpen, setQrOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const [closeOpen, setCloseOpen] = useState(false);
+  const [closing, setClosing] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [deleted, setDeleted] = useState(false);
@@ -579,9 +582,11 @@ function Organizer() {
               aria-label={open ? t("Close poll") : t("Reopen poll")}
               title={open ? t("Close poll: stop taking answers (you can reopen it)") : t("Reopen poll")}
               onClick={() =>
-                (open ? closePoll(pollId) : reopenPoll(pollId))
-                  .then(() => show(open ? t("Poll closed. Guests can no longer change their answers.") : t("Poll reopened")))
-                  .catch((e) => show(t("Couldn't update the poll: {msg}", { msg: (e as Error).message })))
+                open
+                  ? setCloseOpen(true)
+                  : reopenPoll(pollId)
+                      .then(() => show(t("Poll reopened")))
+                      .catch((e) => show(t("Couldn't update the poll: {msg}", { msg: (e as Error).message })))
               }
             >
               <Icon name={open ? "lock" : "unlock"} size={18} />
@@ -945,6 +950,25 @@ function Organizer() {
         </>
       )}
 
+      {closeOpen && (
+        <ClosePollModal
+          title={meta.title}
+          busy={closing}
+          onCancel={() => setCloseOpen(false)}
+          onConfirm={async () => {
+            setClosing(true);
+            try {
+              await closePoll(pollId);
+              setCloseOpen(false);
+              show(t("Poll closed. Guests can no longer change their answers."));
+            } catch (e) {
+              show(t("Couldn't update the poll: {msg}", { msg: (e as Error).message }));
+            } finally {
+              setClosing(false);
+            }
+          }}
+        />
+      )}
       {deleteOpen && (
         <DeletePollModal
           title={meta.title}

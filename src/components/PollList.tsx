@@ -25,7 +25,8 @@ interface Props {
 export default function PollList({ polls, onOpen, onChanged, onMessage, selecting: alwaysSelecting = false, onBatch }: Props) {
   const [selecting, setSelecting] = useState(alwaysSelecting);
   const [picked, setPicked] = useState<Set<string>>(new Set());
-  const [confirmDelete, setConfirmDelete] = useState(false);
+  // Which batch action is waiting for a yes.
+  const [confirming, setConfirming] = useState<"close" | "delete" | null>(null);
   const [busy, setBusy] = useState(false);
 
   const chosen = polls.filter((p) => picked.has(p.pollId));
@@ -33,7 +34,7 @@ export default function PollList({ polls, onOpen, onChanged, onMessage, selectin
   const allPicked = polls.length > 0 && chosen.length === polls.length;
 
   function toggle(id: string) {
-    setConfirmDelete(false);
+    setConfirming(null);
     setPicked((s) => {
       const next = new Set(s);
       if (next.has(id)) next.delete(id);
@@ -44,7 +45,7 @@ export default function PollList({ polls, onOpen, onChanged, onMessage, selectin
 
   function stopSelecting() {
     setPicked(new Set());
-    setConfirmDelete(false);
+    setConfirming(null);
     if (!alwaysSelecting) setSelecting(false);
   }
 
@@ -122,23 +123,36 @@ export default function PollList({ polls, onOpen, onChanged, onMessage, selectin
       ))}
 
       {selecting ? (
-        confirmDelete ? (
+        confirming ? (
           <div className="batch-bar batch-confirm" role="alert">
             <span>
-              {t(
-                chosen.length === 1
-                  ? "Delete 1 poll with all its replies? This can't be undone."
-                  : "Delete {n} polls with all their replies? This can't be undone.",
-                { n: chosen.length }
-              )}
+              {confirming === "delete"
+                ? t(
+                    chosen.length === 1
+                      ? "Delete 1 poll with all its replies? This can't be undone."
+                      : "Delete {n} polls with all their replies? This can't be undone.",
+                    { n: chosen.length }
+                  )
+                : t(
+                    openChosen.length === 1
+                      ? "Close 1 poll? Guests can't add or change their times until you reopen it."
+                      : "Close {n} polls? Guests can't add or change their times until you reopen them.",
+                    { n: openChosen.length }
+                  )}
             </span>
             <div className="btn-row">
-              <button type="button" className="btn btn-sm btn-ghost" disabled={busy} onClick={() => setConfirmDelete(false)}>
+              <button type="button" className="btn btn-sm btn-ghost" disabled={busy} onClick={() => setConfirming(null)}>
                 {t("Cancel")}
               </button>
-              <button type="button" className="btn btn-sm btn-danger" disabled={busy} onClick={() => run("delete")}>
-                {busy ? t("Deleting…") : t("Delete")}
-              </button>
+              {confirming === "delete" ? (
+                <button type="button" className="btn btn-sm btn-danger" disabled={busy} onClick={() => run("delete")}>
+                  {busy ? t("Deleting…") : t("Delete")}
+                </button>
+              ) : (
+                <button type="button" className="btn btn-sm btn-primary" disabled={busy} onClick={() => run("close")}>
+                  {busy ? t("Closing…") : t("Close")}
+                </button>
+              )}
             </div>
           </div>
         ) : (
@@ -148,7 +162,7 @@ export default function PollList({ polls, onOpen, onChanged, onMessage, selectin
               className="btn btn-sm"
               disabled={busy || openChosen.length === 0}
               title={chosen.length > 0 && openChosen.length === 0 ? t("These polls are already closed") : undefined}
-              onClick={() => run("close")}
+              onClick={() => setConfirming("close")}
             >
               <Icon name="lock" size={14} />
               {openChosen.length > 0 ? t("Close {n}", { n: openChosen.length }) : t("Close")}
@@ -158,7 +172,7 @@ export default function PollList({ polls, onOpen, onChanged, onMessage, selectin
                 type="button"
                 className="btn btn-sm btn-danger-ghost"
                 disabled={busy || chosen.length === 0}
-                onClick={() => setConfirmDelete(true)}
+                onClick={() => setConfirming("delete")}
               >
                 <Icon name="trash" size={14} />
                 {chosen.length > 0 ? t("Delete {n}", { n: chosen.length }) : t("Delete")}
